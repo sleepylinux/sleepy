@@ -1,0 +1,77 @@
+name: Check
+
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  fast:
+    name: Fast checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out committed source
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+
+      - name: Check formatting
+        run: nix fmt -- --check .
+
+      - name: Run Statix
+        run: nix develop --command statix check --ignore hosts/sleepy-vm/hardware-configuration.nix .
+
+      - name: Run deadnix
+        run: nix develop --command deadnix --fail --exclude hosts/sleepy-vm/hardware-configuration.nix .
+
+      - name: Run ShellCheck
+        shell: bash
+        run: |
+          mapfile -d '' scripts < <(git ls-files -z '*.sh')
+          if ((${#scripts[@]})); then
+            nix develop --command shellcheck "${scripts[@]}"
+          fi
+
+      - name: Run source contract fixtures
+        run: |
+          nix develop --command bash checks/source-clean-test.sh
+          nix develop --command bash checks/quickshell-contract-test.sh
+
+      - name: Evaluate all checks
+        run: nix flake check --no-build --show-trace
+
+  build:
+    name: Build checks and configurations
+    needs: fast
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out committed source
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+
+      - name: Prove fresh-clone reproducibility
+        run: bash checks/fresh-clone.sh
+
+      - name: Build all checks
+        run: nix flake check -L
+
+      - name: Build Sleepy NixOS
+        run: nix build .#nixosConfigurations.sleepy-vm.config.system.build.toplevel --no-link -L
+
+      - name: Build standalone Home Manager
+        run: nix build '.#homeConfigurations."lazy@sleepy-vm".activationPackage' --no-link -L
+
+      - name: Assert clean checkout
+        shell: bash
+        run: test -z "$(git status --porcelain=v1 --untracked-files=all)"

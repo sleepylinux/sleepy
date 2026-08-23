@@ -1,0 +1,5 @@
+include "input.kdl"
+include "appearance.kdl"
+include "bindings.kdl"
+include "rules.kdl"
+include "startup.kdl"

@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "panel": {
+    "edge": "left",
+    "width": 52,
+    "alwaysVisible": true
+  },
+  "theme": {
+    "name": "lunar-minimal"
+  }
+}
