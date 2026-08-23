@@ -104,6 +104,8 @@ The deferred systems receive stable extension points, not placeholder implementa
 
 `packages` contains independently buildable Sleepy artifacts rather than embedding derivations in modules. The first real packages are the Quickshell configuration and branding assets. `overlays/default.nix` exposes those packages to integrated NixOS and Home Manager configurations through one narrow overlay. Empty placeholders are not committed; each path is introduced with a buildable consumer.
 
+`local/` is outside the public architecture. Public flake outputs do not import it, CI runs without it, and release source or binary artifacts never include it. A developer may explicitly pass local modules to the host factory from an untracked workstation entry point, but no committed module, package, check, or release build may depend on their presence.
+
 ## Flake outputs
 
 The flake will export:
@@ -145,7 +147,9 @@ This behavior is an explicit integration contract and receives an acceptance tes
 
 Implementation follows the pinned versions of upstream [`niri-session`](https://github.com/niri-wm/niri/blob/main/resources/niri-session), [`niri.service`](https://github.com/niri-wm/niri/blob/main/resources/niri.service), and Niri's documented Xwayland Satellite integration rather than copying their current contents.
 
-The pinned Niri version must be at least 25.11 for KDL includes, and Xwayland Satellite must be at least 0.7 for Niri's built-in integration. Niri configuration is split into focused KDL files for input, outputs, appearance, key bindings, window rules, and startup. The generated top-level configuration only includes these files. All KDL files are generated and read-only. The future Settings GUI never edits them. Supported runtime changes are stored in the Sleepy settings backend and applied through an integration service or Niri IPC; immutable KDL remains the fallback source of defaults.
+The selected Niri and Xwayland Satellite packages must provide top-level KDL includes and Niri-managed Xwayland integration. The implementation plan must verify these capabilities against the pinned packages: validate a generated configuration that contains includes, then run the X11 acceptance test without a separately managed Satellite service. The design does not encode release numbers as capability proxies.
+
+Niri configuration is split into focused KDL files for input, outputs, appearance, key bindings, window rules, and startup. The generated top-level configuration only includes these files. All KDL files are generated and read-only. The future Settings GUI never edits them. Supported runtime changes are stored in the Sleepy settings backend and applied through an integration service or Niri IPC; immutable KDL remains the fallback source of defaults.
 
 The key binding `Mod+T` launches Ghostty inside the guest. In virtualized use, the host may intercept the Super key before the guest receives it; the VM documentation will include the virt-manager keyboard-grab procedure and an alternate guest binding for recovery.
 
@@ -166,6 +170,8 @@ Both modes consume the same module implementation and theme interface. Mode-spec
 - Fuzzel is a temporary application launcher.
 
 The base profile does not include a broad application bundle. Future application installation uses a dedicated user-owned Nix profile rather than editing the Sleepy base profile or Home Manager package list. Sleepy-managed base packages and installer-managed applications have separate ownership metadata; the installer refuses or explains duplicates instead of silently claiming a base package.
+
+Before installer implementation begins, its design must define one canonical profile name and filesystem path shared by install, update, list, repair, and uninstall operations. Milestone 1 deliberately does not choose that path because it does not create or mutate the installer profile.
 
 ## Quickshell architecture
 
@@ -321,6 +327,7 @@ The desktop foundation is complete when:
 - replacing branding assets requires no widget changes;
 - a failed build or runtime shell crash has the documented recovery path;
 - an update test proves that local overrides, mutable user preferences, user-installed packages, and unrelated home files remain unchanged;
+- a fresh clone with no `local/` directory reproducibly builds `nixosConfigurations.sleepy-vm` from the committed flake and lock file;
 - rebuilding Home Manager does not create, rewrite, or delete `~/.config/sleepy/settings.json`;
 - the system remains operable from Niri key bindings when Quickshell is unavailable;
 - the systemd user environment receives the Wayland variables and tears down with the Niri session;
