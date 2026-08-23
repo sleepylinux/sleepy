@@ -2,7 +2,7 @@
 
 ## Status
 
-Approved for implementation planning on 2026-08-23.
+Revised after user review on 2026-08-23 and pending final approval for implementation planning.
 
 ## Purpose
 
@@ -15,7 +15,7 @@ The first implementation must provide:
 - a custom Quickshell panel using the temporary Lunar Minimal design;
 - ReGreet on greetd as the graphical login flow;
 - Xwayland Satellite and the required desktop portals;
-- official Firefox, Ghostty with Fish, and Fuzzel as the temporary launcher;
+- Firefox from the standard `nixpkgs` package, Ghostty with Fish, and Fuzzel as the temporary launcher;
 - both integrated and standalone Home Manager outputs;
 - validation that prevents broken Nix, Niri, or Quickshell configuration from becoming an active generation.
 
@@ -70,6 +70,12 @@ The deferred systems receive stable extension points, not placeholder implementa
 │       └── hardware-configuration.nix
 ├── profiles/
 │   └── desktop.nix
+├── packages/
+│   ├── sleepy-branding/
+│   ├── sleepy-shell/
+│   └── default.nix
+├── overlays/
+│   └── default.nix
 ├── modules/
 │   ├── nixos/
 │   │   ├── base/
@@ -88,13 +94,15 @@ The deferred systems receive stable extension points, not placeholder implementa
 └── local/                 # ignored, machine/user-owned overrides
 ```
 
-`flake.nix` composes inputs and exports configurations, modules, formatter, and checks. It does not contain application configuration.
+`flake.nix` composes inputs and exports configurations, modules, packages, development shells, formatter, and checks. It does not contain application configuration.
 
 `lib/mkSleepyHost.nix` is the only host factory. It accepts system architecture, host name, primary user, hardware module, and profiles. Adding a machine must not require copying the desktop stack.
 
 `hosts/sleepy-vm` contains only facts and overrides specific to the VM. `profiles/desktop.nix` composes the reusable system and Home Manager modules.
 
 `modules/nixos` owns operating-system services. `modules/home` owns user-session configuration. `modules/shared/theme` exposes stable theme and branding values to consumers without requiring them to know where assets are stored.
+
+`packages` contains independently buildable Sleepy artifacts rather than embedding derivations in modules. The first real packages are the Quickshell configuration and branding assets. `overlays/default.nix` exposes those packages to integrated NixOS and Home Manager configurations through one narrow overlay. Empty placeholders are not committed; each path is introduced with a buildable consumer.
 
 ## Flake outputs
 
@@ -104,10 +112,14 @@ The flake will export:
 - `nixosModules.sleepy` as the reusable system module;
 - `homeConfigurations` for a standalone `lazy` test deployment;
 - `homeManagerModules.sleepy` as the reusable user module;
-- `formatter.x86_64-linux` using Alejandra;
-- `checks.x86_64-linux` for evaluation, static analysis, configuration validation, and smoke builds.
+- `packages.${system}` for independently buildable Sleepy artifacts;
+- `devShells.${system}.default` with the formatter, linters, and validation tools;
+- `formatter.${system}` using Alejandra;
+- `checks.${system}` for evaluation, static analysis, configuration validation, and smoke builds.
 
-The user name is a parameter of the host factory, not a hard-coded dependency inside desktop modules.
+The user name is a parameter of the host factory, not a hard-coded dependency inside desktop modules. A central supported-systems list and a `forAllSystems` helper generate every system-indexed output. Milestone 1 includes only `x86_64-linux`, but adding an architecture changes that list rather than the output structure.
+
+A future installer milestone may export an installable ISO through `packages.${system}.sleepy-iso` and its supporting NixOS configuration. The first milestone does not build or publish an ISO.
 
 ## System layer
 
@@ -127,7 +139,13 @@ The Lunar Minimal logo is temporary. Colors, metrics, logo, and future mascot pa
 
 greetd starts ReGreet. ReGreet launches the Sleepy Niri session. The session provides Niri, Xwayland Satellite, required XDG portals, clipboard support, notifications, policy authentication, audio integration, and Quickshell startup.
 
-Niri configuration is split into focused KDL files for input, outputs, appearance, key bindings, window rules, and startup. The generated top-level configuration only includes these files.
+Sleepy uses the packaged upstream `niri-session` and `niri.service` lifecycle instead of duplicating it in a custom wrapper. Niri running with `--session` creates the Wayland and IPC sockets, integrates Xwayland Satellite, sets `WAYLAND_DISPLAY`, `DISPLAY`, `XDG_CURRENT_DESKTOP`, `XDG_SESSION_TYPE`, and `NIRI_SOCKET`, and imports the resulting environment into the systemd user manager and D-Bus activation environment before declaring the compositor ready. The upstream service orders `graphical-session.target` after compositor readiness, and `niri-session` drives its shutdown path when Niri exits. Sleepy desktop services bind to that target using `PartOf`, `After`, and `Requisite` as appropriate.
+
+This behavior is an explicit integration contract and receives an acceptance test. Sleepy may package narrowly scoped upstream-compatible unit overrides if a pinned Niri release requires a shutdown fix, but it does not maintain a parallel session implementation.
+
+Implementation follows the pinned versions of upstream [`niri-session`](https://github.com/niri-wm/niri/blob/main/resources/niri-session), [`niri.service`](https://github.com/niri-wm/niri/blob/main/resources/niri.service), and Niri's documented Xwayland Satellite integration rather than copying their current contents.
+
+The pinned Niri version must be at least 25.11 for KDL includes, and Xwayland Satellite must be at least 0.7 for Niri's built-in integration. Niri configuration is split into focused KDL files for input, outputs, appearance, key bindings, window rules, and startup. The generated top-level configuration only includes these files. All KDL files are generated and read-only. The future Settings GUI never edits them. Supported runtime changes are stored in the Sleepy settings backend and applied through an integration service or Niri IPC; immutable KDL remains the fallback source of defaults.
 
 The key binding `Mod+T` launches Ghostty inside the guest. In virtualized use, the host may intercept the Super key before the guest receives it; the VM documentation will include the virt-manager keyboard-grab procedure and an alternate guest binding for recovery.
 
@@ -142,12 +160,12 @@ Both modes consume the same module implementation and theme interface. Mode-spec
 
 ### Applications
 
-- Firefox is the official build from `nixpkgs`.
+- Firefox is provided by the standard `nixpkgs` Firefox package.
 - Ghostty is the default terminal and starts Fish.
 - Fish initially uses its standard prompt.
 - Fuzzel is a temporary application launcher.
 
-The base profile does not include a broad application bundle. Future application installation must use a user-owned package layer rather than editing the Sleepy base profile.
+The base profile does not include a broad application bundle. Future application installation uses a dedicated user-owned Nix profile rather than editing the Sleepy base profile or Home Manager package list. Sleepy-managed base packages and installer-managed applications have separate ownership metadata; the installer refuses or explains duplicates instead of silently claiming a base package.
 
 ## Quickshell architecture
 
@@ -172,7 +190,7 @@ The MVP panel is permanently visible on the left edge and is 52 px wide. It cont
 - tray and status indicators in the middle;
 - clock and user/power entry at the bottom.
 
-The panel starts as a Home Manager systemd user service tied to the graphical session. A Quickshell crash is restarted with rate limiting; it does not terminate Niri or user applications.
+The panel starts as a Home Manager systemd user service tied to `graphical-session.target`. A Quickshell crash is restarted with rate limiting; it does not terminate Niri or user applications. After a bounded number of consecutive failures, systemd stops restarting Quickshell and records the failure. Niri remains fully operable through built-in key bindings for Ghostty, Fuzzel, session logout, and essential window and workspace actions. The panel is never the only route to launch or exit the session.
 
 ## User state and update safety
 
@@ -183,8 +201,9 @@ Sleepy-owned code and user-owned state are separate by construction.
 - The Git repository and Nix store contain versioned Sleepy modules, defaults, schemas, and assets.
 - `local/` contains machine or administrator overrides and is ignored by Git.
 - Mutable desktop preferences live under the user's XDG configuration directory, outside generated Home Manager source files.
-- Packages installed by the future application installer live in a separate user-owned package/profile layer.
+- Packages installed by the future application installer live in a dedicated user-owned Nix profile, separate from system packages and Home Manager packages.
 - Arbitrary files and packages created through normal user tools are outside the Sleepy update target.
+- Credentials and secrets are never stored unencrypted in the repository or Nix store. A later security milestone may integrate `sops-nix` or `agenix` without changing this ownership rule.
 
 An updater must never run a destructive repository reset over local configuration, replace an existing unmanaged file with `force = true`, or rewrite the user's home directory from defaults.
 
@@ -198,7 +217,19 @@ An updater must never run a destructive repository reset over local configuratio
 
 ### Runtime settings and migrations
 
-The future settings backend uses a versioned JSON document in the user's XDG configuration directory. Writes are atomic. Before a schema migration, Sleepy creates a timestamped backup. Migration validates the new document before replacing the old one. If validation fails, the old settings remain active and the failure is reported.
+The settings model has one direction of ownership:
+
+```text
+Nix and Home Manager
+        ↓ immutable defaults and schema
+~/.config/sleepy/settings.json
+        ↓ mutable user overrides
+Quickshell services and Niri integration
+```
+
+Home Manager may install the schema and a default document in the Nix store, but it never manages or rewrites `~/.config/sleepy/settings.json`. The runtime creates that file only when the user first changes a setting. The effective value is the validated user override when present and the immutable default otherwise. Rebuilding Home Manager cannot revert a mutable preference.
+
+The future settings backend uses this versioned JSON document in the user's XDG configuration directory. Writes are atomic. Before a schema migration, Sleepy creates a timestamped backup. Migration validates the new document before replacing the old one. If validation fails, the old settings remain active and the failure is reported.
 
 Unknown or newly removed keys do not crash the shell. They are preserved where possible and ignored with a diagnostic until an explicit migration handles them. Corrupt settings fall back to safe defaults while the original file is retained for recovery.
 
@@ -208,19 +239,22 @@ These guarantees apply to future update tooling and are part of its acceptance c
 
 1. Nix builds packages, services, immutable defaults, validation schemas, and asset paths.
 2. greetd authenticates the user and starts the Niri session.
-3. Niri starts the graphical-session target.
-4. systemd starts Quickshell for that target.
-5. Quickshell service objects observe system state and expose typed properties and actions.
-6. Widgets render the service state and invoke only those actions.
-7. Future mutable user settings overlay immutable defaults without changing generated files.
+3. `niri-session` starts the upstream `niri.service` and waits for it.
+4. Niri creates its Wayland socket, integrates Xwayland Satellite, and imports the completed environment into systemd and D-Bus.
+5. Niri declares readiness and systemd reaches `graphical-session.target`.
+6. systemd starts Quickshell and other Sleepy services bound to that target.
+7. Quickshell service objects observe system state and expose typed properties and actions.
+8. Widgets render the service state and invoke only those actions.
+9. Mutable user settings overlay immutable defaults without changing generated files or KDL.
 
 ## Failure handling and recovery
 
 - Nix evaluation or build failure prevents activation.
 - Invalid Niri KDL prevents the configuration from passing checks.
 - Invalid QML prevents the configuration from passing checks.
-- A Quickshell runtime crash triggers a rate-limited systemd user restart.
+- A Quickshell runtime crash triggers a rate-limited systemd user restart up to the configured failure threshold; Niri keyboard controls remain available after the threshold is reached.
 - A Niri crash ends the session and returns the user to ReGreet; logs remain in the journal.
+- Ending Niri drives the upstream shutdown target, stops `graphical-session.target`, and stops all Sleepy services bound to it.
 - Boot retains previous NixOS generations so the user can select a known-good system.
 - A settings migration failure retains the original settings and activates safe defaults.
 - Host keyboard capture issues are documented separately from guest compositor failures.
@@ -237,14 +271,18 @@ These guarantees apply to future update tooling and are part of its acceptance c
 
 ## Validation and testing
 
-`flake check` is the common local and CI entry point. It will include, directly or through scripts:
+`flake check` is the common local and CI entry point. CI separates fast evaluation from expensive builds. It will include, directly or through scripts:
 
 - Alejandra formatting verification;
 - statix and deadnix;
+- ShellCheck when shell scripts are present;
 - NixOS and standalone Home Manager evaluation;
 - a smoke build of the Sleepy VM system closure;
 - Niri configuration validation;
-- QML linting for Quickshell.
+- QML linting for Quickshell;
+- a repository-clean assertion after generators and checks, including failure on unexpected generated or untracked files.
+
+The fast CI stage runs `nix flake check --no-build`. A separate stage realizes the required system and Home Manager derivations. A later milestone replaces part of the manual smoke coverage with a NixOS VM test that boots, reaches greetd, authenticates a test user, and asserts that Niri and Quickshell run. Firefox launch becomes part of that test when the graphical test environment is reliable.
 
 The manual VM acceptance check verifies:
 
@@ -256,6 +294,8 @@ The manual VM acceptance check verifies:
 6. An X11 test application starts through Xwayland Satellite.
 7. US/RU layout switching works.
 8. A previous generation remains bootable after a deliberately failed candidate build.
+9. Repeatedly crashing Quickshell reaches its restart limit while Ghostty, Fuzzel, and logout remain accessible through Niri key bindings.
+10. Ending Niri follows the upstream shutdown path and stops `graphical-session.target` and its bound user services.
 
 CI will run on feature branches and pull requests. A weekly automation may propose flake input updates, but merging remains manual after CI and a VM test.
 
@@ -280,4 +320,8 @@ The desktop foundation is complete when:
 - public release metadata identifies Sleepy Linux without breaking NixOS tooling;
 - replacing branding assets requires no widget changes;
 - a failed build or runtime shell crash has the documented recovery path;
-- an update test proves that local overrides, mutable user preferences, user-installed packages, and unrelated home files remain unchanged.
+- an update test proves that local overrides, mutable user preferences, user-installed packages, and unrelated home files remain unchanged;
+- rebuilding Home Manager does not create, rewrite, or delete `~/.config/sleepy/settings.json`;
+- the system remains operable from Niri key bindings when Quickshell is unavailable;
+- the systemd user environment receives the Wayland variables and tears down with the Niri session;
+- no unencrypted secret enters the repository or Nix store through a supported configuration path.
