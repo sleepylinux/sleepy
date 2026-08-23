@@ -1,0 +1,9 @@
+.direnv/
+.superpowers/
+result
+result-*
+
+# Host- and user-owned overrides must never be committed or replaced by updates.
+local/
+secrets/
+
