@@ -2,7 +2,7 @@
 
 ## Status
 
-Revised after user review on 2026-08-23 and pending final approval for implementation planning.
+Approved for implementation planning on 2026-08-23 after two review passes.
 
 ## Purpose
 
