@@ -80,6 +80,16 @@ case "$#:$1:${2:-}:${3:-}" in
       emptyPreset)
         printf '%s\n' '{"status":"committed","activePresetId":""}'
         ;;
+      committedLastStream)
+        printf '%s\n' \
+          '{"unexpected":true}' \
+          '{"status":"committed","activePresetId":"builtin.sleepy"}'
+        ;;
+      committedFirstStream)
+        printf '%s\n' \
+          '{"status":"committed","activePresetId":"builtin.sleepy"}' \
+          '{"unexpected":true}'
+        ;;
       *) exit 64 ;;
     esac
     ;;
@@ -227,9 +237,16 @@ test "$(cat "$fixture/initialize-error-initializes")" -eq 2
 test "$(wc -l <"$fixture/initialize-error-sleeps")" -eq 2
 grep -F '"code":"niri_unavailable"' "$fixture/initialize-error-output" >/dev/null
 
-# ApplyReport validation is strict: malformed JSON, unknown fields, and an
-# empty active preset cannot open the graphical-session dependency gate.
-for initialize_mode in malformed extraField emptyPreset; do
+# ApplyReport validation is strict: malformed JSON, unknown fields, an empty
+# active preset, and multi-document streams cannot open the graphical-session
+# dependency gate. Both stream orders are covered because jq otherwise derives
+# its exit status from the final document.
+for initialize_mode in \
+  malformed \
+  extraField \
+  emptyPreset \
+  committedLastStream \
+  committedFirstStream; do
   : >"$fixture/strict-$initialize_mode-ready"
   if run_online 1 \
     "$fixture/strict-$initialize_mode-ready" \
@@ -245,8 +262,33 @@ for initialize_mode in malformed extraField emptyPreset; do
   fi
   test "$(cat "$fixture/strict-$initialize_mode-reconciles")" -eq 1
   test "$(cat "$fixture/strict-$initialize_mode-initializes")" -eq 1
-  grep -F '"code":"binding_initialize_invalid_report"' \
-    "$fixture/strict-$initialize_mode-error" >/dev/null
+  "$fixture_jq" -e '
+    .error.code == "binding_initialize_invalid_report"
+    and (.error.details.output | type == "string" and length > 0)
+  ' "$fixture/strict-$initialize_mode-error" >/dev/null
+
+  case "$initialize_mode" in
+    committedLastStream)
+      expected_diagnostic=$(printf '%s\n' \
+        '{"unexpected":true}' \
+        '{"status":"committed","activePresetId":"builtin.sleepy"}')
+      # $expected below is a jq variable, not a shell variable.
+      # shellcheck disable=SC2016
+      "$fixture_jq" -e --arg expected "$expected_diagnostic" \
+        '.error.details.output == $expected' \
+        "$fixture/strict-$initialize_mode-error" >/dev/null
+      ;;
+    committedFirstStream)
+      expected_diagnostic=$(printf '%s\n' \
+        '{"status":"committed","activePresetId":"builtin.sleepy"}' \
+        '{"unexpected":true}')
+      # $expected below is a jq variable, not a shell variable.
+      # shellcheck disable=SC2016
+      "$fixture_jq" -e --arg expected "$expected_diagnostic" \
+        '.error.details.output == $expected' \
+        "$fixture/strict-$initialize_mode-error" >/dev/null
+      ;;
+  esac
 done
 
 # The socket appears after the stale snapshot. The first realistic reconcile

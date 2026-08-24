@@ -36,28 +36,26 @@ EOF
     export NIRI_SOCKET="$niri_socket"
     if reconcile_output=$("$sleepyctl" bindings reconcile --online-required 2>&1); then
       if initialize_output=$("$sleepyctl" bindings initialize 2>&1); then
-        if printf '%s\n' "$initialize_output" | "$jq" -e '
-          type == "object"
-          and keys == ["activePresetId", "status"]
-          and .status == "committed"
-          and (.activePresetId | type == "string" and length > 0)
-        ' >/dev/null 2>&1; then
-          printf '%s\n' "$initialize_output"
-          exit 0
-        fi
+        if validated_report=$(printf '%s\n' "$initialize_output" | "$jq" -e -c -s '
+          if length == 1 and (.[0] |
+            type == "object"
+            and keys == ["activePresetId", "status"]
+            and (.status == "committed"
+              or .status == "rolledBackConfirmed"
+              or .status == "commitStateUnknown"
+              or .status == "reloadPending")
+            and (.activePresetId | type == "string" and length > 0)
+          ) then .[0] else empty end
+        ' 2>/dev/null); then
+          report_status=$(printf '%s\n' "$validated_report" | "$jq" -r '.status')
+          if test "$report_status" = committed; then
+            printf '%s\n' "$validated_report"
+            exit 0
+          fi
 
-        if printf '%s\n' "$initialize_output" | "$jq" -e '
-          type == "object"
-          and keys == ["activePresetId", "status"]
-          and (.status == "committed"
-            or .status == "rolledBackConfirmed"
-            or .status == "commitStateUnknown"
-            or .status == "reloadPending")
-          and (.activePresetId | type == "string" and length > 0)
-        ' >/dev/null 2>&1; then
           # $report below is a jq variable, not a shell variable.
           # shellcheck disable=SC2016
-          last_error=$("$jq" -cn --argjson report "$initialize_output" '
+          last_error=$("$jq" -cn --argjson report "$validated_report" '
             {error: {
               code: "binding_initialize_uncommitted",
               message: "Binding initialization did not reach a committed state",
