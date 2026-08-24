@@ -40,5 +40,12 @@ if bash "$contract" "$fixture/drifted.nix" "$manifest" "$baseline_manifest" >/de
   exit 1
 fi
 
+sed '/sleepy-m1-baseline = {/a\      inputs.nixpkgs.follows = "nixpkgs";' \
+  "$fixture/valid.nix" >"$fixture/following-baseline.nix"
+if bash "$contract" "$fixture/following-baseline.nix" "$manifest" "$baseline_manifest" >/dev/null 2>&1; then
+  printf 'flake input contract accepted a baseline graph redirected to current nixpkgs\n' >&2
+  exit 1
+fi
+
 bash "$contract" "$repo_root/flake.nix" "$manifest" "$baseline_manifest"
 printf 'flake input contract self-test: ok\n'

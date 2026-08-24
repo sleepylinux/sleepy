@@ -30,7 +30,6 @@
 
     sleepy-m1-baseline = {
       url = "github:sleepylinux/sleepy/a4d8c45337c94c7e8c69a1aebe747ae8e66b0839";
-      inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 

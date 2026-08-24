@@ -79,6 +79,11 @@ if ! awk '
       next
     }
 
+    if (current_input == "sleepy-m1-baseline" && trimmed ~ /^inputs\./) {
+      print "flake input contract: historical root inputs must retain their exact locked graph" > "/dev/stderr"
+      exit 1
+    }
+
     if (trimmed ~ /^url[[:space:]]*=[[:space:]]*"[^"]+";$/) {
       if (current_url != "") {
         printf "flake input contract: duplicate URL for input: %s\n", \
