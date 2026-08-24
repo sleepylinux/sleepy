@@ -42,6 +42,11 @@ jobs:
         run: |
           nix develop --command bash checks/source-clean-test.sh
           nix develop --command bash checks/quickshell-contract-test.sh
+          nix develop --command bash checks/component-contract-test.sh
+          nix develop --command bash checks/component-lock-test.sh
+
+      - name: Validate locked component revisions
+        run: bash checks/component-lock.sh components/desktop-m1.json flake.lock
 
       - name: Evaluate all checks
         run: nix flake check --no-build --show-trace

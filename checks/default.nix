@@ -1,5 +1,8 @@
 {
+  componentContract,
+  componentPackages,
   homeConfiguration,
+  inputs,
   nixosModule,
   nixosConfiguration,
   nixpkgs,
@@ -8,6 +11,15 @@
 }: let
   integratedHomeConfig =
     nixosConfiguration.config.home-manager.users.${homeConfiguration.config.home.username};
+  componentIntegration = import ./component-contract.nix {
+    inherit
+      componentContract
+      componentPackages
+      inputs
+      integratedHomeConfig
+      pkgs;
+    standaloneHomeConfig = homeConfiguration.config;
+  };
   appsContract = import ./apps-contract.nix {
     inherit pkgs integratedHomeConfig;
     standaloneHomeConfig = homeConfiguration.config;
@@ -24,17 +36,25 @@
   updateSafety = pkgs.callPackage ./update-safety.nix {
     inherit (homeConfiguration) activationPackage;
   };
+  fallbackBranding = pkgs.callPackage ../packages/sleepy-branding {};
+  fallbackShell = pkgs.callPackage ../packages/sleepy-shell {
+    sleepy-branding = fallbackBranding;
+  };
   sourceContracts =
     pkgs.runCommand "sleepy-source-contracts" {
       nativeBuildInputs = with pkgs; [
         bash
+        coreutils
         findutils
         git
+        jq
         ripgrep
       ];
     } ''
       ${pkgs.bash}/bin/bash ${source}/checks/source-clean.sh ${source}
       ${pkgs.bash}/bin/bash ${source}/checks/source-clean-test.sh
+      ${pkgs.bash}/bin/bash ${source}/checks/component-contract-test.sh
+      ${pkgs.bash}/bin/bash ${source}/checks/component-lock-test.sh
       touch "$out"
     '';
   freshCloneSource = pkgs.runCommand "sleepy-fresh-clone-source-check" {} ''
@@ -65,11 +85,12 @@
           "$qml_file"
       done < <(${pkgs.findutils}/bin/find ${source}/packages/sleepy-shell/src -name '*.qml' -print0)
 
-      test -f ${pkgs.sleepy-shell}/share/quickshell/sleepy/shell.qml
+      test -f ${fallbackShell}/share/quickshell/sleepy/shell.qml
       touch "$out"
     '';
 in {
   apps-contract = appsContract;
+  component-contract = componentIntegration;
   nixos = nixosConfiguration.config.system.build.toplevel;
   home = homeConfiguration.activationPackage;
   niri-config = niriConfig;

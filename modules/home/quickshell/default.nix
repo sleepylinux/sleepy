@@ -8,7 +8,7 @@
     programs.quickshell = {
       enable = true;
       package = pkgs.quickshell;
-      configs.sleepy = "${config.sleepy.shellPackage}/share/quickshell/sleepy";
+      configs.sleepy = "${config.sleepy.shellPackage}/share/sleepy-desktop";
       activeConfig = "sleepy";
       systemd = {
         enable = true;
@@ -20,6 +20,7 @@
       Unit = {
         PartOf = ["graphical-session.target"];
         Requisite = ["graphical-session.target"];
+        After = ["sleepy-session.service"];
         StartLimitIntervalSec = 30;
         StartLimitBurst = 3;
       };

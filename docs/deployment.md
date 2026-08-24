@@ -1,5 +1,72 @@
 # Deploying the Sleepy desktop
 
+## Desktop Milestone 1 candidate gate
+
+The external desktop slice is not deployable until its generated lock and VM
+acceptance are recorded. Its reviewed immutable inputs are:
+
+```text
+sleepy-sdk      4c4f7989b957f41f3748ddfb092b0348e2ba9e88
+sleepy-session  76937a484ffa444572c9ae1460029e573fb108ca
+sleepy-artwork  7785ac5dac0daa6ac1a619f1e2a9a1b1d1374da1
+sleepy-desktop  b69fd4d97895600e029e10621a61113ad795dbd8
+```
+
+On a Nix-enabled clean checkout, generate the missing lock entries and verify
+that Nix selected those exact revisions. Do not copy or hand-edit lock nodes
+from another checkout:
+
+```bash
+nix flake lock
+bash checks/component-lock.sh components/desktop-m1.json flake.lock
+git diff --check
+git diff -- flake.lock
+sha256sum flake.lock
+```
+
+Commit the generated lock, start again from a clean checkout at that exact
+commit, and run:
+
+```bash
+bash checks/source-clean-test.sh
+bash checks/quickshell-contract-test.sh
+bash checks/component-contract-test.sh
+bash checks/component-lock-test.sh
+bash checks/component-lock.sh components/desktop-m1.json flake.lock
+nix flake check -L --no-write-lock-file
+nix build .#sleepy-contract .#sleepy-session \
+  .#sleepy-session-user-unit .#sleepy-artwork \
+  .#sleepy-shell .#sleepy-settings-preview --no-link -L
+nix build .#nixosConfigurations.sleepy-vm.config.system.build.toplevel \
+  --no-link --no-write-lock-file --print-out-paths -L
+nix build '.#homeConfigurations."lazy@sleepy-vm".activationPackage' \
+  --no-link --no-write-lock-file -L
+```
+
+Before VM activation, record hashes and metadata for any existing settings and
+preset documents under their effective XDG roots. Run `dry-activate`, then
+`test`; stop if either document changes. In the graphical session verify:
+
+```bash
+systemctl --user show sleepy-session.service \
+  -p ActiveState -p SubState -p PartOf -p ExecStart
+systemctl --user is-active graphical-session.target quickshell.service
+
+contract_file=$(mktemp)
+sleepyctl settings show >"$contract_file"
+sleepy-contract validate settings "$contract_file"
+rm -- "$contract_file"
+```
+
+Confirm the left rail, quick-settings drawer, logical lunar mark, and settings
+preview render from the external packages. Only then may the permanent switch
+procedure below be used and the exact root commit, generated lock SHA-256,
+toplevel, state hashes, and visual results be added to the acceptance record.
+
+The in-tree shell and branding derivations are intentionally retained until
+this gate passes. They are fallback/parity evidence, not the configured package
+owners. Removing them before one-candidate Nix and VM acceptance is prohibited.
+
 ## Deployment boundary
 
 Deploy only a clean, committed public tree. Do not copy `.git`, `.superpowers`,

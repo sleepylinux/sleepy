@@ -1,5 +1,60 @@
 # Sleepy desktop foundation acceptance
 
+## Desktop Milestone 1 integration candidate
+
+**BLOCKED pending generated lock and Nix/VM acceptance.** The distribution
+integration consumes only these reviewed component revisions:
+
+| Component | Reviewed revision |
+|---|---|
+| `sleepy-sdk` | `4c4f7989b957f41f3748ddfb092b0348e2ba9e88` |
+| `sleepy-session` | `76937a484ffa444572c9ae1460029e573fb108ca` |
+| `sleepy-artwork` | `7785ac5dac0daa6ac1a619f1e2a9a1b1d1374da1` |
+| `sleepy-desktop` | `b69fd4d97895600e029e10621a61113ad795dbd8` |
+
+The integration source commit and generated `flake.lock` SHA-256 must be
+recorded here only after the candidate has passed the commands below. The
+current lock SHA-256,
+`317438d8272352ebb3b3c6828b0fb7fd0a8288992ec5c123029f8c64ae657ec8`, is the
+pre-integration foundation lock and does **not** lock the four component
+inputs. It is recorded as blocking evidence, not acceptance evidence.
+
+Generate and validate the lock with Nix; never add lock nodes or `narHash`
+values by hand:
+
+```bash
+nix flake lock
+bash checks/component-lock.sh components/desktop-m1.json flake.lock
+git diff -- flake.lock
+sha256sum flake.lock
+```
+
+Then run the complete distribution gate from that exact clean commit:
+
+```bash
+nix flake check -L --no-write-lock-file
+nix build .#sleepy-contract .#sleepy-session \
+  .#sleepy-session-user-unit .#sleepy-artwork \
+  .#sleepy-shell .#sleepy-settings-preview --no-link -L
+nix build .#nixosConfigurations.sleepy-vm.config.system.build.toplevel \
+  --no-link --no-write-lock-file -L
+nix build '.#homeConfigurations."lazy@sleepy-vm".activationPackage' \
+  --no-link --no-write-lock-file -L
+```
+
+VM acceptance must preserve an existing
+`$XDG_CONFIG_HOME/sleepy/settings.json` and
+`$XDG_STATE_HOME/sleepy/presets.json`, activate through `dry-activate` then
+`test`, and confirm `sleepy-session.service` is `active/exited`, belongs to
+`graphical-session.target`, and executes the packaged `sleepyctl`. Validate
+`sleepyctl settings show` with the packaged `sleepy-contract`, then smoke-test
+the external rail, drawer, artwork, and settings preview before switching.
+
+The in-tree `packages/sleepy-shell` and `packages/sleepy-branding` remain as a
+reviewable fallback. Delete them only after the generated lock, full flake
+check, external package builds, standalone Home Manager activation, and VM
+visual/state acceptance all pass at one recorded candidate commit.
+
 ## Result
 
 **PASS — 2026-08-23.** Commit

@@ -1,10 +1,32 @@
-{
+let
+  componentContract = builtins.fromJSON (builtins.readFile ./components/desktop-m1.json);
+in {
   description = "Sleepy Linux desktop foundation";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     home-manager = {
       url = "github:nix-community/home-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    sleepy-sdk = {
+      url = componentContract.inputs.sleepy-sdk.url;
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    sleepy-session = {
+      url = componentContract.inputs.sleepy-session.url;
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    sleepy-artwork = {
+      url = componentContract.inputs.sleepy-artwork.url;
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    sleepy-desktop = {
+      url = componentContract.inputs.sleepy-desktop.url;
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -17,7 +39,7 @@
   }: let
     baseline = import ./hosts/sleepy-vm/baseline.nix;
     supportedSystems = [baseline.system];
-    overlay = import ./overlays;
+    overlay = import ./overlays {inherit inputs;};
     mkSleepyHost = import ./lib/mkSleepyHost.nix {inherit inputs;};
     forAllSystems = import ./lib/for-all-systems.nix {
       inherit (nixpkgs) lib;
@@ -32,7 +54,14 @@
     packages = forAllSystems (system: let
       pkgs = mkPkgs system;
     in {
-      inherit (pkgs) sleepy-branding sleepy-shell;
+      inherit (pkgs)
+        sleepy-artwork
+        sleepy-branding
+        sleepy-contract
+        sleepy-session
+        sleepy-session-user-unit
+        sleepy-settings-preview
+        sleepy-shell;
       default = pkgs.sleepy-shell;
     });
 
@@ -42,7 +71,8 @@
       import ./checks {
         pkgs = mkPkgs system;
         source = self;
-        inherit nixpkgs;
+        inherit componentContract inputs nixpkgs;
+        componentPackages = self.packages.${system};
         nixosModule = self.nixosModules.sleepy;
         nixosConfiguration = self.nixosConfigurations.sleepy-vm;
         homeConfiguration = self.homeConfigurations."lazy@sleepy-vm";
@@ -99,7 +129,8 @@
           sleepy = {
             enable = true;
             primaryUser = "lazy";
-            brandingPackage = self.packages.${baseline.system}.sleepy-branding;
+            brandingPackage = self.packages.${baseline.system}.sleepy-artwork;
+            sessionPackage = self.packages.${baseline.system}.sleepy-session;
             shellPackage = self.packages.${baseline.system}.sleepy-shell;
           };
           home = {
