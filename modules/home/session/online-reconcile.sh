@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 set -euo pipefail
 
 sleepyctl=${SLEEPYCTL:?SLEEPYCTL must name the pinned sleepyctl executable}

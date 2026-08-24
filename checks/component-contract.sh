@@ -188,7 +188,7 @@ primary_mark_relative=$(jq -er '
   select(type == "string" and length > 0)
 ' "$artwork_manifest")
 case "$primary_mark_relative" in
-  /* | *../* | ../* | */.. | ..)
+  /* | *../* | */.. | ..)
     printf 'branding.primaryMark is not package-relative: %s\n' \
       "$primary_mark_relative" >&2
     exit 1

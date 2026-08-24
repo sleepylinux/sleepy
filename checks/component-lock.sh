@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2016 # Backticks below are literal user instructions.
 set -euo pipefail
 
 if ! command -v jq >/dev/null 2>&1; then

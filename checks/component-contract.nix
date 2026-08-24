@@ -22,10 +22,12 @@
     schemaVersion = 1;
     inherit system;
     revisions = builtins.mapAttrs (name: _: inputRevision name) componentContract.inputs;
-    packages = builtins.mapAttrs (name: contract: {
-      inherit (contract) input output;
-      path = toString componentPackages.${name};
-    }) componentContract.rootPackages;
+    packages =
+      builtins.mapAttrs (name: contract: {
+        inherit (contract) input output;
+        path = toString componentPackages.${name};
+      })
+      componentContract.rootPackages;
     defaultPackage = toString componentPackages.default;
     homeManager = {
       shellPackage = toString standaloneHomeConfig.sleepy.shellPackage;

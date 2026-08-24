@@ -21,20 +21,22 @@
     meta.license = lib.licenses.gpl3Only;
   };
 in
-(pkgs.writeShellScriptBin "sleepy-journal-fault-runner" (
-  builtins.replaceStrings
-  ["@coreutils@" "@fshelper@" "@jq@" "@sleepyctl@"]
-  [
-    "${pkgs.coreutils}/bin"
-    "${fsHelper}/bin/sleepy-journal-fs"
-    "${pkgs.jq}/bin/jq"
-    "${sleepy-session}/bin/sleepyctl"
-  ]
-  (builtins.readFile ./runner.sh)
-)).overrideAttrs (_old: {
-  meta.description = "Sleepy deployment journal recovery acceptance runner";
-  meta.license = lib.licenses.gpl3Only;
-  meta.mainProgram = "sleepy-journal-fault-runner";
-  meta.platforms = lib.platforms.linux;
-  passthru.fsHelper = fsHelper;
-})
+  (pkgs.writeShellScriptBin "sleepy-journal-fault-runner" (
+    builtins.replaceStrings
+    ["@coreutils@" "@fshelper@" "@jq@" "@sleepyctl@"]
+    [
+      "${pkgs.coreutils}/bin"
+      "${fsHelper}/bin/sleepy-journal-fs"
+      "${pkgs.jq}/bin/jq"
+      "${sleepy-session}/bin/sleepyctl"
+    ]
+    (builtins.readFile ./runner.sh)
+  )).overrideAttrs (_old: {
+    meta = {
+      description = "Sleepy deployment journal recovery acceptance runner";
+      license = lib.licenses.gpl3Only;
+      mainProgram = "sleepy-journal-fault-runner";
+      platforms = lib.platforms.linux;
+    };
+    passthru = {inherit fsHelper;};
+  })

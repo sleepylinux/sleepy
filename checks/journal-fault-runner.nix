@@ -1,4 +1,7 @@
-{pkgs, runner}:
+{
+  pkgs,
+  runner,
+}:
 pkgs.runCommand "sleepy-journal-fault-runner-check" {
   nativeBuildInputs = [pkgs.coreutils pkgs.jq];
 } ''

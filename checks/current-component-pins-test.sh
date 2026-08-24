@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2016 # Backticks below match literal Markdown code spans.
 set -euo pipefail
 
 for required_command in awk grep jq mktemp sha256sum; do

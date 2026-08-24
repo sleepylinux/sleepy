@@ -1,3 +1,4 @@
+# shellcheck shell=bash disable=SC2015,SC2016
 set -euo pipefail
 umask 077
 

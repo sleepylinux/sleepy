@@ -18,7 +18,8 @@
       componentPackages
       inputs
       integratedHomeConfig
-      pkgs;
+      pkgs
+      ;
     inherit source;
     standaloneHomeConfig = homeConfiguration.config;
   };
@@ -52,7 +53,7 @@
   };
   updateSafetyVm = pkgs.callPackage ./update-safety-vm.nix {
     inherit baselineActivationPackage source;
-    activationPackage = homeConfiguration.activationPackage;
+    inherit (homeConfiguration) activationPackage;
     sessionPackage = componentPackages.sleepy-session;
   };
   fallbackBranding = pkgs.callPackage ../packages/sleepy-branding {};
@@ -125,8 +126,7 @@ in
   "the retained branding fallback must declare GPL-3.0-only";
   assert pkgs.lib.assertMsg
   (fallbackShell.meta.license == pkgs.lib.licenses.gpl3Only)
-  "the retained shell fallback must declare GPL-3.0-only";
-  {
+  "the retained shell fallback must declare GPL-3.0-only"; {
     apps-contract = appsContract;
     bindings-contract = bindingsContract;
     component-contract = componentIntegration;

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2016 # Dollar expressions below are literal source contracts.
 set -euo pipefail
 
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
@@ -38,7 +39,8 @@ assert_contains modules/home/session/default.nix 'unset NIRI_SOCKET'
 assert_contains modules/home/session/default.nix 'test -L "$generated_bindings"'
 assert_contains modules/home/session/default.nix 'test -f "$generated_bindings"'
 assert_contains modules/home/session/default.nix 'SLEEPY_NIRI_VALIDATOR'
-assert_contains modules/home/session/default.nix 'services.gammastep'
+assert_contains modules/home/session/default.nix 'systemd.user.services = {'
+assert_contains modules/home/session/default.nix 'gammastep = {'
 assert_contains modules/home/session/default.nix 'entryAfter ["linkGeneration"]'
 assert_contains modules/home/session/default.nix 'SLEEPY_SOCKET_ATTEMPTS=150'
 assert_contains modules/home/session/online-reconcile.sh 'Niri socket did not become ready before the bounded deadline'

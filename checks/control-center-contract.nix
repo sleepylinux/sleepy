@@ -22,30 +22,30 @@ in
   (pkgs.lib.hasInfix " -l " gammastepExec && pkgs.lib.hasInfix " -t " gammastepExec)
   "gammastep must have continuous location and temperature policy";
     pkgs.runCommand "sleepy-control-center-contract" {
-  nativeBuildInputs = [pkgs.findutils pkgs.gnugrep];
-} ''
-  set -eu
-  desktop=${shellPackage}/share/sleepy-desktop
-  test -d "$desktop"
-  shell="$desktop/shell.qml"
-  ipc="$desktop/services/ShellIpc.qml"
-  ${pkgs.gnugrep}/bin/grep -Fx '//@ pragma ShellId sleepy' "$shell"
-  ${pkgs.gnugrep}/bin/grep -Fx '        target: "sleepy"' "$ipc"
-  for signature in \
-    '        function toggleControlCenter(): void { root.request("toggle", ""); }' \
-    '        function openControlCenter(): void { root.request("open", ""); }' \
-    '        function closeActiveSurface(): void { root.request("close", ""); }' \
-    '        function openPowerMenu(): void { root.request("power", ""); }' \
-    '        function requestSessionAction(action: string): void {'; do
-    ${pkgs.gnugrep}/bin/grep -Fx -- "$signature" "$ipc"
-  done
-  ${pkgs.gnugrep}/bin/grep -Fx '      configs.sleepy = "''${config.sleepy.shellPackage}/share/sleepy-desktop";' \
-    ${source}/modules/home/quickshell/default.nix
-  ${pkgs.gnugrep}/bin/grep -Fx '      activeConfig = "sleepy";' \
-    ${source}/modules/home/quickshell/default.nix
-  ${pkgs.gnugrep}/bin/grep -Fx '        Requires = ["sleepy-bindings-online.service"];' \
-    ${source}/modules/home/quickshell/default.nix
-  ${pkgs.gnugrep}/bin/grep -F 'CommandSpec::new("systemctl", ["--user", "is-active", "gammastep.service"])' \
-    ${sessionSource}/src/system/night_light.rs
-  touch "$out"
-''
+      nativeBuildInputs = [pkgs.findutils pkgs.gnugrep];
+    } ''
+      set -eu
+      desktop=${shellPackage}/share/sleepy-desktop
+      test -d "$desktop"
+      shell="$desktop/shell.qml"
+      ipc="$desktop/services/ShellIpc.qml"
+      ${pkgs.gnugrep}/bin/grep -Fx '//@ pragma ShellId sleepy' "$shell"
+      ${pkgs.gnugrep}/bin/grep -Fx '        target: "sleepy"' "$ipc"
+      for signature in \
+        '        function toggleControlCenter(): void { root.request("toggle", ""); }' \
+        '        function openControlCenter(): void { root.request("open", ""); }' \
+        '        function closeActiveSurface(): void { root.request("close", ""); }' \
+        '        function openPowerMenu(): void { root.request("power", ""); }' \
+        '        function requestSessionAction(action: string): void {'; do
+        ${pkgs.gnugrep}/bin/grep -Fx -- "$signature" "$ipc"
+      done
+      ${pkgs.gnugrep}/bin/grep -Fx '      configs.sleepy = "''${config.sleepy.shellPackage}/share/sleepy-desktop";' \
+        ${source}/modules/home/quickshell/default.nix
+      ${pkgs.gnugrep}/bin/grep -Fx '      activeConfig = "sleepy";' \
+        ${source}/modules/home/quickshell/default.nix
+      ${pkgs.gnugrep}/bin/grep -Fx '        Requires = ["sleepy-bindings-online.service"];' \
+        ${source}/modules/home/quickshell/default.nix
+      ${pkgs.gnugrep}/bin/grep -F 'CommandSpec::new("systemctl", ["--user", "is-active", "gammastep.service"])' \
+        ${sessionSource}/src/system/night_light.rs
+      touch "$out"
+    ''

@@ -1,17 +1,14 @@
-{inputs}:
-final: _prev: let
+{inputs}: final: _prev: let
   system = final.stdenv.hostPlatform.system;
   sdkPackages = inputs.sleepy-sdk.packages.${system};
   sessionPackages = inputs.sleepy-session.packages.${system};
   artworkPackages = inputs.sleepy-artwork.packages.${system};
   desktopPackages = inputs.sleepy-desktop.packages.${system};
 in {
-  sleepy-contract = sdkPackages.sleepy-contract;
-  sleepy-session = sessionPackages.sleepy-session;
-  sleepy-session-user-unit = sessionPackages.sleepy-session-user-unit;
-  sleepy-artwork = artworkPackages.sleepy-artwork;
-  sleepy-shell = desktopPackages.sleepy-shell;
-  sleepy-settings-preview = desktopPackages.sleepy-settings-preview;
+  inherit (sdkPackages) sleepy-contract;
+  inherit (sessionPackages) sleepy-session sleepy-session-user-unit;
+  inherit (artworkPackages) sleepy-artwork;
+  inherit (desktopPackages) sleepy-settings-preview sleepy-shell;
   sleepy-journal-fault-runner = final.callPackage ../packages/sleepy-journal-fault-runner {
     inherit (sessionPackages) sleepy-session;
   };

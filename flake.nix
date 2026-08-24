@@ -57,7 +57,8 @@
     packages = forAllSystems (system: let
       pkgs = mkPkgs system;
     in {
-      inherit (pkgs)
+      inherit
+        (pkgs)
         sleepy-artwork
         sleepy-branding
         sleepy-contract
@@ -65,7 +66,8 @@
         sleepy-session
         sleepy-session-user-unit
         sleepy-settings-preview
-        sleepy-shell;
+        sleepy-shell
+        ;
       default = pkgs.sleepy-shell;
     });
 
@@ -101,6 +103,7 @@
           alejandra
           deadnix
           git
+          jq
           qmlLint
           quickshell
           ripgrep

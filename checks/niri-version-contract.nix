@@ -4,22 +4,24 @@
 }: let
   evaluate = overrides:
     pkgs.lib.evalModules {
-      modules = [
-        (import ../modules/nixos/base/niri-version.nix)
-        ({lib, ...}: {
-          options.assertions = lib.mkOption {
-            type = lib.types.listOf (lib.types.submodule {
-              options = {
-                assertion = lib.mkOption {type = lib.types.bool;};
-                message = lib.mkOption {type = lib.types.str;};
-              };
-            });
-            default = [];
-          };
-          options.programs.niri.package = lib.mkOption {type = lib.types.attrs;};
-          config.programs.niri.package = lib.mkDefault {version = "26.04";};
-        })
-      ] ++ overrides;
+      modules =
+        [
+          (import ../modules/nixos/base/niri-version.nix)
+          ({lib, ...}: {
+            options.assertions = lib.mkOption {
+              type = lib.types.listOf (lib.types.submodule {
+                options = {
+                  assertion = lib.mkOption {type = lib.types.bool;};
+                  message = lib.mkOption {type = lib.types.str;};
+                };
+              });
+              default = [];
+            };
+            options.programs.niri.package = lib.mkOption {type = lib.types.attrs;};
+            config.programs.niri.package = lib.mkDefault {version = "26.04";};
+          })
+        ]
+        ++ overrides;
     };
   accepted = evaluate [];
   rejected = evaluate [
