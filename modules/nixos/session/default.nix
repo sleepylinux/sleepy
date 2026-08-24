@@ -7,7 +7,9 @@
   };
 
   environment.systemPackages = with pkgs; [
+    git
     grim
+    jq
     libnotify
     networkmanagerapplet
     quickshell

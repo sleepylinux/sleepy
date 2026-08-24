@@ -18,6 +18,12 @@ in
   (builtins.elem pkgs.grim config.environment.systemPackages)
   "grim must belong to the candidate system closure for deployment screenshots";
   assert pkgs.lib.assertMsg
+  (builtins.elem pkgs.jq config.environment.systemPackages)
+  "jq must belong to the candidate system closure for deployment validation";
+  assert pkgs.lib.assertMsg
+  (builtins.elem pkgs.git config.environment.systemPackages)
+  "git must belong to the candidate system closure for archive provenance";
+  assert pkgs.lib.assertMsg
   (!(config.systemd.user.services ? xwayland-satellite))
   "Niri owns Xwayland Satellite; Sleepy must not define a user service";
   assert pkgs.lib.assertMsg
@@ -36,9 +42,15 @@ in
       test -L ${config.system.build.toplevel}/sw
       test -x ${config.system.build.toplevel}/sw/bin/quickshell
       test -x ${config.system.build.toplevel}/sw/bin/grim
+      test -x ${config.system.build.toplevel}/sw/bin/jq
+      test -x ${config.system.build.toplevel}/sw/bin/git
       test "$(readlink -f ${config.system.build.toplevel}/sw/bin/quickshell)" = \
         ${pkgs.quickshell}/bin/quickshell
       test "$(readlink -f ${config.system.build.toplevel}/sw/bin/grim)" = \
         ${pkgs.grim}/bin/grim
+      test "$(readlink -f ${config.system.build.toplevel}/sw/bin/jq)" = \
+        ${pkgs.jq}/bin/jq
+      test "$(readlink -f ${config.system.build.toplevel}/sw/bin/git)" = \
+        ${pkgs.git}/bin/git
       touch "$out"
     ''
