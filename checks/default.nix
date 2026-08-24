@@ -60,6 +60,7 @@
       ${pkgs.bash}/bin/bash ${source}/checks/flake-shape-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/flake-input-contract-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/license-contract-test.sh
+      ${pkgs.bash}/bin/bash ${source}/checks/update-safety-contract-test.sh
       touch "$out"
     '';
   freshCloneSource = pkgs.runCommand "sleepy-fresh-clone-source-check" {} ''

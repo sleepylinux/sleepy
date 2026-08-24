@@ -44,6 +44,7 @@ assert_rejected nix-mit-metadata packages/fallback/probe.nix "$mit_nix"
 assert_rejected spdx-mit-metadata docs/probe.md "$mit_spdx"
 
 cp "$fixture/LICENSE" "$fixture/LICENSE.good"
+chmod u+w "$fixture/LICENSE"
 printf '\n' >>"$fixture/LICENSE"
 if bash "$contract" "$fixture" >/dev/null 2>&1; then
   printf 'license contract accepted modified canonical license bytes\n' >&2

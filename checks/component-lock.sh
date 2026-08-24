@@ -17,6 +17,7 @@ lock=$2
 
 if ! jq -e --slurpfile reviewed "$manifest" '
   . as $lock |
+  ($reviewed[0].inputs | map_values(.revision)) as $reviewedRevisions |
   .nodes[.root].inputs as $rootInputs |
   (
     all($reviewed[0].inputs | to_entries[];
@@ -31,6 +32,21 @@ if ! jq -e --slurpfile reviewed "$manifest" '
     )
   ) and
   (
+    [
+      $lock.nodes[].locked? |
+      . as $node |
+      select(
+        $node.type == "github" and
+        $node.owner == "sleepylinux" and
+        ($reviewedRevisions[$node.repo] != null)
+      ) |
+      ($node.rev == $reviewedRevisions[$node.repo]) and
+      ($node.narHash |
+        type == "string" and startswith("sha256-") and length > 7)
+    ] |
+    all
+  ) and
+  (
     [$lock.nodes[].locked.rev?] |
     all(
       . != "4c4f7989b957f41f3748ddfb092b0348e2ba9e88" and
@@ -39,7 +55,7 @@ if ! jq -e --slurpfile reviewed "$manifest" '
   )
 ' "$lock" >/dev/null; then
   printf '%s\n' \
-    'component lock: flake.lock does not lock every reviewed root input or contains a legacy pre-GPL component revision.' \
+    'component lock: reviewed root/nested component nodes do not match the manifest or contain a legacy pre-GPL revision.' \
     'Run `nix flake lock`, review the generated lock diff, then run:' \
     '  bash checks/component-lock.sh components/desktop-m1.json flake.lock' >&2
   exit 1

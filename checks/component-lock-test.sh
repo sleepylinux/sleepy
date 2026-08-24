@@ -38,7 +38,18 @@ jq -n --slurpfile reviewed "$manifest" '
             narHash: "sha256-contract-fixture"
           }
         }
-      ))
+      )) +
+      {
+        upstream: {
+          locked: {
+            type: "github",
+            owner: "unrelated-upstream",
+            repo: "sleepy-session",
+            rev: "0000000000000000000000000000000000000000",
+            narHash: "sha256-unrelated-fixture"
+          }
+        }
+      }
     )
   }
 ' >"$good"
@@ -69,5 +80,9 @@ assert_rejected legacy-nested-sdk-revision \
   '.nodes["legacy-sdk"] = {locked:{type:"github",owner:"sleepylinux",repo:"sleepy-sdk",rev:"4c4f7989b957f41f3748ddfb092b0348e2ba9e88",narHash:"sha256-legacy-fixture"}}'
 assert_rejected legacy-nested-artwork-revision \
   '.nodes["legacy-artwork"] = {locked:{type:"github",owner:"sleepylinux",repo:"sleepy-artwork",rev:"7785ac5dac0daa6ac1a619f1e2a9a1b1d1374da1",narHash:"sha256-legacy-fixture"}}'
+assert_rejected arbitrary-nested-session-revision \
+  '.nodes["nested-session"] = {locked:{type:"github",owner:"sleepylinux",repo:"sleepy-session",rev:"0000000000000000000000000000000000000000",narHash:"sha256-drift-fixture"}}'
+assert_rejected nested-session-missing-content-hash \
+  '.nodes["nested-session"] = {locked:{type:"github",owner:"sleepylinux",repo:"sleepy-session",rev:"1e8863839b5c4310bce251b7e10ed15926039930"}}'
 
 printf 'component lock self-test: ok\n'

@@ -8,20 +8,11 @@ pkgs.runCommand "sleepy-update-safety-check" {
   set -eu
 
   home_files=${activationPackage}/home-files
-  settings_file="$home_files/.config/sleepy/settings.json"
   niri_dir="$home_files/.config/niri"
 
-  if [ -e "$settings_file" ] || [ -L "$settings_file" ]; then
-    echo "Home Manager must not manage .config/sleepy/settings.json" >&2
-    exit 1
-  fi
-
-  if ${pkgs.ripgrep}/bin/rg -n --glob '*.nix' \
-    'settings\.json|force[[:space:]]*=[[:space:]]*true[[:space:]]*;' \
-    ${../modules/home} ${../flake.nix}; then
-    echo "Home Manager sources must not reference mutable settings or force file ownership" >&2
-    exit 1
-  fi
+  ${pkgs.bash}/bin/bash ${./update-safety-contract.sh} \
+    "$home_files" ${activationPackage}/activate \
+    ${../modules/home} ${../flake.nix}
 
   if [ ! -d "$niri_dir" ]; then
     echo "standalone activation has no managed Niri directory" >&2

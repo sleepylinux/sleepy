@@ -35,6 +35,7 @@ bash checks/component-lock-test.sh
 bash checks/flake-shape-test.sh
 bash checks/flake-input-contract-test.sh
 bash checks/license-contract-test.sh
+bash checks/update-safety-contract-test.sh
 bash checks/component-lock.sh components/desktop-m1.json flake.lock
 nix flake check -L --no-write-lock-file
 nix build .#sleepy-contract .#sleepy-session \

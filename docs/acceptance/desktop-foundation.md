@@ -2,7 +2,7 @@
 
 ## Desktop Milestone 1 integration candidate
 
-**BLOCKED pending generated lock and Nix/VM acceptance.** The distribution
+**BLOCKED pending completion of Nix/VM acceptance.** The distribution
 integration consumes only these reviewed component revisions:
 
 | Component | Reviewed revision |
@@ -12,15 +12,16 @@ integration consumes only these reviewed component revisions:
 | `sleepy-artwork` | `0dd59cc9d8a77700f7a415997e3dcde396f55e99` |
 | `sleepy-desktop` | `a88fba369d3926981c46b837c88483553559a60a` |
 
-The integration source commit and generated `flake.lock` SHA-256 must be
-recorded here only after the candidate has passed the commands below. The
-current lock SHA-256,
-`317438d8272352ebb3b3c6828b0fb7fd0a8288992ec5c123029f8c64ae657ec8`, is the
-pre-integration foundation lock and does **not** lock the four component
-inputs. It is recorded as blocking evidence, not acceptance evidence.
+The generated `flake.lock` has SHA-256
+`64f819a051bdeb0be8e44b146316d8317b4a8e10ca700148ba2e93ff7b770bca`,
+contains the four component inputs above, and passes the executable component
+lock contract. This is generated-lock evidence only: the full Nix check is
+still in progress, VM acceptance is pending, and neither result is claimed
+here. Record the final integration source commit only after the candidate has
+passed the remaining commands below.
 
-Generate and validate the lock with Nix; never add lock nodes or `narHash`
-values by hand:
+Regenerate the lock only from the flake inputs and validate it; never add lock
+nodes or `narHash` values by hand:
 
 ```bash
 nix flake lock
