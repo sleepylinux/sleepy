@@ -9,14 +9,15 @@ for required_command in awk jq mktemp; do
   fi
 done
 
-if test "$#" -ne 2; then
-  printf 'usage: %s <flake.nix> <reviewed-manifest.json>\n' \
+if test "$#" -ne 3; then
+  printf 'usage: %s <flake.nix> <reviewed-manifest.json> <baseline-manifest.json>\n' \
     "${0##*/}" >&2
   exit 2
 fi
 
 flake=$1
 manifest=$2
+baseline_manifest=$3
 extracted_tsv=$(mktemp /tmp/sleepy-flake-inputs.XXXXXX)
 extracted_json=$(mktemp /tmp/sleepy-flake-inputs.XXXXXX.json)
 trap 'rm -f -- "$extracted_tsv" "$extracted_json"' EXIT
@@ -114,6 +115,14 @@ if ! jq -e --slurpfile actual "$extracted_json" '
   )
 ' "$manifest" >/dev/null; then
   printf 'flake input contract: component URL literals drift from reviewed manifest\n' >&2
+  exit 1
+fi
+
+if ! jq -e --slurpfile actual "$extracted_json" '
+  .root.url as $expected |
+  $actual[0]["sleepy-m1-baseline"] == $expected
+' "$baseline_manifest" >/dev/null; then
+  printf 'flake input contract: historical root URL drifts from baseline manifest\n' >&2
   exit 1
 fi
 

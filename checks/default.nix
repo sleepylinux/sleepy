@@ -1,6 +1,7 @@
 {
   componentContract,
   componentPackages,
+  baselineActivationPackage,
   homeConfiguration,
   inputs,
   nixosModule,
@@ -26,6 +27,14 @@
     nixosConfig = nixosConfiguration.config;
   };
   niriConfig = pkgs.callPackage ./niri-config.nix {};
+  bindingsContract = pkgs.callPackage ./bindings-contract.nix {
+    inherit source;
+    sessionPackage = componentPackages.sleepy-session;
+  };
+  controlCenterContract = pkgs.callPackage ./control-center-contract.nix {
+    inherit source;
+    shellPackage = componentPackages.sleepy-shell;
+  };
   publicModule = import ./public-module.nix {
     inherit nixosModule nixpkgs pkgs;
   };
@@ -35,6 +44,12 @@
   };
   updateSafety = pkgs.callPackage ./update-safety.nix {
     inherit (homeConfiguration) activationPackage;
+    inherit baselineActivationPackage;
+  };
+  updateSafetyVm = pkgs.callPackage ./update-safety-vm.nix {
+    inherit baselineActivationPackage source;
+    activationPackage = homeConfiguration.activationPackage;
+    sessionPackage = componentPackages.sleepy-session;
   };
   fallbackBranding = pkgs.callPackage ../packages/sleepy-branding {};
   fallbackShell = pkgs.callPackage ../packages/sleepy-shell {
@@ -61,6 +76,7 @@
       ${pkgs.bash}/bin/bash ${source}/checks/flake-input-contract-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/license-contract-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/update-safety-contract-test.sh
+      ${pkgs.bash}/bin/bash ${source}/checks/root-integration-contract-test.sh
       touch "$out"
     '';
   freshCloneSource = pkgs.runCommand "sleepy-fresh-clone-source-check" {} ''
@@ -103,14 +119,21 @@ in
   "the retained shell fallback must declare GPL-3.0-only";
   {
     apps-contract = appsContract;
+    bindings-contract = bindingsContract;
     component-contract = componentIntegration;
+    control-center-contract = controlCenterContract;
     nixos = nixosConfiguration.config.system.build.toplevel;
     home = homeConfiguration.activationPackage;
     niri-config = niriConfig;
     public-module = publicModule;
     session-contract = sessionContract;
     update-safety = updateSafety;
+    update-safety-vm = updateSafetyVm;
     source-contracts = sourceContracts;
     fresh-clone-source = freshCloneSource;
     inherit quickshell;
+    sleepy-artwork-assets = inputs.sleepy-artwork.checks.${pkgs.stdenv.hostPlatform.system}.assets;
+    sleepy-desktop-qml = inputs.sleepy-desktop.checks.${pkgs.stdenv.hostPlatform.system}.qml;
+    sleepy-desktop-package = inputs.sleepy-desktop.checks.${pkgs.stdenv.hostPlatform.system}.package;
+    sleepy-desktop-preview = inputs.sleepy-desktop.checks.${pkgs.stdenv.hostPlatform.system}.preview;
   }
