@@ -66,7 +66,7 @@ fi
 
 awk '/^## Desktop Milestone 2 candidate gate$/ { keep=1 } /^## Deployment boundary$/ { keep=0 } keep' \
   "$repo_root/docs/deployment.md" >"$deployment_candidate"
-awk '/^## Desktop Milestone 2 integration candidate$/ { keep=1 } /^## Desktop Milestone 1 VM deployment/ { keep=0 } keep' \
+awk '/^## Desktop Milestone 2 integration candidate$/ { keep=1 } /^## Desktop Milestone 2 VM deployment/ { keep=0 } /^## Desktop Milestone 1 VM deployment/ { keep=0 } keep' \
   "$repo_root/docs/acceptance/desktop-foundation.md" >"$acceptance_candidate"
 
 computed_lock_sha=$(sha256sum "$repo_root/flake.lock" | awk '{print $1}')

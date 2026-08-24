@@ -52,9 +52,13 @@ desktop package check       /nix/store/zbv9c9ds00a1wd5fs8cwlayqh8qq8vg0-sleepy-d
 desktop preview check       /nix/store/3z7lv9jnxrdgickzlxavrs1ah3kh8dhl-sleepy-desktop-preview-contracts
 ```
 
-Live target-VM deployment, state preservation, and visual behavior remain
-unverified at this candidate stage. From a clean checkout, reproduce the local
-and Nix gates with:
+Live target-VM deployment, reboot persistence, state preservation, and visual
+behavior passed for root commit
+`1aa712237c60494b2690eccc75aaa37a87225a03`. The permanent VM profile is
+`/nix/store/m1jxcyb71nkxl6s0m0hn2rxkrpav29rf-nixos-system-sleepy-vm-26.11.20260822.2c423e0`.
+The exact state and screenshot hashes are recorded in
+`docs/acceptance/desktop-foundation.md`. From a clean checkout, reproduce the
+local and Nix gates with:
 
 ```bash
 bash checks/source-clean-test.sh

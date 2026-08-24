@@ -2,7 +2,7 @@
 
 ## Desktop Milestone 2 integration candidate
 
-**CANDIDATE; live VM deployment and interaction acceptance are pending.** The
+**PASS — permanently deployed and reboot-verified in the `Sleepy` VM.** The
 distribution integration consumes only these reviewed component revisions:
 
 | Component | Reviewed revision |
@@ -35,16 +35,16 @@ builds produced these candidate outputs:
 | `sleepy-artwork` | `/nix/store/nh341wq9kf7bbx6nn4i2bqvcy6qyh6ar-sleepy-artwork-0.1.0` |
 | `sleepy-shell` | `/nix/store/xkplqqfncs3wnqvdb5zbr3vmc97cap9p-sleepy-shell-0.2.0` |
 | `sleepy-settings-preview` | `/nix/store/90q1fczz1r81vjimg3bp24n8r55znnsx-sleepy-settings-preview-0.2.0` |
-| NixOS toplevel | `/nix/store/3axvhxi6z4k992lj064j28d5y0x37vjd-nixos-system-sleepy-vm-26.11.20260822.2c423e0` |
+| NixOS toplevel | `/nix/store/28ci2cfi4inrg4jvr9vxqgw91vwq8x68-nixos-system-sleepy-vm-26.11.20260822.2c423e0` |
 | Standalone Home Manager activation | `/nix/store/w30qvcz43n3300n8amk7baj7hlh4acbb-home-manager-generation` |
 | Artwork assets check | `/nix/store/2a4vdax6s2467mfnyhzhkmbs5zanm04x-sleepy-artwork-contracts` |
 | Desktop QML check | `/nix/store/6pmc2c02jj0931pn7rvkyfcw01q7ykb3-sleepy-desktop-qml-contracts` |
 | Desktop package check | `/nix/store/zbv9c9ds00a1wd5fs8cwlayqh8qq8vg0-sleepy-desktop-package-contracts` |
 | Desktop preview check | `/nix/store/3z7lv9jnxrdgickzlxavrs1ah3kh8dhl-sleepy-desktop-preview-contracts` |
 
-The exact root commit is recorded after this evidence update is committed.
-Target-VM generation, state-preservation, and live visual acceptance remain
-pending and are not claimed here.
+The accepted root source commit is
+`1aa712237c60494b2690eccc75aaa37a87225a03`. Target-VM generation,
+state-preservation, live input, and visual acceptance are recorded below.
 
 Regenerate the lock only from the flake inputs and validate it; never add lock
 nodes or `narHash` values by hand:
@@ -81,6 +81,62 @@ The in-tree `packages/sleepy-shell` and `packages/sleepy-branding` remain as a
 reviewable fallback. Delete them only after the generated lock, full flake
 check, external package builds, standalone Home Manager activation, and VM
 visual/state acceptance all pass at one recorded candidate commit.
+
+## Desktop Milestone 2 VM deployment — 2026-08-24
+
+Commit `1aa712237c60494b2690eccc75aaa37a87225a03` was exported from a clean
+worktree. Its public `git archive` SHA-256 was
+`c71aabbb388116c6541dfcbb5b1951c74ee827c1df31fe83355e2c8d7ef62952`;
+the complete Git bundle SHA-256 was
+`d8c3f935e268e6797fb96398b1731a725e610ca6a7902640cf47c42bfe10ab71`.
+That deployment source commit was pushed to and remains an ancestor of the
+public branch `feat/desktop-m2-control-center`.
+
+The clean-copy `nixos/nix:2.35.2` gate ran with `/dev/kvm` and ended with
+`all checks passed!`. It included the real M1-to-M2 QEMU update test, the exact
+Niri 26.04 validator, component ownership and lock contracts, Home Manager,
+session, artwork, desktop QML/package/preview, GPL-scope, and source-clean
+checks.
+
+The VM first activated the reviewed candidate reversibly. After live visual
+inspection it was permanently switched, rebooted, and inspected again. Both
+`/run/current-system` and `/nix/var/nix/profiles/system` now resolve to:
+
+```text
+/nix/store/m1jxcyb71nkxl6s0m0hn2rxkrpav29rf-nixos-system-sleepy-vm-26.11.20260822.2c423e0
+```
+
+The reboot preserved the three user-owned artifacts byte-for-byte:
+
+| User-owned artifact | Accepted SHA-256 |
+|---|---|
+| `~/.config/sleepy/settings.json` | `d8d0c1695362be643d00b8f1b9cc1acbb3b3abb6dc2dc63fe56acb570ec217a0` |
+| `~/.local/state/sleepy/presets.json` | `07bbad19c9c777e00a67651b41865cf251ef28877eafde550664c632b9103c01` |
+| `~/.config/niri/sleepy-user-bindings.kdl` | `9aa7b9a9058b247a4e4dbefdf51849e9fc4a759f4909afe1fa789e119932698d` |
+
+After the reboot, Niri, `sleepy-session`, `sleepy-bindings-online`, and
+Quickshell were all active. Quickshell carried
+`QML_XHR_ALLOW_FILE_READ=1`; its current-boot journal contained no local-file
+XHR, `QML Image:`, or unsupported-image-format error. The active user preset
+was `Sleepy M2 Preview`, and both its contract and the generated KDL bound
+`surface.controlCenter.toggle` to `Mod+Space`. A real guest `Mod+Space` input
+opened the drawer; a second input closed it.
+
+The first untouched post-login frame contained only the lunar rail and no
+Niri hotkey overlay. The live drawer showed the glass surface, logical SVG
+icons, network/Bluetooth, volume/microphone, brightness, mute, night-light,
+power-profile, media, preset, and diagnostics widgets. Named-preset and
+keybinding pages rendered and were navigable. The power chooser opened without
+performing an action, and Cancel returned safely while the session remained
+active. Captured guest-frame hashes were:
+
+| Frame | SHA-256 |
+|---|---|
+| Clean post-reboot desktop | `ffa42ebe7488ce96b735756c83a9f556a9164bfdc20ec947028add26e7a767f0` |
+| Drawer opened by live `Mod+Space` | `3b497eba461cb5e8b4d5b271dffa4b21565d54033a176713c24e4857871b60dc` |
+| Safe power chooser | `a5bef49c0b7a1f1704973d9f5241c5acb713be9f4b224ed2fe8f7db08308e279` |
+
+No system generations were deleted and no garbage collection was run.
 
 ## Desktop Milestone 1 VM deployment — 2026-08-24
 
