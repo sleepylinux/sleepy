@@ -52,6 +52,10 @@ mit_json+='MIT"'
 
 failed=0
 while IFS= read -r -d '' relative_path; do
+  case "$relative_path" in
+    .superpowers | .superpowers/*) continue ;;
+  esac
+
   source_path="$repo_root/$relative_path"
   if test ! -f "$source_path"; then
     continue

@@ -8,12 +8,20 @@ trap 'rm -rf -- "$fixture"' EXIT
 
 test -x "$contract"
 
-mkdir -p "$fixture/docs" "$fixture/packages/fallback"
+or_later='GPL-3.0-'
+or_later+='or-later'
+
+mkdir -p \
+  "$fixture/.superpowers/sdd" \
+  "$fixture/docs" \
+  "$fixture/packages/fallback"
 cp "$repo_root/LICENSE" "$fixture/LICENSE"
 printf '%s\n' 'Sleepy Linux is licensed under GPL-3.0-only.' \
   >"$fixture/README.md"
 printf '%s\n' '{lib, ...}: {meta.license = lib.licenses.gpl3Only;}' \
   >"$fixture/packages/fallback/default.nix"
+printf '%s\n' "$or_later" \
+  >"$fixture/.superpowers/sdd/historical-review.md"
 
 bash "$contract" "$fixture"
 
@@ -32,14 +40,12 @@ assert_rejected() {
   rm -f -- "$probe"
 }
 
-or_later='GPL-3.0-'
-or_later+='or-later'
 mit_nix='lib.licenses.'
 mit_nix+='mit'
 mit_spdx='SPDX-License-Identifier: '
 mit_spdx+='MIT'
 
-assert_rejected or-later-intent docs/probe.md "$or_later"
+assert_rejected release-doc-or-later-intent docs/probe.md "$or_later"
 assert_rejected nix-mit-metadata packages/fallback/probe.nix "$mit_nix"
 assert_rejected spdx-mit-metadata docs/probe.md "$mit_spdx"
 
