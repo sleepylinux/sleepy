@@ -1,11 +1,11 @@
 {
   config,
-  lib,
   pkgs,
   ...
 }: let
   cfg = config.sleepy;
 in {
+  imports = [./niri-version.nix];
   users.users.${cfg.primaryUser} = {
     isNormalUser = true;
     extraGroups = ["wheel"];
@@ -41,10 +41,4 @@ in {
     power-profiles-daemon.enable = true;
   };
 
-  assertions = [
-    {
-      assertion = lib.versionAtLeast pkgs.niri.version "26.04";
-      message = "Sleepy requires Niri 26.04 or newer for optional includes and confirmed reloads";
-    }
-  ];
 }

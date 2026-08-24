@@ -20,6 +20,9 @@ in
   assert pkgs.lib.assertMsg
   (builtins.elem niriPackage config.systemd.packages)
   "the upstream Niri systemd package must be installed";
+  assert pkgs.lib.assertMsg
+  (pkgs.lib.versionAtLeast niriPackage.version "26.04")
+  "the configured Niri package must satisfy the M2 minimum";
     pkgs.runCommand "session-contract" {} ''
       test -x ${niriPackage}/bin/niri-session
       test -f ${niriPackage}/lib/systemd/user/niri.service

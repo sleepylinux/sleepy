@@ -7,20 +7,11 @@
   sleepyctl = "${config.sleepy.sessionPackage}/bin/sleepyctl";
   niri = "${pkgs.niri}/bin/niri";
   onlineReconcile = pkgs.writeShellScript "sleepy-bindings-online" ''
-    set -eu
-    attempt=0
-    while test "$attempt" -lt 50; do
-      NIRI_SOCKET=$(${pkgs.systemd}/bin/systemctl --user show-environment \
-        | ${pkgs.gnused}/bin/sed -n 's/^NIRI_SOCKET=//p')
-      if test -n "$NIRI_SOCKET"; then
-        export NIRI_SOCKET
-        exec ${sleepyctl} bindings reconcile --online-required
-      fi
-      attempt=$((attempt + 1))
-      ${pkgs.coreutils}/bin/sleep 0.1
-    done
-    echo "Sleepy online binding reconciliation timed out waiting for NIRI_SOCKET" >&2
-    exit 1
+    export SLEEPYCTL=${lib.escapeShellArg sleepyctl}
+    export SLEEPY_SYSTEMCTL=${lib.escapeShellArg "${pkgs.systemd}/bin/systemctl"}
+    export SLEEPY_SLEEP=${lib.escapeShellArg "${pkgs.coreutils}/bin/sleep"}
+    export SLEEPY_SOCKET_ATTEMPTS=150
+    ${builtins.readFile ./online-reconcile.sh}
   '';
 in {
   config = lib.mkIf (config.sleepy.enable && config.sleepy.sessionPackage != null) {
@@ -45,7 +36,7 @@ in {
       SLEEPY_NIRI_VALIDATOR = niri;
     };
 
-    home.activation.sleepyBindings = lib.hm.dag.entryAfter ["writeBoundary"] ''
+    home.activation.sleepyBindings = lib.hm.dag.entryAfter ["linkGeneration"] ''
       export SLEEPY_NIRI=${lib.escapeShellArg niri}
       export SLEEPY_NIRI_VALIDATOR=${lib.escapeShellArg niri}
       unset NIRI_SOCKET
@@ -103,7 +94,9 @@ in {
       Unit.Description = "Sleepy managed night-light provider";
       Service = {
         Type = "simple";
-        ExecStart = "${pkgs.gammastep}/bin/gammastep -m wayland -O 4500";
+        # Equal day/night temperatures make the neutral location irrelevant:
+        # service active means a continuously held 4500 K, stop resets it.
+        ExecStart = "${pkgs.gammastep}/bin/gammastep -m wayland -l 0:0 -t 4500:4500";
         Restart = "on-failure";
       };
     };
