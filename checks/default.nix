@@ -19,6 +19,7 @@
       inputs
       integratedHomeConfig
       pkgs;
+    inherit source;
     standaloneHomeConfig = homeConfiguration.config;
   };
   appsContract = import ./apps-contract.nix {
@@ -33,8 +34,11 @@
   };
   controlCenterContract = pkgs.callPackage ./control-center-contract.nix {
     inherit source;
+    homeConfig = homeConfiguration.config;
+    sessionSource = inputs.sleepy-session;
     shellPackage = componentPackages.sleepy-shell;
   };
+  niriVersionContract = pkgs.callPackage ./niri-version-contract.nix {inherit source;};
   publicModule = import ./public-module.nix {
     inherit nixosModule nixpkgs pkgs;
   };
@@ -70,11 +74,14 @@
     } ''
       ${pkgs.bash}/bin/bash ${source}/checks/source-clean.sh ${source}
       ${pkgs.bash}/bin/bash ${source}/checks/source-clean-test.sh
+      ${pkgs.bash}/bin/bash ${source}/checks/baseline-provenance-test.sh
+      ${pkgs.bash}/bin/bash ${source}/checks/bindings-policy-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/component-contract-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/component-lock-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/flake-shape-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/flake-input-contract-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/license-contract-test.sh
+      ${pkgs.bash}/bin/bash ${source}/checks/online-readiness-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/update-safety-contract-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/root-integration-contract-test.sh
       touch "$out"
@@ -125,6 +132,7 @@ in
     nixos = nixosConfiguration.config.system.build.toplevel;
     home = homeConfiguration.activationPackage;
     niri-config = niriConfig;
+    niri-version-contract = niriVersionContract;
     public-module = publicModule;
     session-contract = sessionContract;
     update-safety = updateSafety;

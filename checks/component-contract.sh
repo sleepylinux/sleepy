@@ -56,7 +56,9 @@ jq -e --slurpfile reviewed "$manifest" '
   .homeManager.service.remainAfterExit == true and
   .homeManager.service.execStart ==
     [(.packages["sleepy-session"].path + "/bin/sleepyctl settings show")] and
-  (.sources["sleepy-sdk"] | type == "string" and length > 0)
+  (.sources["sleepy-sdk"] | type == "string" and length > 0) and
+  (.sources.root | type == "string" and length > 0) and
+  (.validators.niri | type == "string" and startswith("/") and length > 1)
 ' "$actual" >/dev/null
 
 sdk=$(jq -er '.packages["sleepy-contract"].path' "$actual")
@@ -66,6 +68,8 @@ artwork=$(jq -er '.packages["sleepy-artwork"].path' "$actual")
 desktop=$(jq -er '.packages["sleepy-shell"].path' "$actual")
 preview=$(jq -er '.packages["sleepy-settings-preview"].path' "$actual")
 sdk_source=$(jq -er '.sources["sleepy-sdk"]' "$actual")
+root_source=$(jq -er '.sources.root' "$actual")
+niri_validator=$(jq -er '.validators.niri' "$actual")
 
 sdk_cli="$sdk/bin/sleepy-contract"
 session_cli="$session/bin/sleepyctl"
@@ -74,6 +78,7 @@ test -x "$session_cli"
 test -x "$desktop/bin/sleepy-shell"
 test -x "$preview/bin/sleepy-settings-preview"
 test -f "$unit/share/systemd/user/sleepy-session.service"
+test -x "$niri_validator"
 
 for kind in settings preset plugin; do
   for fixture in "$sdk_source/fixtures/v1/$kind"/valid*.json; do
@@ -94,18 +99,14 @@ done
 runtime=$(mktemp -d /tmp/sleepy-component-runtime.XXXXXX)
 trap 'rm -rf -- "$runtime"' EXIT
 mkdir -p "$runtime/home" "$runtime/config/niri"
-cat >"$runtime/config/niri/config.kdl" <<'EOF'
-include "bindings-core.kdl"
-include optional=true "sleepy-user-bindings.kdl"
-EOF
-printf '%s\n' 'binds { Mod+Shift+Escape { spawn "ghostty"; } }' \
-  >"$runtime/config/niri/bindings-core.kdl"
+cp "$root_source/modules/home/niri/config/"*.kdl "$runtime/config/niri/"
+test "$(find "$runtime/config/niri" -maxdepth 1 -type f -name '*.kdl' | wc -l)" -eq 6
 
 run_sleepyctl() {
   HOME="$runtime/home" \
     XDG_CONFIG_HOME="$runtime/config" \
     XDG_STATE_HOME="$runtime/state" \
-    SLEEPY_NIRI_VALIDATOR="$(command -v true)" \
+    SLEEPY_NIRI_VALIDATOR="$niri_validator" \
     "$session_cli" "$@"
 }
 
@@ -152,8 +153,8 @@ jq -e --arg id "$duplicate_id" '
   .preset.id == $id and .preset.name == "Contract renamed"
 ' "$rename_output" >/dev/null
 
-run_sleepyctl bindings initialize >"$runtime/initialize.json"
-test -f "$runtime/config/niri/sleepy-user-bindings.kdl"
+test ! -e "$runtime/config/niri/sleepy-user-bindings.kdl"
+test ! -e "$runtime/state/sleepy/bindings-transaction.json"
 
 if run_sleepyctl presets activate "$duplicate_id" \
   >"$runtime/unexpected-activate.json" 2>"$runtime/apply-required.json"; then
@@ -167,6 +168,8 @@ run_sleepyctl presets activate "$duplicate_id" --apply >"$activate_output"
 jq -e --arg id "$duplicate_id" '
   .activePresetId == $id and .status == "reloadPending"
 ' "$activate_output" >/dev/null
+test -f "$runtime/config/niri/sleepy-user-bindings.kdl"
+test -f "$runtime/state/sleepy/bindings-transaction.json"
 
 immutable_error="$runtime/immutable-error.json"
 if run_sleepyctl presets rename builtin.sleepy Nope \

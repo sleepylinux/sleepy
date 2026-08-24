@@ -4,6 +4,7 @@
   inputs,
   integratedHomeConfig,
   pkgs,
+  source,
   standaloneHomeConfig,
 }: let
   system = pkgs.stdenv.hostPlatform.system;
@@ -42,7 +43,11 @@
         execStart = sessionService.Service.ExecStart;
       };
     };
-    sources.sleepy-sdk = toString inputs.sleepy-sdk;
+    sources = {
+      root = toString source;
+      sleepy-sdk = toString inputs.sleepy-sdk;
+    };
+    validators.niri = "${pkgs.niri}/bin/niri";
   });
 in
   assert pkgs.lib.assertMsg

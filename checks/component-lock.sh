@@ -64,8 +64,7 @@ if ! jq -e \
   all(.nodes | to_entries[];
     . as $entry |
     $entry.value.locked? as $locked |
-    if ($locked.type == "github" and $locked.owner == "sleepylinux" and
-        (($currentManifest.inputs[$locked.repo] != null) or $locked.repo == "sleepy")) then
+    if ($locked.type == "github" and $locked.owner == "sleepylinux") then
       ($currentClosure | index($entry.key)) as $inCurrent |
       ($baselineClosure | index($entry.key)) as $inBaseline |
       if $inCurrent != null and $inBaseline != null then

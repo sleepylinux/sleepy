@@ -46,5 +46,7 @@ assert_rejected wrong-baseline-root '.nodes["baseline-root"].locked.rev = "00000
 assert_rejected leaked-exemption '.nodes.leaked = .nodes["baseline-sleepy-sdk"]'
 assert_rejected incompatible-shared '.nodes.root.inputs["sleepy-sdk"] = "baseline-sleepy-sdk"'
 assert_rejected missing-hash 'del(.nodes["baseline-sleepy-desktop"].locked.narHash)'
+assert_rejected unknown-current-sleepy-repository \
+  '.nodes["current-sleepy-desktop"].inputs.agent = "sleepy-agent" | .nodes["sleepy-agent"] = {locked:{type:"github",owner:"sleepylinux",repo:"sleepy-agent",rev:"0000000000000000000000000000000000000000",narHash:"sha256-agent"}}'
 
 printf 'component lock self-test: ok\n'
