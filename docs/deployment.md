@@ -44,7 +44,7 @@ sleepy-session-user-unit    /nix/store/9nlxhfr441yz5i43gf65qfqzab4s6sz5-sleepy-s
 sleepy-artwork              /nix/store/nh341wq9kf7bbx6nn4i2bqvcy6qyh6ar-sleepy-artwork-0.1.0
 sleepy-shell                /nix/store/xkplqqfncs3wnqvdb5zbr3vmc97cap9p-sleepy-shell-0.2.0
 sleepy-settings-preview     /nix/store/90q1fczz1r81vjimg3bp24n8r55znnsx-sleepy-settings-preview-0.2.0
-nixos toplevel              /nix/store/3axvhxi6z4k992lj064j28d5y0x37vjd-nixos-system-sleepy-vm-26.11.20260822.2c423e0
+nixos toplevel              /nix/store/5673q2vvkc57l0c7hja62ajzc1fz9b6i-nixos-system-sleepy-vm-26.11.20260822.2c423e0
 home-manager activation     /nix/store/w30qvcz43n3300n8amk7baj7hlh4acbb-home-manager-generation
 artwork assets check        /nix/store/2a4vdax6s2467mfnyhzhkmbs5zanm04x-sleepy-artwork-contracts
 desktop QML check           /nix/store/6pmc2c02jj0931pn7rvkyfcw01q7ykb3-sleepy-desktop-qml-contracts
@@ -54,8 +54,8 @@ desktop preview check       /nix/store/3z7lv9jnxrdgickzlxavrs1ah3kh8dhl-sleepy-d
 
 Live target-VM deployment, reboot persistence, state preservation, and visual
 behavior passed for root commit
-`1aa712237c60494b2690eccc75aaa37a87225a03`. The permanent VM profile is
-`/nix/store/m1jxcyb71nkxl6s0m0hn2rxkrpav29rf-nixos-system-sleepy-vm-26.11.20260822.2c423e0`.
+`563ae07b50ccc8c5332e1fb0352d351d46c7f615`. The permanent VM profile is
+`/nix/store/5673q2vvkc57l0c7hja62ajzc1fz9b6i-nixos-system-sleepy-vm-26.11.20260822.2c423e0`.
 The exact state and screenshot hashes are recorded in
 `docs/acceptance/desktop-foundation.md`. From a clean checkout, reproduce the
 local and Nix gates with:

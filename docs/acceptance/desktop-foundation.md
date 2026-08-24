@@ -35,7 +35,7 @@ builds produced these candidate outputs:
 | `sleepy-artwork` | `/nix/store/nh341wq9kf7bbx6nn4i2bqvcy6qyh6ar-sleepy-artwork-0.1.0` |
 | `sleepy-shell` | `/nix/store/xkplqqfncs3wnqvdb5zbr3vmc97cap9p-sleepy-shell-0.2.0` |
 | `sleepy-settings-preview` | `/nix/store/90q1fczz1r81vjimg3bp24n8r55znnsx-sleepy-settings-preview-0.2.0` |
-| NixOS toplevel | `/nix/store/28ci2cfi4inrg4jvr9vxqgw91vwq8x68-nixos-system-sleepy-vm-26.11.20260822.2c423e0` |
+| NixOS toplevel | `/nix/store/5673q2vvkc57l0c7hja62ajzc1fz9b6i-nixos-system-sleepy-vm-26.11.20260822.2c423e0` |
 | Standalone Home Manager activation | `/nix/store/w30qvcz43n3300n8amk7baj7hlh4acbb-home-manager-generation` |
 | Artwork assets check | `/nix/store/2a4vdax6s2467mfnyhzhkmbs5zanm04x-sleepy-artwork-contracts` |
 | Desktop QML check | `/nix/store/6pmc2c02jj0931pn7rvkyfcw01q7ykb3-sleepy-desktop-qml-contracts` |
@@ -43,7 +43,7 @@ builds produced these candidate outputs:
 | Desktop preview check | `/nix/store/3z7lv9jnxrdgickzlxavrs1ah3kh8dhl-sleepy-desktop-preview-contracts` |
 
 The accepted root source commit is
-`1aa712237c60494b2690eccc75aaa37a87225a03`. Target-VM generation,
+`563ae07b50ccc8c5332e1fb0352d351d46c7f615`. Target-VM generation,
 state-preservation, live input, and visual acceptance are recorded below.
 
 Regenerate the lock only from the flake inputs and validate it; never add lock
@@ -84,11 +84,9 @@ visual/state acceptance all pass at one recorded candidate commit.
 
 ## Desktop Milestone 2 VM deployment — 2026-08-24
 
-Commit `1aa712237c60494b2690eccc75aaa37a87225a03` was exported from a clean
+Commit `563ae07b50ccc8c5332e1fb0352d351d46c7f615` was exported from a clean
 worktree. Its public `git archive` SHA-256 was
-`c71aabbb388116c6541dfcbb5b1951c74ee827c1df31fe83355e2c8d7ef62952`;
-the complete Git bundle SHA-256 was
-`d8c3f935e268e6797fb96398b1731a725e610ca6a7902640cf47c42bfe10ab71`.
+`7ee7506638f52aa828ba564f027c623fb2568cf443a7f6d86a84ad4c04f5d9dd`.
 That deployment source commit was pushed to and remains an ancestor of the
 public branch `feat/desktop-m2-control-center`.
 
@@ -103,7 +101,7 @@ inspection it was permanently switched, rebooted, and inspected again. Both
 `/run/current-system` and `/nix/var/nix/profiles/system` now resolve to:
 
 ```text
-/nix/store/m1jxcyb71nkxl6s0m0hn2rxkrpav29rf-nixos-system-sleepy-vm-26.11.20260822.2c423e0
+/nix/store/5673q2vvkc57l0c7hja62ajzc1fz9b6i-nixos-system-sleepy-vm-26.11.20260822.2c423e0
 ```
 
 The reboot preserved the three user-owned artifacts byte-for-byte:
@@ -122,6 +120,13 @@ was `Sleepy M2 Preview`, and both its contract and the generated KDL bound
 `surface.controlCenter.toggle` to `Mod+Space`. A real guest `Mod+Space` input
 opened the drawer; a second input closed it.
 
+The final system adds an action-specific Polkit rule for wheel users so the
+unprivileged Control Center can use the managed power-profile adapter. After
+the permanent switch and again after the reboot, the packaged CLI completed a
+strict confirmed cycle `balanced -> power-saver -> balanced`. Mutation
+generations 2102 and 2104 matched their snapshot generations and confirmed the
+requested profile in the readback; the final profile remained `balanced`.
+
 The first untouched post-login frame contained only the lunar rail and no
 Niri hotkey overlay. The live drawer showed the glass surface, logical SVG
 icons, network/Bluetooth, volume/microphone, brightness, mute, night-light,
@@ -135,6 +140,7 @@ active. Captured guest-frame hashes were:
 | Clean post-reboot desktop | `ffa42ebe7488ce96b735756c83a9f556a9164bfdc20ec947028add26e7a767f0` |
 | Drawer opened by live `Mod+Space` | `3b497eba461cb5e8b4d5b271dffa4b21565d54033a176713c24e4857871b60dc` |
 | Safe power chooser | `a5bef49c0b7a1f1704973d9f5241c5acb713be9f4b224ed2fe8f7db08308e279` |
+| Final drawer after Polkit fix and reboot | `6426f416e88c066504457c2fa556e8133fabc0ed750a93ea677826646adb81b4` |
 
 No system generations were deleted and no garbage collection was run.
 
