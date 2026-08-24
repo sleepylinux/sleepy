@@ -6,8 +6,12 @@
   source,
 }: let
   gammastepService = homeConfig.systemd.user.services.gammastep;
+  quickshellService = homeConfig.systemd.user.services.quickshell;
   gammastepExec = pkgs.lib.concatStringsSep " " (pkgs.lib.toList gammastepService.Service.ExecStart);
 in
+  assert pkgs.lib.assertMsg
+  (builtins.elem "QML_XHR_ALLOW_FILE_READ=1" (pkgs.lib.toList quickshellService.Service.Environment))
+  "the deployed Quickshell service must permit the pinned local artwork manifest";
   assert pkgs.lib.assertMsg
   (gammastepService.Service.Type == "simple")
   "gammastep must remain a continuous service";

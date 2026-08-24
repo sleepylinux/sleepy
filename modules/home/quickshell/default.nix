@@ -25,7 +25,10 @@
         StartLimitIntervalSec = 30;
         StartLimitBurst = 3;
       };
-      Service.RestartSec = 2;
+      Service = {
+        Environment = ["QML_XHR_ALLOW_FILE_READ=1"];
+        RestartSec = 2;
+      };
     };
   };
 }
