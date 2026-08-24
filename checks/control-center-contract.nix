@@ -6,15 +6,16 @@
   source,
 }: let
   gammastepService = homeConfig.systemd.user.services.gammastep;
+  gammastepExec = pkgs.lib.concatStringsSep " " (pkgs.lib.toList gammastepService.Service.ExecStart);
 in
   assert pkgs.lib.assertMsg
   (gammastepService.Service.Type == "simple")
   "gammastep must remain a continuous service";
   assert pkgs.lib.assertMsg
-  (!(pkgs.lib.hasInfix " -O " gammastepService.Service.ExecStart))
+  (!(pkgs.lib.hasInfix " -O " gammastepExec))
   "gammastep must not use the one-shot temperature command";
   assert pkgs.lib.assertMsg
-  (pkgs.lib.hasInfix " -l " gammastepService.Service.ExecStart && pkgs.lib.hasInfix " -t " gammastepService.Service.ExecStart)
+  (pkgs.lib.hasInfix " -l " gammastepExec && pkgs.lib.hasInfix " -t " gammastepExec)
   "gammastep must have continuous location and temperature policy";
     pkgs.runCommand "sleepy-control-center-contract" {
   nativeBuildInputs = [pkgs.findutils pkgs.gnugrep];
