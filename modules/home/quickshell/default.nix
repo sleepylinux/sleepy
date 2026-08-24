@@ -20,7 +20,8 @@
       Unit = {
         PartOf = ["graphical-session.target"];
         Requisite = ["graphical-session.target"];
-        After = ["sleepy-session.service"];
+        Requires = ["sleepy-bindings-online.service"];
+        After = ["sleepy-bindings-online.service"];
         StartLimitIntervalSec = 30;
         StartLimitBurst = 3;
       };

@@ -89,17 +89,17 @@ if test ! -e "$presets"; then
   printf '%s\n' '{"presets":[{"schemaVersion":1,"id":"builtin.sleepy","name":"Sleepy","origin":"builtin","basePresetId":null,"layouts":{},"drawers":[],"keybindings":[],"pluginRequirements":[]}]}' >"$presets"
 fi
 
-case "${1:-} ${2:-}" in
-  'settings show')
+case "${1:-}:${2:-}:${4:-}" in
+  'settings:show:')
     cat "$settings"
     ;;
-  'presets list')
+  'presets:list:')
     cat "$presets"
     ;;
-  'presets duplicate')
+  presets:duplicate:*)
     printf '%s\n' '{"preset":{"id":"11111111-1111-4111-8111-111111111111","name":"Contract copy"}}'
     ;;
-  'presets rename')
+  presets:rename:*)
     if test "${3:-}" = builtin.sleepy; then
       printf '%s\n' '{"error":{"code":"immutable_preset","message":"built-in presets are immutable"}}' >&2
       exit 1
@@ -107,11 +107,20 @@ case "${1:-} ${2:-}" in
     jq -n --arg id "${3:?}" --arg name "${4:?}" \
       '{preset:{id:$id,name:$name}}'
     ;;
-  'presets activate')
+  'presets:activate:')
+    printf '%s\n' '{"error":{"code":"apply_required","message":"journaled apply is required"}}' >&2
+    exit 1
+    ;;
+  'presets:activate:--apply')
     candidate="$settings.tmp"
     jq --arg id "${3:?}" '.activePresetId = $id' "$settings" >"$candidate"
     mv "$candidate" "$settings"
-    cat "$settings"
+    jq -n --arg id "${3:?}" '{status:"reloadPending",activePresetId:$id}'
+    ;;
+  'bindings:initialize:')
+    mkdir -p "$config_root/niri"
+    printf '%s\n' 'binds {}' >"$config_root/niri/sleepy-user-bindings.kdl"
+    printf '%s\n' '{"status":"reloadPending","activePresetId":"builtin.sleepy"}'
     ;;
   *)
     printf '%s\n' '{"error":{"code":"invalid_command","message":"invalid command"}}' >&2
@@ -181,6 +190,7 @@ EOF
 
 actual="$fixture/actual.json"
 jq -n \
+  --slurpfile reviewed "$manifest" \
   --arg sdk "$sdk" \
   --arg session "$session" \
   --arg unit "$unit" \
@@ -191,12 +201,7 @@ jq -n \
   '{
     schemaVersion: 1,
     system: "x86_64-linux",
-    revisions: {
-      "sleepy-sdk": "2edbe8310eee69c40e4f75924da67a57942bd1c3",
-      "sleepy-session": "1e8863839b5c4310bce251b7e10ed15926039930",
-      "sleepy-artwork": "0dd59cc9d8a77700f7a415997e3dcde396f55e99",
-      "sleepy-desktop": "a88fba369d3926981c46b837c88483553559a60a"
-    },
+    revisions: ($reviewed[0].inputs | map_values(.revision)),
     packages: {
       "sleepy-contract": {input:"sleepy-sdk", output:"sleepy-contract", path:$sdk},
       "sleepy-session": {input:"sleepy-session", output:"sleepy-session", path:$session},

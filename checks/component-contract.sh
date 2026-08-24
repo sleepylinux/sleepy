@@ -20,25 +20,12 @@ actual=$2
 
 jq -e '
   .schemaVersion == 1 and
-  .milestone == "desktop-m1" and
-  .inputs == {
-    "sleepy-sdk": {
-      "url": "github:sleepylinux/sleepy-sdk/2edbe8310eee69c40e4f75924da67a57942bd1c3",
-      "revision": "2edbe8310eee69c40e4f75924da67a57942bd1c3"
-    },
-    "sleepy-session": {
-      "url": "github:sleepylinux/sleepy-session/1e8863839b5c4310bce251b7e10ed15926039930",
-      "revision": "1e8863839b5c4310bce251b7e10ed15926039930"
-    },
-    "sleepy-artwork": {
-      "url": "github:sleepylinux/sleepy-artwork/0dd59cc9d8a77700f7a415997e3dcde396f55e99",
-      "revision": "0dd59cc9d8a77700f7a415997e3dcde396f55e99"
-    },
-    "sleepy-desktop": {
-      "url": "github:sleepylinux/sleepy-desktop/a88fba369d3926981c46b837c88483553559a60a",
-      "revision": "a88fba369d3926981c46b837c88483553559a60a"
-    }
-  } and
+  (.milestone == "desktop-m1" or .milestone == "desktop-m2") and
+  (.inputs | keys == ["sleepy-artwork", "sleepy-desktop", "sleepy-sdk", "sleepy-session"]) and
+  all(.inputs | to_entries[];
+    (.value.revision | type == "string" and test("^[0-9a-f]{40}$")) and
+    .value.url == ("github:sleepylinux/" + .key + "/" + .value.revision)
+  ) and
   (.rootPackages | type == "object") and
   .defaultPackage == "sleepy-shell"
 ' "$manifest" >/dev/null
@@ -106,12 +93,19 @@ done
 
 runtime=$(mktemp -d /tmp/sleepy-component-runtime.XXXXXX)
 trap 'rm -rf -- "$runtime"' EXIT
-mkdir -p "$runtime/home"
+mkdir -p "$runtime/home" "$runtime/config/niri"
+cat >"$runtime/config/niri/config.kdl" <<'EOF'
+include "bindings-core.kdl"
+include optional=true "sleepy-user-bindings.kdl"
+EOF
+printf '%s\n' 'binds { Mod+Shift+Escape { spawn "ghostty"; } }' \
+  >"$runtime/config/niri/bindings-core.kdl"
 
 run_sleepyctl() {
   HOME="$runtime/home" \
     XDG_CONFIG_HOME="$runtime/config" \
     XDG_STATE_HOME="$runtime/state" \
+    SLEEPY_NIRI_VALIDATOR="$(command -v true)" \
     "$session_cli" "$@"
 }
 
@@ -158,11 +152,21 @@ jq -e --arg id "$duplicate_id" '
   .preset.id == $id and .preset.name == "Contract renamed"
 ' "$rename_output" >/dev/null
 
+run_sleepyctl bindings initialize >"$runtime/initialize.json"
+test -f "$runtime/config/niri/sleepy-user-bindings.kdl"
+
+if run_sleepyctl presets activate "$duplicate_id" \
+  >"$runtime/unexpected-activate.json" 2>"$runtime/apply-required.json"; then
+  printf 'sleepyctl retained the settings-only activation bypass\n' >&2
+  exit 1
+fi
+jq -e '.error.code == "apply_required"' "$runtime/apply-required.json" >/dev/null
+
 activate_output="$runtime/activate.json"
-run_sleepyctl presets activate "$duplicate_id" >"$activate_output"
-jq -e --arg id "$duplicate_id" '.activePresetId == $id' \
-  "$activate_output" >/dev/null
-"$sdk_cli" validate settings "$activate_output" >/dev/null
+run_sleepyctl presets activate "$duplicate_id" --apply >"$activate_output"
+jq -e --arg id "$duplicate_id" '
+  .activePresetId == $id and .status == "reloadPending"
+' "$activate_output" >/dev/null
 
 immutable_error="$runtime/immutable-error.json"
 if run_sleepyctl presets rename builtin.sleepy Nope \

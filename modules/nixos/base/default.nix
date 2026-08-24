@@ -1,5 +1,6 @@
 {
   config,
+  lib,
   pkgs,
   ...
 }: let
@@ -12,6 +13,7 @@ in {
   };
 
   networking.networkmanager.enable = true;
+  hardware.bluetooth.enable = true;
 
   i18n.defaultLocale = "en_US.UTF-8";
   services.xserver.xkb = {
@@ -36,5 +38,13 @@ in {
       pulse.enable = true;
     };
     upower.enable = true;
+    power-profiles-daemon.enable = true;
   };
+
+  assertions = [
+    {
+      assertion = lib.versionAtLeast pkgs.niri.version "26.04";
+      message = "Sleepy requires Niri 26.04 or newer for optional includes and confirmed reloads";
+    }
+  ];
 }
