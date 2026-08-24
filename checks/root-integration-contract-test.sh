@@ -26,6 +26,8 @@ test ! -e "$repo_root/modules/home/niri/config/bindings.kdl"
 assert_contains modules/home/niri/config/bindings-core.kdl 'Mod+Shift+Escape'
 assert_contains modules/home/niri/config/config.kdl 'include "bindings-core.kdl"'
 assert_contains modules/home/niri/config/config.kdl 'include optional=true "sleepy-user-bindings.kdl"'
+assert_contains modules/home/niri/config/appearance.kdl 'hotkey-overlay'
+assert_contains modules/home/niri/config/appearance.kdl 'skip-at-startup'
 assert_not_contains modules/home/niri/default.nix 'sleepy-user-bindings.kdl'
 
 assert_contains modules/home/session/default.nix 'bindings reconcile'
