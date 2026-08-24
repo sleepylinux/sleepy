@@ -8,9 +8,9 @@ integration consumes only these reviewed component revisions:
 | Component | Reviewed revision |
 |---|---|
 | `sleepy-sdk` | `2edbe8310eee69c40e4f75924da67a57942bd1c3` |
-| `sleepy-session` | `bf7a23081fe9f9bf83c9f5668e45e91faf943bd1` |
+| `sleepy-session` | `1e8863839b5c4310bce251b7e10ed15926039930` |
 | `sleepy-artwork` | `0dd59cc9d8a77700f7a415997e3dcde396f55e99` |
-| `sleepy-desktop` | `f76108510e000b0cb7a758d6992d922e24d8a802` |
+| `sleepy-desktop` | `a88fba369d3926981c46b837c88483553559a60a` |
 
 The integration source commit and generated `flake.lock` SHA-256 must be
 recorded here only after the candidate has passed the commands below. The

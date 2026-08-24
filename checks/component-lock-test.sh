@@ -65,5 +65,9 @@ assert_rejected wrong-owner \
   '.nodes["sleepy-artwork"].locked.owner = "someone-else"'
 assert_rejected missing-content-hash \
   'del(.nodes["sleepy-desktop"].locked.narHash)'
+assert_rejected legacy-nested-sdk-revision \
+  '.nodes["legacy-sdk"] = {locked:{type:"github",owner:"sleepylinux",repo:"sleepy-sdk",rev:"4c4f7989b957f41f3748ddfb092b0348e2ba9e88",narHash:"sha256-legacy-fixture"}}'
+assert_rejected legacy-nested-artwork-revision \
+  '.nodes["legacy-artwork"] = {locked:{type:"github",owner:"sleepylinux",repo:"sleepy-artwork",rev:"7785ac5dac0daa6ac1a619f1e2a9a1b1d1374da1",narHash:"sha256-legacy-fixture"}}'
 
 printf 'component lock self-test: ok\n'

@@ -20,7 +20,7 @@ cat >"$fixture/valid.nix" <<'EOF'
     };
 
     sleepy-session = {
-      url = "github:sleepylinux/sleepy-session/bf7a23081fe9f9bf83c9f5668e45e91faf943bd1";
+      url = "github:sleepylinux/sleepy-session/1e8863839b5c4310bce251b7e10ed15926039930";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -30,7 +30,7 @@ cat >"$fixture/valid.nix" <<'EOF'
     };
 
     sleepy-desktop = {
-      url = "github:sleepylinux/sleepy-desktop/f76108510e000b0cb7a758d6992d922e24d8a802";
+      url = "github:sleepylinux/sleepy-desktop/a88fba369d3926981c46b837c88483553559a60a";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -59,7 +59,7 @@ if bash "$contract" "$fixture/computed.nix" "$manifest" >/dev/null 2>&1; then
 fi
 
 sed \
-  's/bf7a23081fe9f9bf83c9f5668e45e91faf943bd1/0000000000000000000000000000000000000000/' \
+  's/1e8863839b5c4310bce251b7e10ed15926039930/0000000000000000000000000000000000000000/' \
   "$fixture/valid.nix" >"$fixture/drifted.nix"
 if bash "$contract" "$fixture/drifted.nix" "$manifest" >/dev/null 2>&1; then
   printf 'flake input contract accepted revision drift from the manifest\n' >&2
