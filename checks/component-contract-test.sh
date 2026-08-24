@@ -43,8 +43,8 @@ mkdir -p \
   "$sources/sleepy-sdk/fixtures/v1/plugin"
 mkdir -p "$validators"
 
-cat >"$validators/niri" <<'EOF'
-#!/usr/bin/env bash
+printf '#!%s\n' "$fixture_bash" >"$validators/niri"
+cat >>"$validators/niri" <<'EOF'
 set -euo pipefail
 if test "${1:-}" = --version; then
   printf 'niri 26.04\n'
@@ -150,10 +150,11 @@ chmod +x "$session/bin/sleepyctl"
 
 for fixture_executable in \
   "$sdk/bin/sleepy-contract" \
-  "$session/bin/sleepyctl"; do
+  "$session/bin/sleepyctl" \
+  "$validators/niri"; do
   IFS= read -r interpreter_line <"$fixture_executable"
   interpreter=${interpreter_line#\#!}
-  if test "$interpreter" = "$interpreter_line" || ! test -x "$interpreter"; then
+  if test "$interpreter" != "$fixture_bash" || ! test -x "$interpreter"; then
     printf 'component contract fixture has no executable interpreter: %s\n' \
       "$fixture_executable" >&2
     exit 1
