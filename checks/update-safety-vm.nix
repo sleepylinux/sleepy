@@ -14,6 +14,7 @@ pkgs.testers.runNixOSTest {
       home = "/home/lazy";
     };
     environment.systemPackages = [pkgs.jq pkgs.niri sessionPackage];
+    virtualisation.additionalPaths = [baselineActivationPackage activationPackage];
   };
 
   testScript = ''
@@ -24,10 +25,12 @@ pkgs.testers.runNixOSTest {
 
     env = "HOME=/home/lazy XDG_CONFIG_HOME=/home/lazy/.config XDG_STATE_HOME=/home/lazy/.local/state SLEEPY_NIRI_VALIDATOR=${pkgs.niri}/bin/niri"
     state_manifest = "(find /home/lazy/.config/sleepy /home/lazy/.local/state/sleepy -xdev -type f -print0 2>/dev/null; find /home/lazy/.config/niri -maxdepth 1 -type f \\( -name 'sleepy-user-bindings.kdl' -o -name '.sleepy-user-bindings.kdl.*' \\) -print0 2>/dev/null) | sort -z | xargs -0 -r sha256sum"
+    hm_bootstrap = "install -d -o lazy -g users -m 700 /home/lazy/.local /home/lazy/.local/state /home/lazy/.local/share /home/lazy/.local/state/home-manager /home/lazy/.local/state/nix && install -d -o lazy -g users -m 700 /home/lazy/.local/state/home-manager/gcroots /home/lazy/.local/state/nix/profiles"
 
     # Historical activation is the first writer in this isolated VM home.
     machine.succeed("test ! -e /home/lazy/.config/sleepy/settings.json")
     machine.succeed("test ! -e /home/lazy/.local/state/sleepy/presets.json")
+    machine.succeed(hm_bootstrap)
     machine.succeed("sudo -u lazy HOME=/home/lazy ${baselineActivationPackage}/activate")
     machine.succeed("test ! -e /home/lazy/.config/sleepy/settings.json")
     machine.succeed("test ! -e /home/lazy/.local/state/sleepy/presets.json")
@@ -64,6 +67,7 @@ pkgs.testers.runNixOSTest {
     machine.succeed("chown lazy:users /home/lazy")
     machine.succeed("test -z \"$(find /home/lazy -mindepth 1 -print -quit)\"")
     machine.succeed("test ! -e /home/lazy/.local/state/home-manager")
+    machine.succeed(hm_bootstrap)
     machine.succeed("sudo -u lazy HOME=/home/lazy ${activationPackage}/activate")
     machine.succeed("test -s /home/lazy/.config/niri/sleepy-user-bindings.kdl")
     machine.succeed("test ! -e /home/lazy/.local/state/home-manager/old-home-manager-generation")
@@ -75,6 +79,7 @@ pkgs.testers.runNixOSTest {
     # merely omitting its output. Static candidate links remain untouched.
     machine.succeed("find /home/lazy -mindepth 1 -delete")
     machine.succeed("chown lazy:users /home/lazy")
+    machine.succeed(hm_bootstrap)
     machine.succeed("sudo -u lazy HOME=/home/lazy ${activationPackage}/activate")
     machine.succeed("rm -rf /home/lazy/.config/sleepy /home/lazy/.local/state/sleepy")
     machine.succeed("find /home/lazy/.config/niri -maxdepth 1 -type f \\( -name 'sleepy-user-bindings.kdl' -o -name '.sleepy-user-bindings.kdl.*' \\) -delete")

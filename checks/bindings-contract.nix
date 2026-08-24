@@ -31,8 +31,8 @@ pkgs.runCommand "sleepy-bindings-contract" {
     'focus-column-right;' \
     'focus-window-up;' \
     'focus-window-down;' \
-    'focus-workspace-previous;' \
-    'focus-workspace-next;' \
+    'focus-workspace-up;' \
+    'focus-workspace-down;' \
     '"toggleControlCenter"' \
     '"requestSessionAction" "lock"' \
     '"requestSessionAction" "logout"' \

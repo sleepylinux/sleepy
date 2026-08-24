@@ -1,20 +1,19 @@
 # Deploying the Sleepy desktop
 
-## Desktop Milestone 1 candidate gate
+## Desktop Milestone 2 candidate gate
 
 The external desktop slice is not deployable until live Wayland/VM acceptance
 is recorded. Its reviewed immutable inputs are:
 
 ```text
-sleepy-sdk      2edbe8310eee69c40e4f75924da67a57942bd1c3
-sleepy-session  1e8863839b5c4310bce251b7e10ed15926039930
-sleepy-artwork  0dd59cc9d8a77700f7a415997e3dcde396f55e99
-sleepy-desktop  a88fba369d3926981c46b837c88483553559a60a
+sleepy-sdk      5dc792faea9d743fabbb576ae1b25ed7e1f729f9
+sleepy-session  6f1857bd786323ad89ac91c250a8485f944eb39c
+sleepy-artwork  108487617077254edb4e3a3b21047f5621eef151
+sleepy-desktop  b04cdee46ed67490c6af62f9742d4426fb10ef4b
 ```
 
-The generated lock is committed by
-`2e1346e5b806a8ff3153d1f070f3675100980dc3` and has SHA-256
-`64f819a051bdeb0be8e44b146316d8317b4a8e10ca700148ba2e93ff7b770bca`.
+The generated candidate lock has SHA-256
+`bb68b48718b7144f4ae1780f937031af0f3eeb30aa4ad8d24c1543f29da622b0`.
 Reproduce it only from the flake inputs and verify that Nix selected those exact
 revisions. Do not copy or hand-edit lock nodes from another checkout:
 
@@ -26,19 +25,17 @@ git diff -- flake.lock
 sha256sum flake.lock
 ```
 
-A clean-copy Docker run with `nixos/nix:latest` and a persistent cache executed
+A final clean-copy Docker run with `nixos/nix:2.35.2` and a persistent cache must execute
 
 ```bash
 nix --extra-experimental-features 'nix-command flakes' \
   flake check --print-build-logs
 ```
 
-and exited 0 with final output `all checks passed!`. It built the SDK/session
-tests, standalone Home Manager activation, update-safety and component
-contracts, Quickshell checks, and the NixOS system closure. This proves the Nix
-evaluation/build gate, not live Wayland/VM boot, state preservation, or visual
-behavior; those remain unverified. From a clean checkout, reproduce the local
-and Nix gates with:
+and exit 0 with final output `all checks passed!`. Record that evidence only
+after it completes. Live Wayland/VM boot, state preservation, and visual
+behavior remain unverified at this candidate stage. From a clean checkout,
+reproduce the local and Nix gates with:
 
 ```bash
 bash checks/source-clean-test.sh

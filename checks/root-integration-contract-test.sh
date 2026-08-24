@@ -51,9 +51,17 @@ assert_contains checks/default.nix 'sleepy-artwork-assets'
 assert_contains checks/default.nix 'sleepy-desktop-qml'
 assert_contains checks/default.nix 'sleepy-desktop-package'
 assert_contains checks/default.nix 'sleepy-desktop-preview'
+assert_contains checks/bindings-contract.nix "'focus-workspace-down;'"
+assert_contains checks/bindings-contract.nix "'focus-workspace-up;'"
+assert_not_contains checks/bindings-contract.nix "'focus-workspace-next;'"
+assert_not_contains checks/bindings-contract.nix "'focus-workspace-previous;'"
 assert_contains checks/control-center-contract.nix 'concatStringsSep " " (pkgs.lib.toList gammastepService.Service.ExecStart)'
 assert_not_contains checks/update-safety-vm.nix 'rm -f /home/lazy/.config/niri/*.kdl'
 assert_contains checks/update-safety-vm.nix 'test -L /home/lazy/.config/niri/config.kdl'
 assert_contains checks/update-safety-vm.nix 'SLEEPY_NIRI_VALIDATOR=/bin/false'
+assert_contains checks/update-safety-vm.nix 'install -d -o lazy -g users -m 700 /home/lazy/.local/state/home-manager/gcroots'
+assert_contains checks/update-safety-vm.nix '/home/lazy/.local/state/nix/profiles'
+assert_contains checks/update-safety-vm.nix '/home/lazy/.local/share'
+assert_contains checks/update-safety-vm.nix 'virtualisation.additionalPaths = [baselineActivationPackage activationPackage]'
 
 printf 'root integration contract self-test: ok\n'

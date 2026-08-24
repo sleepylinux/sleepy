@@ -1,35 +1,31 @@
 # Sleepy desktop foundation acceptance
 
-## Desktop Milestone 1 integration candidate
+## Desktop Milestone 2 integration candidate
 
-**DEPLOYED; final drawer/preview interaction acceptance remains blocked.** The
+**CANDIDATE; live VM deployment and interaction acceptance are pending.** The
 distribution integration consumes only these reviewed component revisions:
 
 | Component | Reviewed revision |
 |---|---|
-| `sleepy-sdk` | `2edbe8310eee69c40e4f75924da67a57942bd1c3` |
-| `sleepy-session` | `1e8863839b5c4310bce251b7e10ed15926039930` |
-| `sleepy-artwork` | `0dd59cc9d8a77700f7a415997e3dcde396f55e99` |
-| `sleepy-desktop` | `a88fba369d3926981c46b837c88483553559a60a` |
+| `sleepy-sdk` | `5dc792faea9d743fabbb576ae1b25ed7e1f729f9` |
+| `sleepy-session` | `6f1857bd786323ad89ac91c250a8485f944eb39c` |
+| `sleepy-artwork` | `108487617077254edb4e3a3b21047f5621eef151` |
+| `sleepy-desktop` | `b04cdee46ed67490c6af62f9742d4426fb10ef4b` |
 
 The generated `flake.lock` has SHA-256
-`64f819a051bdeb0be8e44b146316d8317b4a8e10ca700148ba2e93ff7b770bca`,
+`bb68b48718b7144f4ae1780f937031af0f3eeb30aa4ad8d24c1543f29da622b0`,
 contains the four component inputs above, and passes the executable component
-lock contract. A clean-copy Docker run using `nixos/nix:latest` and a persistent
-cache executed:
+lock contract. The final clean-copy gate uses `nixos/nix:2.35.2` with a
+persistent cache and must execute:
 
 ```bash
 nix --extra-experimental-features 'nix-command flakes' \
   flake check --print-build-logs
 ```
 
-It exited 0 with final output `all checks passed!` after building the SDK and
-session tests, standalone Home Manager activation, update-safety and component
-contracts, Quickshell checks, and the NixOS system closure. This records the
-full Nix evaluation/build gate as PASS. The 2026-08-24 VM deployment below
-closes boot, activation, state-preservation, service, and rail-rendering gates.
-Live drawer activation and settings-preview interaction remain unverified and
-are not claimed here.
+The final M2 clean-copy run must exit 0 before VM deployment. Its result, exact
+root commit, toplevel, generation, state-preservation evidence, and live visual
+acceptance are recorded only after the gates complete; none are claimed yet.
 
 Regenerate the lock only from the flake inputs and validate it; never add lock
 nodes or `narHash` values by hand:
