@@ -7,13 +7,13 @@ is recorded. Its reviewed immutable inputs are:
 
 ```text
 sleepy-sdk      5dc792faea9d743fabbb576ae1b25ed7e1f729f9
-sleepy-session  6f1857bd786323ad89ac91c250a8485f944eb39c
+sleepy-session  b88f5b993ae449acf176d8fc6f0d6542776d06bd
 sleepy-artwork  108487617077254edb4e3a3b21047f5621eef151
-sleepy-desktop  a93e59a60dc887efcb3da0bc4442869eb8713a18
+sleepy-desktop  0b612df154e0606ced56020a56a54fa1f42dd3db
 ```
 
 The generated candidate lock has SHA-256
-`bb68b48718b7144f4ae1780f937031af0f3eeb30aa4ad8d24c1543f29da622b0`.
+`37077bba388939aa3b848cd53031f92c5ad07d5b13ac7314e4462985603bab82`.
 Reproduce it only from the flake inputs and verify that Nix selected those exact
 revisions. Do not copy or hand-edit lock nodes from another checkout:
 
@@ -25,17 +25,36 @@ git diff -- flake.lock
 sha256sum flake.lock
 ```
 
-A final clean-copy Docker run with `nixos/nix:2.35.2` and a persistent cache must execute
+A clean-copy Docker run with `nixos/nix:2.35.2`, the persistent
+`sleepy-nix-cache` volume, and `/dev/kvm` passed on 2026-08-24. It executed
 
 ```bash
 nix --extra-experimental-features 'nix-command flakes' \
-  flake check --print-build-logs
+  flake check -L --no-write-lock-file
 ```
 
-and exit 0 with final output `all checks passed!`. Record that evidence only
-after it completes. Live Wayland/VM boot, state preservation, and visual
-behavior remain unverified at this candidate stage. From a clean checkout,
-reproduce the local and Nix gates with:
+and exited 0 with final output `all checks passed!`. The included
+`sleepy-m1-to-m2-update-safety` QEMU test ran to completion in 17.73 seconds.
+The explicit builds produced:
+
+```text
+sleepy-contract             /nix/store/1hma6bvlaj9i4sf4dj25kp1hbkxd1mhv-sleepy-sdk-0.1.0
+sleepy-session              /nix/store/s05bf253170i8ahz2w2wa5dy9lncnbwh-sleepy-session-0.1.0
+sleepy-session-user-unit    /nix/store/9nlxhfr441yz5i43gf65qfqzab4s6sz5-sleepy-session.service
+sleepy-artwork              /nix/store/nh341wq9kf7bbx6nn4i2bqvcy6qyh6ar-sleepy-artwork-0.1.0
+sleepy-shell                /nix/store/xkplqqfncs3wnqvdb5zbr3vmc97cap9p-sleepy-shell-0.2.0
+sleepy-settings-preview     /nix/store/90q1fczz1r81vjimg3bp24n8r55znnsx-sleepy-settings-preview-0.2.0
+nixos toplevel              /nix/store/3axvhxi6z4k992lj064j28d5y0x37vjd-nixos-system-sleepy-vm-26.11.20260822.2c423e0
+home-manager activation     /nix/store/w30qvcz43n3300n8amk7baj7hlh4acbb-home-manager-generation
+artwork assets check        /nix/store/2a4vdax6s2467mfnyhzhkmbs5zanm04x-sleepy-artwork-contracts
+desktop QML check           /nix/store/6pmc2c02jj0931pn7rvkyfcw01q7ykb3-sleepy-desktop-qml-contracts
+desktop package check       /nix/store/zbv9c9ds00a1wd5fs8cwlayqh8qq8vg0-sleepy-desktop-package-contracts
+desktop preview check       /nix/store/3z7lv9jnxrdgickzlxavrs1ah3kh8dhl-sleepy-desktop-preview-contracts
+```
+
+Live target-VM deployment, state preservation, and visual behavior remain
+unverified at this candidate stage. From a clean checkout, reproduce the local
+and Nix gates with:
 
 ```bash
 bash checks/source-clean-test.sh

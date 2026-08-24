@@ -8,24 +8,43 @@ distribution integration consumes only these reviewed component revisions:
 | Component | Reviewed revision |
 |---|---|
 | `sleepy-sdk` | `5dc792faea9d743fabbb576ae1b25ed7e1f729f9` |
-| `sleepy-session` | `6f1857bd786323ad89ac91c250a8485f944eb39c` |
+| `sleepy-session` | `b88f5b993ae449acf176d8fc6f0d6542776d06bd` |
 | `sleepy-artwork` | `108487617077254edb4e3a3b21047f5621eef151` |
-| `sleepy-desktop` | `a93e59a60dc887efcb3da0bc4442869eb8713a18` |
+| `sleepy-desktop` | `0b612df154e0606ced56020a56a54fa1f42dd3db` |
 
 The generated `flake.lock` has SHA-256
-`bb68b48718b7144f4ae1780f937031af0f3eeb30aa4ad8d24c1543f29da622b0`,
+`37077bba388939aa3b848cd53031f92c5ad07d5b13ac7314e4462985603bab82`,
 contains the four component inputs above, and passes the executable component
 lock contract. The final clean-copy gate uses `nixos/nix:2.35.2` with a
-persistent cache and must execute:
+persistent cache and `/dev/kvm`; on 2026-08-24 it executed:
 
 ```bash
 nix --extra-experimental-features 'nix-command flakes' \
-  flake check --print-build-logs
+  flake check -L --no-write-lock-file
 ```
 
-The final M2 clean-copy run must exit 0 before VM deployment. Its result, exact
-root commit, toplevel, generation, state-preservation evidence, and live visual
-acceptance are recorded only after the gates complete; none are claimed yet.
+The clean-copy run exited 0 with final output `all checks passed!`; its
+`sleepy-m1-to-m2-update-safety` QEMU test completed in 17.73 seconds. Explicit
+builds produced these candidate outputs:
+
+| Output | Store path |
+|---|---|
+| `sleepy-contract` | `/nix/store/1hma6bvlaj9i4sf4dj25kp1hbkxd1mhv-sleepy-sdk-0.1.0` |
+| `sleepy-session` | `/nix/store/s05bf253170i8ahz2w2wa5dy9lncnbwh-sleepy-session-0.1.0` |
+| `sleepy-session-user-unit` | `/nix/store/9nlxhfr441yz5i43gf65qfqzab4s6sz5-sleepy-session.service` |
+| `sleepy-artwork` | `/nix/store/nh341wq9kf7bbx6nn4i2bqvcy6qyh6ar-sleepy-artwork-0.1.0` |
+| `sleepy-shell` | `/nix/store/xkplqqfncs3wnqvdb5zbr3vmc97cap9p-sleepy-shell-0.2.0` |
+| `sleepy-settings-preview` | `/nix/store/90q1fczz1r81vjimg3bp24n8r55znnsx-sleepy-settings-preview-0.2.0` |
+| NixOS toplevel | `/nix/store/3axvhxi6z4k992lj064j28d5y0x37vjd-nixos-system-sleepy-vm-26.11.20260822.2c423e0` |
+| Standalone Home Manager activation | `/nix/store/w30qvcz43n3300n8amk7baj7hlh4acbb-home-manager-generation` |
+| Artwork assets check | `/nix/store/2a4vdax6s2467mfnyhzhkmbs5zanm04x-sleepy-artwork-contracts` |
+| Desktop QML check | `/nix/store/6pmc2c02jj0931pn7rvkyfcw01q7ykb3-sleepy-desktop-qml-contracts` |
+| Desktop package check | `/nix/store/zbv9c9ds00a1wd5fs8cwlayqh8qq8vg0-sleepy-desktop-package-contracts` |
+| Desktop preview check | `/nix/store/3z7lv9jnxrdgickzlxavrs1ah3kh8dhl-sleepy-desktop-preview-contracts` |
+
+The exact root commit is recorded after this evidence update is committed.
+Target-VM generation, state-preservation, and live visual acceptance remain
+pending and are not claimed here.
 
 Regenerate the lock only from the flake inputs and validate it; never add lock
 nodes or `narHash` values by hand:

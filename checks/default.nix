@@ -78,6 +78,7 @@
       ${pkgs.bash}/bin/bash ${source}/checks/bindings-policy-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/component-contract-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/component-lock-test.sh
+      ${pkgs.bash}/bin/bash ${source}/checks/current-component-pins-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/flake-shape-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/flake-input-contract-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/license-contract-test.sh
