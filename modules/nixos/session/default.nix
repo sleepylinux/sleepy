@@ -7,8 +7,10 @@
   };
 
   environment.systemPackages = with pkgs; [
+    grim
     libnotify
     networkmanagerapplet
+    quickshell
     wl-clipboard
     xwayland-satellite
   ];

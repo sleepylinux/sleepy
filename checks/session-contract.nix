@@ -12,6 +12,12 @@ in
   (builtins.elem pkgs.xwayland-satellite config.environment.systemPackages)
   "xwayland-satellite must be available in the Niri session PATH";
   assert pkgs.lib.assertMsg
+  (builtins.elem pkgs.quickshell config.environment.systemPackages)
+  "Quickshell must belong to the candidate system closure for deployment attestation";
+  assert pkgs.lib.assertMsg
+  (builtins.elem pkgs.grim config.environment.systemPackages)
+  "grim must belong to the candidate system closure for deployment screenshots";
+  assert pkgs.lib.assertMsg
   (!(config.systemd.user.services ? xwayland-satellite))
   "Niri owns Xwayland Satellite; Sleepy must not define a user service";
   assert pkgs.lib.assertMsg
@@ -27,5 +33,12 @@ in
       test -x ${niriPackage}/bin/niri-session
       test -f ${niriPackage}/lib/systemd/user/niri.service
       test -f ${niriPackage}/share/wayland-sessions/niri.desktop
+      test -L ${config.system.build.toplevel}/sw
+      test -x ${config.system.build.toplevel}/sw/bin/quickshell
+      test -x ${config.system.build.toplevel}/sw/bin/grim
+      test "$(readlink -f ${config.system.build.toplevel}/sw/bin/quickshell)" = \
+        ${pkgs.quickshell}/bin/quickshell
+      test "$(readlink -f ${config.system.build.toplevel}/sw/bin/grim)" = \
+        ${pkgs.grim}/bin/grim
       touch "$out"
     ''
