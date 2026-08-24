@@ -46,7 +46,7 @@ if uniq -d "$fixture/chords" | grep . >/dev/null; then
 fi
 
 if grep -E \
-  'spawn[[:space:]]+"(systemctl|reboot|poweroff|shutdown|niri)"([^;]*"(reboot|poweroff|power-off|quit)")?|\{[[:space:]]*quit;' \
+  'spawn[[:space:]]+"([^"]*/)?(reboot|poweroff|shutdown)"|spawn[[:space:]]+"([^"]*/)?systemctl"[^;]*"(reboot|poweroff|power-off)"|spawn[[:space:]]+"([^"]*/)?niri"[^;]*"quit"|\{[[:space:]]*quit;' \
   "$generated" >/dev/null; then
   printf 'bindings policy: generated bindings contain a direct destructive action\n' >&2
   exit 1

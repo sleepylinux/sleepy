@@ -32,22 +32,29 @@ pkgs.testers.runNixOSTest {
     machine.succeed("test ! -e /home/lazy/.config/sleepy/settings.json")
     machine.succeed("test ! -e /home/lazy/.local/state/sleepy/presets.json")
     machine.succeed("test ! -e /home/lazy/.config/niri/sleepy-user-bindings.kdl")
+    for static_name in ["config", "input", "appearance", "bindings", "rules", "startup"]:
+        machine.succeed(f"test -L /home/lazy/.config/niri/{static_name}.kdl")
 
-    # Seed user state only after the exact old activation. The first binding
-    # transaction is activation --apply against the complete candidate tree.
-    machine.succeed("rm -f /home/lazy/.config/niri/*.kdl")
-    machine.succeed("cp ${source}/modules/home/niri/config/*.kdl /home/lazy/.config/niri/")
-    machine.succeed("chown -R lazy:users /home/lazy/.config /home/lazy/.local")
+    # Seed only user-owned files. Historical Home Manager links remain intact
+    # until the candidate generation legitimately replaces them.
     machine.succeed(f"sudo -u lazy {env} ${sessionPackage}/bin/sleepyctl settings show >/dev/null")
     duplicate = machine.succeed(f"sudo -u lazy {env} ${sessionPackage}/bin/sleepyctl presets duplicate builtin.sleepy 'VM preserved preset'")
     preset_id = json.loads(duplicate)["preset"]["id"]
-    machine.succeed(f"sudo -u lazy {env} ${sessionPackage}/bin/sleepyctl presets activate {preset_id} --apply >/dev/null")
+    machine.succeed(f"${pkgs.jq}/bin/jq --arg id {preset_id} '.activePresetId = $id' /home/lazy/.config/sleepy/settings.json > /tmp/sleepy-settings.json && install -o lazy -g users -m 600 /tmp/sleepy-settings.json /home/lazy/.config/sleepy/settings.json")
+    machine.succeed(f"sudo -u lazy {env} ${sessionPackage}/bin/sleepyctl bindings render > /tmp/sleepy-render.json")
+    machine.succeed("${pkgs.jq}/bin/jq -j .kdl /tmp/sleepy-render.json > /tmp/sleepy-user-bindings.kdl && install -o lazy -g users -m 600 /tmp/sleepy-user-bindings.kdl /home/lazy/.config/niri/sleepy-user-bindings.kdl")
+    machine.succeed("test ! -e /home/lazy/.local/state/sleepy/bindings-transaction.json")
 
     before = machine.succeed(state_manifest)
     machine.succeed("sudo -u lazy HOME=/home/lazy ${baselineActivationPackage}/activate")
     assert machine.succeed(state_manifest) == before
+    for static_name in ["config", "input", "appearance", "bindings", "rules", "startup"]:
+        machine.succeed(f"test -L /home/lazy/.config/niri/{static_name}.kdl")
     machine.succeed("sudo -u lazy HOME=/home/lazy ${activationPackage}/activate")
     assert machine.succeed(state_manifest) == before
+    for static_name in ["config", "input", "appearance", "bindings-core", "rules", "startup"]:
+        machine.succeed(f"test -L /home/lazy/.config/niri/{static_name}.kdl")
+    machine.succeed("test ! -e /home/lazy/.config/niri/bindings.kdl")
     machine.succeed(f"sudo -u lazy {env} ${sessionPackage}/bin/sleepyctl bindings reconcile >/dev/null")
     assert machine.succeed(state_manifest) == before
 
@@ -64,13 +71,16 @@ pkgs.testers.runNixOSTest {
     machine.succeed("grep -F Mod+Shift+Escape /home/lazy/.config/niri/bindings-core.kdl")
     machine.succeed("grep -F toggleControlCenter /home/lazy/.config/niri/sleepy-user-bindings.kdl")
 
-    # Simulate initializer failure in another fully reset home. Optional user
-    # bindings plus immutable recovery must still make the root config valid.
+    # Run a genuinely failing initializer in another reset home, rather than
+    # merely omitting its output. Static candidate links remain untouched.
     machine.succeed("find /home/lazy -mindepth 1 -delete")
-    machine.succeed("install -d -o lazy -g users /home/lazy/.config/niri")
-    machine.succeed("cp ${source}/modules/home/niri/config/*.kdl /home/lazy/.config/niri/")
-    machine.succeed("rm -f /home/lazy/.config/niri/sleepy-user-bindings.kdl")
-    machine.succeed("test ! -e /home/lazy/.config/sleepy && test ! -e /home/lazy/.local/state/sleepy")
+    machine.succeed("chown lazy:users /home/lazy")
+    machine.succeed("sudo -u lazy HOME=/home/lazy ${activationPackage}/activate")
+    machine.succeed("rm -rf /home/lazy/.config/sleepy /home/lazy/.local/state/sleepy")
+    machine.succeed("find /home/lazy/.config/niri -maxdepth 1 -type f \\( -name 'sleepy-user-bindings.kdl' -o -name '.sleepy-user-bindings.kdl.*' \\) -delete")
+    machine.fail(f"sudo -u lazy {env} SLEEPY_NIRI_VALIDATOR=/bin/false ${sessionPackage}/bin/sleepyctl bindings initialize")
+    machine.succeed("test ! -e /home/lazy/.config/niri/sleepy-user-bindings.kdl")
+    machine.succeed("test -L /home/lazy/.config/niri/config.kdl")
     machine.succeed("grep -F Mod+Shift+Escape /home/lazy/.config/niri/bindings-core.kdl")
     machine.succeed("${pkgs.niri}/bin/niri validate --config /home/lazy/.config/niri/config.kdl")
   '';

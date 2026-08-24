@@ -5,50 +5,99 @@ repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 script="$repo_root/modules/home/session/online-reconcile.sh"
 fixture=$(mktemp -d /tmp/sleepy-online-readiness.XXXXXX)
 trap 'rm -rf -- "$fixture"' EXIT
+socket="$fixture/niri.sock"
 
-cat >"$fixture/systemctl-empty" <<'EOF'
+cat >"$fixture/systemctl" <<'EOF'
 #!/usr/bin/env bash
 test "$*" = '--user show-environment'
-printf 'WAYLAND_DISPLAY=wayland-1\n'
+printf 'NIRI_SOCKET=%s\n' "${SOCKET_PATH:?}"
 EOF
-cat >"$fixture/systemctl-ready" <<'EOF'
+cat >"$fixture/socket-ready" <<'EOF'
 #!/usr/bin/env bash
-test "$*" = '--user show-environment'
-printf 'NIRI_SOCKET=/run/user/1000/niri.sock\n'
+test "$1" = "${SOCKET_PATH:?}"
+test -f "${READY_MARKER:?}"
 EOF
 cat >"$fixture/sleep" <<'EOF'
 #!/usr/bin/env bash
 printf '.\n' >>"${SLEEP_MARKER:?}"
+if test "${CREATE_SOCKET:-0}" = 1 && ! test -f "${READY_MARKER:?}"; then
+  : >"$READY_MARKER"
+fi
 EOF
 cat >"$fixture/sleepyctl" <<'EOF'
 #!/usr/bin/env bash
 test "$*" = 'bindings reconcile --online-required'
-test "${NIRI_SOCKET:-}" = '/run/user/1000/niri.sock'
-printf 'called\n' >"${SLEEPYCTL_MARKER:?}"
-EOF
-chmod +x "$fixture"/*
-
-if SLEEPYCTL="$fixture/sleepyctl" \
-  SLEEPY_SYSTEMCTL="$fixture/systemctl-empty" \
-  SLEEPY_SLEEP="$fixture/sleep" \
-  SLEEPY_SOCKET_ATTEMPTS=3 \
-  SLEEP_MARKER="$fixture/sleeps" \
-  SLEEPYCTL_MARKER="$fixture/called" \
-  bash "$script" 2>"$fixture/timeout-error"; then
-  printf 'online readiness accepted a permanently missing NIRI_SOCKET\n' >&2
+"${SLEEPY_SOCKET_READY_CHECK:?}" "${NIRI_SOCKET:?}"
+count=0
+test ! -f "${CALL_COUNT:?}" || count=$(cat "$CALL_COUNT")
+count=$((count + 1))
+printf '%s\n' "$count" >"$CALL_COUNT"
+if test "$count" -lt "${SUCCEED_ON_CALL:-1}"; then
+  printf '%s\n' '{"error":{"code":"niri_unavailable","message":"socket is stale"}}' >&2
   exit 1
 fi
-test "$(wc -l <"$fixture/sleeps")" -eq 3
-grep -F 'timed out waiting for NIRI_SOCKET' "$fixture/timeout-error"
-test ! -e "$fixture/called"
+printf '%s\n' '{"status":"committed"}'
+EOF
+chmod +x "$fixture/systemctl" "$fixture/socket-ready" "$fixture/sleep" "$fixture/sleepyctl"
 
-SLEEPYCTL="$fixture/sleepyctl" \
-  SLEEPY_SYSTEMCTL="$fixture/systemctl-ready" \
+# A non-empty but stale manager environment is not readiness. No CLI call is
+# made, the loop is bounded, and failure remains a typed document.
+if SLEEPYCTL="$fixture/sleepyctl" \
+  SLEEPY_SYSTEMCTL="$fixture/systemctl" \
   SLEEPY_SLEEP="$fixture/sleep" \
+  SLEEPY_SOCKET_READY_CHECK="$fixture/socket-ready" \
   SLEEPY_SOCKET_ATTEMPTS=3 \
-  SLEEP_MARKER="$fixture/sleeps" \
-  SLEEPYCTL_MARKER="$fixture/called" \
-  bash "$script"
-test -f "$fixture/called"
+  SOCKET_PATH="$socket" \
+  READY_MARKER="$fixture/ready" \
+  SLEEP_MARKER="$fixture/stale-sleeps" \
+  CALL_COUNT="$fixture/stale-calls" \
+  bash "$script" 2>"$fixture/stale-error"; then
+  printf 'online readiness accepted a stale NIRI_SOCKET\n' >&2
+  exit 1
+fi
+test "$(wc -l <"$fixture/stale-sleeps")" -eq 3
+test ! -e "$fixture/stale-calls"
+grep -F '"code":"niri_unavailable"' "$fixture/stale-error"
+
+# A usable socket whose online reconcile remains unavailable is retried to the
+# same bound. The final typed CLI error is preserved and the service fails, so
+# Quickshell's Requires dependency remains blocked.
+: >"$fixture/ready"
+if SOCKET_PATH="$socket" \
+  SUCCEED_ON_CALL=99 \
+  SLEEPYCTL="$fixture/sleepyctl" \
+  SLEEPY_SYSTEMCTL="$fixture/systemctl" \
+  SLEEPY_SLEEP="$fixture/sleep" \
+  SLEEPY_SOCKET_READY_CHECK="$fixture/socket-ready" \
+  SLEEPY_SOCKET_ATTEMPTS=2 \
+  READY_MARKER="$fixture/ready" \
+  SLEEP_MARKER="$fixture/failing-sleeps" \
+  CALL_COUNT="$fixture/failing-calls" \
+  bash "$script" 2>"$fixture/failing-error"; then
+  printf 'online readiness accepted repeated typed CLI failures\n' >&2
+  exit 1
+fi
+test "$(cat "$fixture/failing-calls")" -eq 2
+test "$(wc -l <"$fixture/failing-sleeps")" -eq 2
+grep -F '"code":"niri_unavailable"' "$fixture/failing-error"
+rm -f "$fixture/ready"
+
+# The socket appears after the stale snapshot. The first realistic CLI probe
+# still fails, then the bounded loop retries and succeeds.
+SOCKET_PATH="$socket" \
+  CREATE_SOCKET=1 \
+  SUCCEED_ON_CALL=2 \
+  SLEEPYCTL="$fixture/sleepyctl" \
+  SLEEPY_SYSTEMCTL="$fixture/systemctl" \
+  SLEEPY_SLEEP="$fixture/sleep" \
+  SLEEPY_SOCKET_READY_CHECK="$fixture/socket-ready" \
+  SLEEPY_SOCKET_ATTEMPTS=5 \
+  READY_MARKER="$fixture/ready" \
+  SLEEP_MARKER="$fixture/ready-sleeps" \
+  CALL_COUNT="$fixture/ready-calls" \
+  bash "$script" >"$fixture/ready-output"
+test "$(cat "$fixture/ready-calls")" -eq 2
+test "$(wc -l <"$fixture/ready-sleeps")" -eq 2
+grep -F '"status":"committed"' "$fixture/ready-output"
 
 printf 'online readiness self-test: ok\n'
