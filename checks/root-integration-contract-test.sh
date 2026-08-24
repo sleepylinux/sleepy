@@ -30,6 +30,8 @@ assert_not_contains modules/home/niri/default.nix 'sleepy-user-bindings.kdl'
 
 assert_contains modules/home/session/default.nix 'bindings reconcile'
 assert_contains modules/home/session/online-reconcile.sh '--online-required'
+assert_contains modules/home/session/online-reconcile.sh 'bindings initialize'
+assert_contains modules/home/session/default.nix 'SLEEPY_JQ'
 assert_contains modules/home/session/default.nix 'unset NIRI_SOCKET'
 assert_contains modules/home/session/default.nix 'test -L "$generated_bindings"'
 assert_contains modules/home/session/default.nix 'test -f "$generated_bindings"'

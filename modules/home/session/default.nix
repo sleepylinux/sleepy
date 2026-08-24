@@ -8,6 +8,7 @@
   niri = "${pkgs.niri}/bin/niri";
   onlineReconcile = pkgs.writeShellScript "sleepy-bindings-online" ''
     export SLEEPYCTL=${lib.escapeShellArg sleepyctl}
+    export SLEEPY_JQ=${lib.escapeShellArg "${pkgs.jq}/bin/jq"}
     export SLEEPY_SYSTEMCTL=${lib.escapeShellArg "${pkgs.systemd}/bin/systemctl"}
     export SLEEPY_SLEEP=${lib.escapeShellArg "${pkgs.coreutils}/bin/sleep"}
     export SLEEPY_SOCKET_ATTEMPTS=150
