@@ -117,21 +117,95 @@ static uint8_t *read_stdin(size_t *length) {
     return buffer;
 }
 
-static void copy_new(int parent, const char *source, const char *destination) {
-    int input = open_regular_at(parent, source);
-    int output = openat(parent, destination,
+struct tracked_output {
+    int parent;
+    int fd;
+    char name[256];
+    dev_t device;
+    ino_t inode;
+};
+
+static bool open_tracked_output(struct tracked_output *output, int parent,
+    const char *name) {
+    output->parent = parent;
+    output->fd = -1;
+    int count = snprintf(output->name, sizeof(output->name), "%s", name);
+    if (count < 0 || (size_t)count >= sizeof(output->name)) {
+        errno = ENAMETOOLONG;
+        return false;
+    }
+    if (!entry_absent(parent, name)) {
+        errno = EEXIST;
+        return false;
+    }
+    output->fd = openat(parent, name,
         O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC | O_NOFOLLOW, 0600);
-    if (output < 0) fail(destination);
+    if (output->fd < 0) return false;
+    struct stat st;
+    if (fstat(output->fd, &st) < 0) {
+        int saved_errno = errno;
+        (void)unlinkat(parent, name, 0);
+        close(output->fd);
+        output->fd = -1;
+        errno = saved_errno;
+        return false;
+    }
+    output->device = st.st_dev;
+    output->inode = st.st_ino;
+    return true;
+}
+
+static bool tracked_output_matches(const struct tracked_output *output) {
+    struct stat st;
+    if (fstatat(output->parent, output->name, &st, AT_SYMLINK_NOFOLLOW) < 0)
+        return false;
+    return S_ISREG(st.st_mode) && st.st_uid == geteuid() && st.st_nlink == 1 &&
+        st.st_dev == output->device && st.st_ino == output->inode;
+}
+
+static void cleanup_tracked_outputs(struct tracked_output *outputs, size_t count) {
+    for (size_t index = 0; index < count; index++) {
+        if (outputs[index].fd >= 0 && tracked_output_matches(&outputs[index]))
+            (void)unlinkat(outputs[index].parent, outputs[index].name, 0);
+        if (outputs[index].fd >= 0) close(outputs[index].fd);
+    }
+    for (size_t index = 0; index < count; index++)
+        (void)fsync(outputs[index].parent);
+}
+
+static bool fill_tracked_output(struct tracked_output *output, int parent,
+    const char *source) {
+    int input = openat(parent, source,
+        O_RDONLY | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK);
+    if (input < 0) return false;
+    struct stat source_stat;
+    if (fstat(input, &source_stat) < 0 || !S_ISREG(source_stat.st_mode) ||
+        source_stat.st_uid != geteuid() || source_stat.st_nlink != 1) {
+        close(input);
+        errno = EPERM;
+        return false;
+    }
     uint8_t buffer[16384];
     for (;;) {
         ssize_t count = read(input, buffer, sizeof(buffer));
-        if (count < 0) fail(source);
+        if (count < 0) {
+            close(input);
+            return false;
+        }
         if (count == 0) break;
-        write_all(output, buffer, (size_t)count);
+        size_t written = 0;
+        while (written < (size_t)count) {
+            ssize_t result = write(output->fd, buffer + written,
+                (size_t)count - written);
+            if (result < 0) {
+                close(input);
+                return false;
+            }
+            written += (size_t)result;
+        }
     }
-    if (fsync(output) < 0) fail(destination);
-    close(output);
     close(input);
+    return fsync(output->fd) == 0 && tracked_output_matches(output);
 }
 
 static void atomic_replace(int parent, const char *destination,
@@ -173,20 +247,89 @@ static void prepare(struct roots *roots) {
         {&roots->niri, "sleepy-user-bindings.kdl"},
     };
     char source[256], destination[256];
+    struct tracked_output outputs[7];
+    for (size_t index = 0; index < 7; index++) outputs[index].fd = -1;
     size_t created = 0;
+
+    require_regular_entry(roots->presets, "bindings-transaction.json");
+    require_absent(roots->presets, ".bindings-transaction.runner.prepare.tmp");
+    for (size_t index = 0; index < 3; index++) {
+        for (size_t variant = 0; variant < 2; variant++) {
+            const char *label = variant == 0 ? "old" : "new";
+            sidecar_name(source, sizeof(source), artifacts[index].name, label, false);
+            require_regular_entry(*artifacts[index].directory, source);
+            sidecar_name(destination, sizeof(destination), artifacts[index].name, label, true);
+            require_absent(*artifacts[index].directory, destination);
+        }
+    }
+
     for (size_t index = 0; index < 3; index++) {
         for (size_t variant = 0; variant < 2; variant++) {
             const char *label = variant == 0 ? "old" : "new";
             sidecar_name(source, sizeof(source), artifacts[index].name, label, false);
             sidecar_name(destination, sizeof(destination), artifacts[index].name, label, true);
-            require_absent(*artifacts[index].directory, destination);
-            copy_new(*artifacts[index].directory, source, destination);
             created++;
+            if (!open_tracked_output(&outputs[created - 1],
+                    *artifacts[index].directory, destination)) {
+                int saved_errno = errno;
+                cleanup_tracked_outputs(outputs, created);
+                free(journal);
+                errno = saved_errno;
+                fail("create production sidecar");
+            }
+            if (!fill_tracked_output(&outputs[created - 1],
+                    *artifacts[index].directory, source)) {
+                int saved_errno = errno;
+                cleanup_tracked_outputs(outputs, created);
+                free(journal);
+                errno = saved_errno;
+                fail("copy production sidecar");
+            }
         }
     }
-    (void)created;
-    atomic_replace(roots->presets, "bindings-transaction.json",
-        ".bindings-transaction.runner.prepare.tmp", journal, length);
+
+    created++;
+    if (!open_tracked_output(&outputs[created - 1], roots->presets,
+            ".bindings-transaction.runner.prepare.tmp")) {
+        int saved_errno = errno;
+        cleanup_tracked_outputs(outputs, created);
+        free(journal);
+        errno = saved_errno;
+        fail("create journal staging");
+    }
+    size_t journal_written = 0;
+    while (journal_written < length) {
+        ssize_t count = write(outputs[created - 1].fd,
+            journal + journal_written, length - journal_written);
+        if (count < 0) break;
+        journal_written += (size_t)count;
+    }
+    if (journal_written != length || fsync(outputs[created - 1].fd) < 0 ||
+        !tracked_output_matches(&outputs[created - 1])) {
+        int saved_errno = errno;
+        cleanup_tracked_outputs(outputs, created);
+        free(journal);
+        errno = saved_errno;
+        fail("prepare journal staging");
+    }
+    for (size_t index = 0; index < created; index++) {
+        if (!tracked_output_matches(&outputs[index])) {
+            cleanup_tracked_outputs(outputs, created);
+            free(journal);
+            errno = ESTALE;
+            fail("prepared path identity changed");
+        }
+    }
+    if (renameat(roots->presets, outputs[created - 1].name,
+            roots->presets, "bindings-transaction.json") < 0) {
+        int saved_errno = errno;
+        cleanup_tracked_outputs(outputs, created);
+        free(journal);
+        errno = saved_errno;
+        fail("rename journal");
+    }
+    for (size_t index = 0; index < created; index++) close(outputs[index].fd);
+    if (fsync(roots->presets) < 0) fail("sync journal directory");
     free(journal);
 }
 

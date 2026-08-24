@@ -148,6 +148,7 @@ pkgs.runCommand "sleepy-journal-fault-runner-check" {
     printf 'new\n' >"$file.sleepy-transaction.new"
   done
   printf '{}\n' >"$helper_root/state/sleepy/bindings-transaction.json"
+  printf 'prepared\n' >"$helper_root/fault.must-consume"
 
   race_root="$TMPDIR/helper-parent-race"
   cp -a "$helper_root" "$race_root"
@@ -178,14 +179,17 @@ pkgs.runCommand "sleepy-journal-fault-runner-check" {
     exit 1
   fi
   test "$(cat "$helper_root/victim")" = do-not-truncate
+  test "$(cat "$helper_root/fault.must-consume")" = prepared
+  test "$(find "$helper_root/config" "$helper_root/state" -type f \
+    -name '*.00000000-0000-4000-8000-000000000001.*' | wc -l)" -eq 0
+  for fixture in \
+    "$helper_root/config/sleepy/settings.json" \
+    "$helper_root/state/sleepy/presets.json" \
+    "$helper_root/config/niri/sleepy-user-bindings.kdl"; do
+    test "$(cat "$fixture.sleepy-transaction.old")" = old
+    test "$(cat "$fixture.sleepy-transaction.new")" = new
+  done
   rm "$helper_root/state/sleepy/.bindings-transaction.runner.prepare.tmp"
-  rm \
-    "$helper_root/config/sleepy/.settings.json.00000000-0000-4000-8000-000000000001.old" \
-    "$helper_root/config/sleepy/.settings.json.00000000-0000-4000-8000-000000000001.new" \
-    "$helper_root/state/sleepy/.presets.json.00000000-0000-4000-8000-000000000001.old" \
-    "$helper_root/state/sleepy/.presets.json.00000000-0000-4000-8000-000000000001.new" \
-    "$helper_root/config/niri/.sleepy-user-bindings.kdl.00000000-0000-4000-8000-000000000001.old" \
-    "$helper_root/config/niri/.sleepy-user-bindings.kdl.00000000-0000-4000-8000-000000000001.new"
 
   rm "$helper_root/config/sleepy/settings.json.sleepy-transaction.old"
   ln -s "$helper_root/missing" \
