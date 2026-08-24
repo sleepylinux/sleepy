@@ -51,7 +51,7 @@ nodes or `narHash` values by hand:
 
 ```bash
 nix flake lock
-bash checks/component-lock.sh components/desktop-m1.json flake.lock
+bash checks/component-lock.sh components/desktop-m1.json components/desktop-m1-baseline.json flake.lock
 git diff -- flake.lock
 sha256sum flake.lock
 ```
