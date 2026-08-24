@@ -1,9 +1,7 @@
 {
   description = "Sleepy Linux desktop foundation";
 
-  inputs = let
-    componentContract = builtins.fromJSON (builtins.readFile ./components/desktop-m1.json);
-  in {
+  inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     home-manager = {
       url = "github:nix-community/home-manager";
@@ -11,22 +9,22 @@
     };
 
     sleepy-sdk = {
-      url = componentContract.inputs.sleepy-sdk.url;
+      url = "github:sleepylinux/sleepy-sdk/4c4f7989b957f41f3748ddfb092b0348e2ba9e88";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
     sleepy-session = {
-      url = componentContract.inputs.sleepy-session.url;
+      url = "github:sleepylinux/sleepy-session/76937a484ffa444572c9ae1460029e573fb108ca";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
     sleepy-artwork = {
-      url = componentContract.inputs.sleepy-artwork.url;
+      url = "github:sleepylinux/sleepy-artwork/7785ac5dac0daa6ac1a619f1e2a9a1b1d1374da1";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
     sleepy-desktop = {
-      url = componentContract.inputs.sleepy-desktop.url;
+      url = "github:sleepylinux/sleepy-desktop/b69fd4d97895600e029e10621a61113ad795dbd8";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };

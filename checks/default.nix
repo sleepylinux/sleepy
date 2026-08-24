@@ -46,7 +46,9 @@
         bash
         coreutils
         findutils
+        gawk
         git
+        gnused
         jq
         ripgrep
       ];
@@ -56,6 +58,7 @@
       ${pkgs.bash}/bin/bash ${source}/checks/component-contract-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/component-lock-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/flake-shape-test.sh
+      ${pkgs.bash}/bin/bash ${source}/checks/flake-input-contract-test.sh
       touch "$out"
     '';
   freshCloneSource = pkgs.runCommand "sleepy-fresh-clone-source-check" {} ''

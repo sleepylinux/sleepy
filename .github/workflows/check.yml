@@ -45,6 +45,7 @@ jobs:
           nix develop --command bash checks/component-contract-test.sh
           nix develop --command bash checks/component-lock-test.sh
           nix develop --command bash checks/flake-shape-test.sh
+          nix develop --command bash checks/flake-input-contract-test.sh
 
       - name: Validate locked component revisions
         run: bash checks/component-lock.sh components/desktop-m1.json flake.lock
