@@ -13,6 +13,7 @@
     libnotify
     networkmanagerapplet
     quickshell
+    ripgrep
     wl-clipboard
     xwayland-satellite
   ];

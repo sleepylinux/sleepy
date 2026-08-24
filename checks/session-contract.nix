@@ -24,6 +24,9 @@ in
   (builtins.elem pkgs.git config.environment.systemPackages)
   "git must belong to the candidate system closure for archive provenance";
   assert pkgs.lib.assertMsg
+  (builtins.elem pkgs.ripgrep config.environment.systemPackages)
+  "ripgrep must belong to the candidate system closure for source contracts";
+  assert pkgs.lib.assertMsg
   (!(config.systemd.user.services ? xwayland-satellite))
   "Niri owns Xwayland Satellite; Sleepy must not define a user service";
   assert pkgs.lib.assertMsg
@@ -44,6 +47,7 @@ in
       test -x ${config.system.build.toplevel}/sw/bin/grim
       test -x ${config.system.build.toplevel}/sw/bin/jq
       test -x ${config.system.build.toplevel}/sw/bin/git
+      test -x ${config.system.build.toplevel}/sw/bin/rg
       test "$(readlink -f ${config.system.build.toplevel}/sw/bin/quickshell)" = \
         ${pkgs.quickshell}/bin/quickshell
       test "$(readlink -f ${config.system.build.toplevel}/sw/bin/grim)" = \
@@ -52,5 +56,7 @@ in
         ${pkgs.jq}/bin/jq
       test "$(readlink -f ${config.system.build.toplevel}/sw/bin/git)" = \
         ${pkgs.git}/bin/git
+      test "$(readlink -f ${config.system.build.toplevel}/sw/bin/rg)" = \
+        ${pkgs.ripgrep}/bin/rg
       touch "$out"
     ''
