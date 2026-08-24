@@ -6,26 +6,27 @@ script="$repo_root/modules/home/session/online-reconcile.sh"
 fixture=$(mktemp -d /tmp/sleepy-online-readiness.XXXXXX)
 trap 'rm -rf -- "$fixture"' EXIT
 socket="$fixture/niri.sock"
+fixture_bash=$(command -v bash)
 
-cat >"$fixture/systemctl" <<'EOF'
-#!/usr/bin/env bash
+printf '#!%s\n' "$fixture_bash" >"$fixture/systemctl"
+cat >>"$fixture/systemctl" <<'EOF'
 test "$*" = '--user show-environment'
 printf 'NIRI_SOCKET=%s\n' "${SOCKET_PATH:?}"
 EOF
-cat >"$fixture/socket-ready" <<'EOF'
-#!/usr/bin/env bash
+printf '#!%s\n' "$fixture_bash" >"$fixture/socket-ready"
+cat >>"$fixture/socket-ready" <<'EOF'
 test "$1" = "${SOCKET_PATH:?}"
 test -f "${READY_MARKER:?}"
 EOF
-cat >"$fixture/sleep" <<'EOF'
-#!/usr/bin/env bash
+printf '#!%s\n' "$fixture_bash" >"$fixture/sleep"
+cat >>"$fixture/sleep" <<'EOF'
 printf '.\n' >>"${SLEEP_MARKER:?}"
 if test "${CREATE_SOCKET:-0}" = 1 && ! test -f "${READY_MARKER:?}"; then
   : >"$READY_MARKER"
 fi
 EOF
-cat >"$fixture/sleepyctl" <<'EOF'
-#!/usr/bin/env bash
+printf '#!%s\n' "$fixture_bash" >"$fixture/sleepyctl"
+cat >>"$fixture/sleepyctl" <<'EOF'
 test "$*" = 'bindings reconcile --online-required'
 "${SLEEPY_SOCKET_READY_CHECK:?}" "${NIRI_SOCKET:?}"
 count=0
@@ -39,6 +40,10 @@ fi
 printf '%s\n' '{"status":"committed"}'
 EOF
 chmod +x "$fixture/systemctl" "$fixture/socket-ready" "$fixture/sleep" "$fixture/sleepyctl"
+for fixture_executable in systemctl socket-ready sleep sleepyctl; do
+  test "$(sed -n '1s/^#!//p' "$fixture/$fixture_executable")" = "$fixture_bash"
+  test -x "$fixture_bash"
+done
 
 # A non-empty but stale manager environment is not readiness. No CLI call is
 # made, the loop is bounded, and failure remains a typed document.
