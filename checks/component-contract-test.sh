@@ -17,6 +17,8 @@ trap 'rm -rf -- "$fixture"' EXIT
 
 test -f "$manifest"
 test -x "$contract"
+fixture_bash=$(command -v bash)
+test -x "$fixture_bash"
 
 sdk="$fixture/packages/sleepy-sdk"
 session="$fixture/packages/sleepy-session"
@@ -39,8 +41,8 @@ mkdir -p \
   "$sources/sleepy-sdk/fixtures/v1/preset" \
   "$sources/sleepy-sdk/fixtures/v1/plugin"
 
-cat >"$sdk/bin/sleepy-contract" <<'EOF'
-#!/usr/bin/env bash
+printf '#!%s\n' "$fixture_bash" >"$sdk/bin/sleepy-contract"
+cat >>"$sdk/bin/sleepy-contract" <<'EOF'
 set -euo pipefail
 test "$#" -eq 3
 test "$1" = validate
@@ -70,8 +72,8 @@ esac
 EOF
 chmod +x "$sdk/bin/sleepy-contract"
 
-cat >"$session/bin/sleepyctl" <<'EOF'
-#!/usr/bin/env bash
+printf '#!%s\n' "$fixture_bash" >"$session/bin/sleepyctl"
+cat >>"$session/bin/sleepyctl" <<'EOF'
 set -euo pipefail
 
 config_root=${XDG_CONFIG_HOME:-${HOME:?}/.config}
@@ -118,6 +120,18 @@ case "${1:-} ${2:-}" in
 esac
 EOF
 chmod +x "$session/bin/sleepyctl"
+
+for fixture_executable in \
+  "$sdk/bin/sleepy-contract" \
+  "$session/bin/sleepyctl"; do
+  IFS= read -r interpreter_line <"$fixture_executable"
+  interpreter=${interpreter_line#\#!}
+  if test "$interpreter" = "$interpreter_line" || ! test -x "$interpreter"; then
+    printf 'component contract fixture has no executable interpreter: %s\n' \
+      "$fixture_executable" >&2
+    exit 1
+  fi
+done
 
 cat >"$sources/sleepy-sdk/schemas/settings.schema.json" <<'EOF'
 {"$schema":"https://json-schema.org/draft/2020-12/schema","title":"SettingsDocument","type":"object"}
@@ -242,8 +256,8 @@ assert_rejected legacy-in-tree-shell-layout \
   '.homeManager.quickshellConfig = (.homeManager.shellPackage + "/share/quickshell/sleepy")'
 
 cp "$session/bin/sleepyctl" "$fixture/sleepyctl.good"
-cat >"$session/bin/sleepyctl" <<'EOF'
-#!/usr/bin/env bash
+printf '#!%s\n' "$fixture_bash" >"$session/bin/sleepyctl"
+cat >>"$session/bin/sleepyctl" <<'EOF'
 printf '{}\n'
 EOF
 chmod +x "$session/bin/sleepyctl"
