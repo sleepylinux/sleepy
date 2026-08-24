@@ -2,8 +2,8 @@
 
 ## Desktop Milestone 1 integration candidate
 
-**BLOCKED pending live Wayland/VM boot and visual acceptance.** The distribution
-integration consumes only these reviewed component revisions:
+**DEPLOYED; final drawer/preview interaction acceptance remains blocked.** The
+distribution integration consumes only these reviewed component revisions:
 
 | Component | Reviewed revision |
 |---|---|
@@ -26,10 +26,10 @@ nix --extra-experimental-features 'nix-command flakes' \
 It exited 0 with final output `all checks passed!` after building the SDK and
 session tests, standalone Home Manager activation, update-safety and component
 contracts, Quickshell checks, and the NixOS system closure. This records the
-full Nix evaluation/build gate as PASS. Live Wayland/VM boot, activation,
-user-state preservation, and visual smoke remain unverified and are not
-claimed here. Record final live acceptance only after the remaining VM steps
-below pass.
+full Nix evaluation/build gate as PASS. The 2026-08-24 VM deployment below
+closes boot, activation, state-preservation, service, and rail-rendering gates.
+Live drawer activation and settings-preview interaction remain unverified and
+are not claimed here.
 
 Regenerate the lock only from the flake inputs and validate it; never add lock
 nodes or `narHash` values by hand:
@@ -66,6 +66,50 @@ The in-tree `packages/sleepy-shell` and `packages/sleepy-branding` remain as a
 reviewable fallback. Delete them only after the generated lock, full flake
 check, external package builds, standalone Home Manager activation, and VM
 visual/state acceptance all pass at one recorded candidate commit.
+
+## Desktop Milestone 1 VM deployment — 2026-08-24
+
+Commit `0267c7bba0ed9d4ac3360583d7a6726c865f6b47` was exported as a
+clean public archive with SHA-256
+`d9205eda068d04b4ca6acb2de977f1c25f029e69610e138d274bd0e323099f02`.
+The archive contained only regular files and directories. Source-clean and
+component-lock contracts passed after root-owned extraction in the VM, and a
+full VM `nix flake check` ended with `all checks passed!`.
+
+The candidate was dry-activated and test-activated before the permanent
+profile changed. The test activation produced toplevel
+`/nix/store/12mhf8a8cjcfz889srfldgnm2zgf7hal-nixos-system-sleepy-vm-26.11.20260822.2c423e0`
+while the previous permanent profile and generation set stayed unchanged.
+After SSH reconnect, graphical service and state checks passed, then the
+reviewed permanent switch created exactly `system-6-link` for that toplevel.
+Generations 1 through 5 were retained; no generation deletion or garbage
+collection was performed. The previous source tree remains at
+`/etc/sleepy.pre-0267c7b-20260824T023543Z`.
+
+The deployment initialized the previously absent settings and preset stores,
+then preserved their inode metadata and exact contents across dry, test, and
+permanent activation:
+
+| User-owned file | Accepted SHA-256 |
+|---|---|
+| `~/.config/sleepy/settings.json` | `a1d575f14b75c650b5b9c9651c7efe7e156a66dc52ec8233643bcca4b426cabf` |
+| `~/.local/state/sleepy/presets.json` | `4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945` |
+
+Fresh post-switch checks proved SSH reconnect, matching runtime and permanent
+profile, responsive Niri, active `graphical-session.target`, healthy
+`quickshell.service` with zero restarts, and successful
+`sleepy-session.service`. The Home Manager shell link resolved to the external
+`sleepy-shell-0.1.0` store package, and the packaged SDK accepted the deployed
+settings document.
+
+The final 1280×800 guest framebuffer showed the inset lavender rail, lunar
+mark, active workspace, clock, and status control aligned and rendered without
+visible clipping; the captured screenshot SHA-256 is
+`e12344e75cded2ac4ffe0604cf5ac5d4486d86f9407b9bb597aab23af65d4802`.
+Host-side VNC and libvirt input did not activate the QML status control, so a
+live drawer screenshot was not obtained. Drawer behavior remains covered by
+the component test suite but is explicitly not marked as live visual PASS.
+Consequently, the fallback-deletion gate remains closed.
 
 ## Result
 

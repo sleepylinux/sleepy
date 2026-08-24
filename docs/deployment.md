@@ -403,6 +403,34 @@ public copies:
 On 2026-08-23 the switch created system generation 5 and retained generations
 1 through 4. No generation deletion or garbage collection was performed.
 
+### Desktop Milestone 1 deployment record
+
+On 2026-08-24 the public archive for
+`0267c7bba0ed9d4ac3360583d7a6726c865f6b47` (SHA-256
+`d9205eda068d04b4ca6acb2de977f1c25f029e69610e138d274bd0e323099f02`)
+passed the full flake check inside the VM. A separately reviewed two-phase
+activation preserved the permanent profile during `dry-activate` and `test`,
+then switched `/etc/sleepy` to the verified root-owned source. The accepted
+toplevel is:
+
+```text
+/nix/store/12mhf8a8cjcfz889srfldgnm2zgf7hal-nixos-system-sleepy-vm-26.11.20260822.2c423e0
+```
+
+The permanent switch created generation 6 and retained all predecessors. The
+immediately previous source is preserved at:
+
+```text
+/etc/sleepy.pre-0267c7b-20260824T023543Z
+```
+
+The root-only deployment evidence is retained at
+`/var/tmp/sleepy-deploy-0267c7b.tDLLbJ`. No generation was deleted and no
+garbage collection ran. Settings and preset stores remained user-owned and
+byte-identical through every activation stage. Live rail rendering passed;
+live drawer activation remains an explicit follow-up and therefore does not
+authorize deletion of the in-tree fallback packages.
+
 ## Interactive authorization
 
 Passwordless `sudo` is intentionally unavailable. Run privileged deployment
