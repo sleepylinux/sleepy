@@ -68,7 +68,7 @@ jq -e --slurpfile reviewed "$manifest" '
   .homeManager.service.type == "oneshot" and
   .homeManager.service.remainAfterExit == true and
   .homeManager.service.execStart ==
-    (.packages["sleepy-session"].path + "/bin/sleepyctl settings show") and
+    [(.packages["sleepy-session"].path + "/bin/sleepyctl settings show")] and
   (.sources["sleepy-sdk"] | type == "string" and length > 0)
 ' "$actual" >/dev/null
 

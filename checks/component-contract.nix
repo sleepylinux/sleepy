@@ -16,7 +16,7 @@
     inputs.${contract.input}.packages.${system}.${contract.output};
   sessionService = standaloneHomeConfig.systemd.user.services.sleepy-session;
   integratedSessionService = integratedHomeConfig.systemd.user.services.sleepy-session;
-  expectedSessionExec = "${componentPackages.sleepy-session}/bin/sleepyctl settings show";
+  expectedSessionExec = ["${componentPackages.sleepy-session}/bin/sleepyctl settings show"];
   actualContract = pkgs.writeText "sleepy-component-contract.json" (builtins.toJSON {
     schemaVersion = 1;
     inherit system;

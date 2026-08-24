@@ -205,13 +205,16 @@ jq -n \
         requisite: ["graphical-session.target"],
         type: "oneshot",
         remainAfterExit: true,
-        execStart: ($session + "/bin/sleepyctl settings show")
+        execStart: [($session + "/bin/sleepyctl settings show")]
       }
     },
     sources: {"sleepy-sdk": $sdkSource}
   }' >"$actual"
 
-bash "$contract" "$manifest" "$actual"
+if ! bash "$contract" "$manifest" "$actual"; then
+  printf 'component contract rejected Home Manager normalized ExecStart list\n' >&2
+  exit 1
+fi
 
 assert_rejected() {
   local name=$1
@@ -233,6 +236,8 @@ assert_rejected wrong-package-output \
   '.packages["sleepy-settings-preview"].output = "default"'
 assert_rejected non-graphical-service \
   '.homeManager.service.wantedBy = ["default.target"]'
+assert_rejected scalar-session-exec-start \
+  '.homeManager.service.execStart = .homeManager.service.execStart[0]'
 assert_rejected legacy-in-tree-shell-layout \
   '.homeManager.quickshellConfig = (.homeManager.shellPackage + "/share/quickshell/sleepy")'
 
