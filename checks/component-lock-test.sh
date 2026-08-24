@@ -2,87 +2,51 @@
 set -euo pipefail
 
 for required_command in jq mktemp; do
-  if ! command -v "$required_command" >/dev/null 2>&1; then
-    printf 'component lock self-test: required command not found: %s\n' \
-      "$required_command" >&2
-    exit 127
-  fi
+  command -v "$required_command" >/dev/null 2>&1 || exit 127
 done
 
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 contract="$repo_root/checks/component-lock.sh"
 manifest="$repo_root/components/desktop-m1.json"
+baseline="$repo_root/components/desktop-m1-baseline.json"
 fixture=$(mktemp -d /tmp/sleepy-component-lock.XXXXXX)
 trap 'rm -rf -- "$fixture"' EXIT
 
-test -x "$contract"
-
 good="$fixture/flake.lock"
-jq -n --slurpfile reviewed "$manifest" '
+jq -n --slurpfile current "$manifest" --slurpfile old "$baseline" '
   {
     version: 7,
     root: "root",
-    nodes: (
-      {
-        root: {
-          inputs: ($reviewed[0].inputs | with_entries(.value = .key))
-        }
-      } +
-      ($reviewed[0].inputs | with_entries(
-        .value = {
-          locked: {
-            type: "github",
-            owner: "sleepylinux",
-            repo: .key,
-            rev: .value.revision,
-            narHash: "sha256-contract-fixture"
-          }
-        }
-      )) +
-      {
-        upstream: {
-          locked: {
-            type: "github",
-            owner: "unrelated-upstream",
-            repo: "sleepy-session",
-            rev: "0000000000000000000000000000000000000000",
-            narHash: "sha256-unrelated-fixture"
-          }
-        }
-      }
-    )
+    nodes: ({
+      root: {inputs: (($current[0].inputs | with_entries(.value = ("current-" + .key))) + {"sleepy-m1-baseline":"baseline-root"})},
+      "baseline-root": {inputs: ($old[0].inputs | with_entries(.value = ("baseline-" + .key))), locked:{type:"github",owner:"sleepylinux",repo:"sleepy",rev:$old[0].root.revision,narHash:"sha256-baseline-root"}},
+      upstream: {locked:{type:"github",owner:"unrelated-upstream",repo:"sleepy-session",rev:"0000000000000000000000000000000000000000",narHash:"sha256-unrelated"}}
+    } +
+    ($current[0].inputs | with_entries(.key = ("current-" + .key) | .value = {locked:{type:"github",owner:"sleepylinux",repo:(.key | sub("^current-";"")),rev:.value.revision,narHash:"sha256-current"}})) +
+    ($old[0].inputs | with_entries(.key = ("baseline-" + .key) | .value = {locked:{type:"github",owner:"sleepylinux",repo:(.key | sub("^baseline-";"")),rev:.value.revision,narHash:"sha256-baseline"}})))
   }
 ' >"$good"
 
-bash "$contract" "$manifest" "$good"
+bash "$contract" "$manifest" "$baseline" "$good"
 
 assert_rejected() {
   local name=$1
   local filter=$2
-  local rejected="$fixture/rejected.lock"
-
+  local rejected="$fixture/$name.lock"
   jq "$filter" "$good" >"$rejected"
-  if bash "$contract" "$manifest" "$rejected" >/dev/null 2>&1; then
-    printf 'component lock contract accepted invalid fixture: %s\n' \
-      "$name" >&2
+  if bash "$contract" "$manifest" "$baseline" "$rejected" >/dev/null 2>&1; then
+    printf 'component lock accepted invalid fixture: %s\n' "$name" >&2
     return 1
   fi
 }
 
-assert_rejected missing-root-input 'del(.nodes.root.inputs["sleepy-sdk"])'
-assert_rejected moving-revision \
-  '.nodes["sleepy-session"].locked.rev = "0000000000000000000000000000000000000000"'
-assert_rejected wrong-owner \
-  '.nodes["sleepy-artwork"].locked.owner = "someone-else"'
-assert_rejected missing-content-hash \
-  'del(.nodes["sleepy-desktop"].locked.narHash)'
-assert_rejected legacy-nested-sdk-revision \
-  '.nodes["legacy-sdk"] = {locked:{type:"github",owner:"sleepylinux",repo:"sleepy-sdk",rev:"4c4f7989b957f41f3748ddfb092b0348e2ba9e88",narHash:"sha256-legacy-fixture"}}'
-assert_rejected legacy-nested-artwork-revision \
-  '.nodes["legacy-artwork"] = {locked:{type:"github",owner:"sleepylinux",repo:"sleepy-artwork",rev:"7785ac5dac0daa6ac1a619f1e2a9a1b1d1374da1",narHash:"sha256-legacy-fixture"}}'
-assert_rejected arbitrary-nested-session-revision \
-  '.nodes["nested-session"] = {locked:{type:"github",owner:"sleepylinux",repo:"sleepy-session",rev:"0000000000000000000000000000000000000000",narHash:"sha256-drift-fixture"}}'
-assert_rejected nested-session-missing-content-hash \
-  '.nodes["nested-session"] = {locked:{type:"github",owner:"sleepylinux",repo:"sleepy-session",rev:"1e8863839b5c4310bce251b7e10ed15926039930"}}'
+assert_rejected moving-current '.nodes["current-sleepy-session"].locked.rev = "0000000000000000000000000000000000000000"'
+assert_rejected arbitrary-historical '.nodes["baseline-sleepy-session"].locked.rev = "0000000000000000000000000000000000000000"'
+assert_rejected wrong-baseline-root '.nodes["baseline-root"].locked.rev = "0000000000000000000000000000000000000000"'
+assert_rejected leaked-exemption '.nodes.leaked = .nodes["baseline-sleepy-sdk"]'
+assert_rejected incompatible-shared '.nodes.root.inputs["sleepy-sdk"] = "baseline-sleepy-sdk"'
+assert_rejected missing-hash 'del(.nodes["baseline-sleepy-desktop"].locked.narHash)'
+assert_rejected unknown-current-sleepy-repository \
+  '.nodes["current-sleepy-desktop"].inputs.agent = "sleepy-agent" | .nodes["sleepy-agent"] = {locked:{type:"github",owner:"sleepylinux",repo:"sleepy-agent",rev:"0000000000000000000000000000000000000000",narHash:"sha256-agent"}}'
 
 printf 'component lock self-test: ok\n'

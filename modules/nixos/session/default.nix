@@ -1,14 +1,28 @@
 {pkgs, ...}: {
   programs.niri.enable = true;
 
+  security.polkit.extraConfig = ''
+    polkit.addRule(function(action, subject) {
+      if (action.id == "org.freedesktop.UPower.PowerProfiles.switch-profile" &&
+          subject.isInGroup("wheel")) {
+        return polkit.Result.YES;
+      }
+    });
+  '';
+
   services = {
     displayManager.regreet.enable = true;
     greetd.enable = true;
   };
 
   environment.systemPackages = with pkgs; [
+    git
+    grim
+    jq
     libnotify
     networkmanagerapplet
+    quickshell
+    ripgrep
     wl-clipboard
     xwayland-satellite
   ];

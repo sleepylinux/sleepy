@@ -1,6 +1,7 @@
 {
   componentContract,
   componentPackages,
+  baselineActivationPackage,
   homeConfiguration,
   inputs,
   nixosModule,
@@ -17,7 +18,9 @@
       componentPackages
       inputs
       integratedHomeConfig
-      pkgs;
+      pkgs
+      ;
+    inherit source;
     standaloneHomeConfig = homeConfiguration.config;
   };
   appsContract = import ./apps-contract.nix {
@@ -26,6 +29,17 @@
     nixosConfig = nixosConfiguration.config;
   };
   niriConfig = pkgs.callPackage ./niri-config.nix {};
+  bindingsContract = pkgs.callPackage ./bindings-contract.nix {
+    inherit source;
+    sessionPackage = componentPackages.sleepy-session;
+  };
+  controlCenterContract = pkgs.callPackage ./control-center-contract.nix {
+    inherit source;
+    homeConfig = homeConfiguration.config;
+    sessionSource = inputs.sleepy-session;
+    shellPackage = componentPackages.sleepy-shell;
+  };
+  niriVersionContract = pkgs.callPackage ./niri-version-contract.nix {inherit source;};
   publicModule = import ./public-module.nix {
     inherit nixosModule nixpkgs pkgs;
   };
@@ -35,6 +49,12 @@
   };
   updateSafety = pkgs.callPackage ./update-safety.nix {
     inherit (homeConfiguration) activationPackage;
+    inherit baselineActivationPackage;
+  };
+  updateSafetyVm = pkgs.callPackage ./update-safety-vm.nix {
+    inherit baselineActivationPackage source;
+    inherit (homeConfiguration) activationPackage;
+    sessionPackage = componentPackages.sleepy-session;
   };
   fallbackBranding = pkgs.callPackage ../packages/sleepy-branding {};
   fallbackShell = pkgs.callPackage ../packages/sleepy-shell {
@@ -55,12 +75,18 @@
     } ''
       ${pkgs.bash}/bin/bash ${source}/checks/source-clean.sh ${source}
       ${pkgs.bash}/bin/bash ${source}/checks/source-clean-test.sh
+      ${pkgs.bash}/bin/bash ${source}/checks/baseline-provenance-test.sh
+      ${pkgs.bash}/bin/bash ${source}/checks/bindings-policy-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/component-contract-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/component-lock-test.sh
+      ${pkgs.bash}/bin/bash ${source}/checks/current-component-pins-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/flake-shape-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/flake-input-contract-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/license-contract-test.sh
+      ${pkgs.bash}/bin/bash ${source}/checks/journal-fault-runner-source-test.sh
+      ${pkgs.bash}/bin/bash ${source}/checks/online-readiness-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/update-safety-contract-test.sh
+      ${pkgs.bash}/bin/bash ${source}/checks/root-integration-contract-test.sh
       touch "$out"
     '';
   freshCloneSource = pkgs.runCommand "sleepy-fresh-clone-source-check" {} ''
@@ -100,17 +126,27 @@ in
   "the retained branding fallback must declare GPL-3.0-only";
   assert pkgs.lib.assertMsg
   (fallbackShell.meta.license == pkgs.lib.licenses.gpl3Only)
-  "the retained shell fallback must declare GPL-3.0-only";
-  {
+  "the retained shell fallback must declare GPL-3.0-only"; {
     apps-contract = appsContract;
+    bindings-contract = bindingsContract;
     component-contract = componentIntegration;
+    control-center-contract = controlCenterContract;
     nixos = nixosConfiguration.config.system.build.toplevel;
     home = homeConfiguration.activationPackage;
     niri-config = niriConfig;
+    niri-version-contract = niriVersionContract;
     public-module = publicModule;
     session-contract = sessionContract;
     update-safety = updateSafety;
+    update-safety-vm = updateSafetyVm;
     source-contracts = sourceContracts;
+    journal-fault-runner = pkgs.callPackage ./journal-fault-runner.nix {
+      runner = componentPackages.sleepy-journal-fault-runner;
+    };
     fresh-clone-source = freshCloneSource;
     inherit quickshell;
+    sleepy-artwork-assets = inputs.sleepy-artwork.checks.${pkgs.stdenv.hostPlatform.system}.assets;
+    sleepy-desktop-qml = inputs.sleepy-desktop.checks.${pkgs.stdenv.hostPlatform.system}.qml;
+    sleepy-desktop-package = inputs.sleepy-desktop.checks.${pkgs.stdenv.hostPlatform.system}.package;
+    sleepy-desktop-preview = inputs.sleepy-desktop.checks.${pkgs.stdenv.hostPlatform.system}.preview;
   }

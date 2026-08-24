@@ -20,25 +20,12 @@ actual=$2
 
 jq -e '
   .schemaVersion == 1 and
-  .milestone == "desktop-m1" and
-  .inputs == {
-    "sleepy-sdk": {
-      "url": "github:sleepylinux/sleepy-sdk/2edbe8310eee69c40e4f75924da67a57942bd1c3",
-      "revision": "2edbe8310eee69c40e4f75924da67a57942bd1c3"
-    },
-    "sleepy-session": {
-      "url": "github:sleepylinux/sleepy-session/1e8863839b5c4310bce251b7e10ed15926039930",
-      "revision": "1e8863839b5c4310bce251b7e10ed15926039930"
-    },
-    "sleepy-artwork": {
-      "url": "github:sleepylinux/sleepy-artwork/0dd59cc9d8a77700f7a415997e3dcde396f55e99",
-      "revision": "0dd59cc9d8a77700f7a415997e3dcde396f55e99"
-    },
-    "sleepy-desktop": {
-      "url": "github:sleepylinux/sleepy-desktop/a88fba369d3926981c46b837c88483553559a60a",
-      "revision": "a88fba369d3926981c46b837c88483553559a60a"
-    }
-  } and
+  (.milestone == "desktop-m1" or .milestone == "desktop-m2") and
+  (.inputs | keys == ["sleepy-artwork", "sleepy-desktop", "sleepy-sdk", "sleepy-session"]) and
+  all(.inputs | to_entries[];
+    (.value.revision | type == "string" and test("^[0-9a-f]{40}$")) and
+    .value.url == ("github:sleepylinux/" + .key + "/" + .value.revision)
+  ) and
   (.rootPackages | type == "object") and
   .defaultPackage == "sleepy-shell"
 ' "$manifest" >/dev/null
@@ -69,7 +56,9 @@ jq -e --slurpfile reviewed "$manifest" '
   .homeManager.service.remainAfterExit == true and
   .homeManager.service.execStart ==
     [(.packages["sleepy-session"].path + "/bin/sleepyctl settings show")] and
-  (.sources["sleepy-sdk"] | type == "string" and length > 0)
+  (.sources["sleepy-sdk"] | type == "string" and length > 0) and
+  (.sources.root | type == "string" and length > 0) and
+  (.validators.niri | type == "string" and startswith("/") and length > 1)
 ' "$actual" >/dev/null
 
 sdk=$(jq -er '.packages["sleepy-contract"].path' "$actual")
@@ -79,6 +68,8 @@ artwork=$(jq -er '.packages["sleepy-artwork"].path' "$actual")
 desktop=$(jq -er '.packages["sleepy-shell"].path' "$actual")
 preview=$(jq -er '.packages["sleepy-settings-preview"].path' "$actual")
 sdk_source=$(jq -er '.sources["sleepy-sdk"]' "$actual")
+root_source=$(jq -er '.sources.root' "$actual")
+niri_validator=$(jq -er '.validators.niri' "$actual")
 
 sdk_cli="$sdk/bin/sleepy-contract"
 session_cli="$session/bin/sleepyctl"
@@ -87,6 +78,7 @@ test -x "$session_cli"
 test -x "$desktop/bin/sleepy-shell"
 test -x "$preview/bin/sleepy-settings-preview"
 test -f "$unit/share/systemd/user/sleepy-session.service"
+test -x "$niri_validator"
 
 for kind in settings preset plugin; do
   for fixture in "$sdk_source/fixtures/v1/$kind"/valid*.json; do
@@ -106,12 +98,15 @@ done
 
 runtime=$(mktemp -d /tmp/sleepy-component-runtime.XXXXXX)
 trap 'rm -rf -- "$runtime"' EXIT
-mkdir -p "$runtime/home"
+mkdir -p "$runtime/home" "$runtime/config/niri"
+cp "$root_source/modules/home/niri/config/"*.kdl "$runtime/config/niri/"
+test "$(find "$runtime/config/niri" -maxdepth 1 -type f -name '*.kdl' | wc -l)" -eq 6
 
 run_sleepyctl() {
   HOME="$runtime/home" \
     XDG_CONFIG_HOME="$runtime/config" \
     XDG_STATE_HOME="$runtime/state" \
+    SLEEPY_NIRI_VALIDATOR="$niri_validator" \
     "$session_cli" "$@"
 }
 
@@ -158,11 +153,23 @@ jq -e --arg id "$duplicate_id" '
   .preset.id == $id and .preset.name == "Contract renamed"
 ' "$rename_output" >/dev/null
 
+test ! -e "$runtime/config/niri/sleepy-user-bindings.kdl"
+test ! -e "$runtime/state/sleepy/bindings-transaction.json"
+
+if run_sleepyctl presets activate "$duplicate_id" \
+  >"$runtime/unexpected-activate.json" 2>"$runtime/apply-required.json"; then
+  printf 'sleepyctl retained the settings-only activation bypass\n' >&2
+  exit 1
+fi
+jq -e '.error.code == "apply_required"' "$runtime/apply-required.json" >/dev/null
+
 activate_output="$runtime/activate.json"
-run_sleepyctl presets activate "$duplicate_id" >"$activate_output"
-jq -e --arg id "$duplicate_id" '.activePresetId == $id' \
-  "$activate_output" >/dev/null
-"$sdk_cli" validate settings "$activate_output" >/dev/null
+run_sleepyctl presets activate "$duplicate_id" --apply >"$activate_output"
+jq -e --arg id "$duplicate_id" '
+  .activePresetId == $id and .status == "reloadPending"
+' "$activate_output" >/dev/null
+test -f "$runtime/config/niri/sleepy-user-bindings.kdl"
+test -f "$runtime/state/sleepy/bindings-transaction.json"
 
 immutable_error="$runtime/immutable-error.json"
 if run_sleepyctl presets rename builtin.sleepy Nope \
@@ -181,7 +188,7 @@ primary_mark_relative=$(jq -er '
   select(type == "string" and length > 0)
 ' "$artwork_manifest")
 case "$primary_mark_relative" in
-  /* | *../* | ../* | */.. | ..)
+  /* | *../* | */.. | ..)
     printf 'branding.primaryMark is not package-relative: %s\n' \
       "$primary_mark_relative" >&2
     exit 1

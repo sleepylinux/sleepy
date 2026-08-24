@@ -43,6 +43,8 @@ assert_owned_path_rejected settings-owned \
   '.config/sleepy/settings.json'
 assert_owned_path_rejected presets-owned \
   '.local/state/sleepy/presets.json'
+assert_owned_path_rejected generated-bindings-owned \
+  '.config/niri/sleepy-user-bindings.kdl'
 
 dangling="$fixture/dangling-presets"
 mkdir -p "$dangling/home-files/.local/state/sleepy" "$dangling/sources"
@@ -71,5 +73,17 @@ assert_activation_reference_rejected activation-settings \
   '.config/sleepy/settings.json'
 assert_activation_reference_rejected activation-presets \
   '.local/state/sleepy/presets.json'
+
+approved_initializer="$fixture/approved-initializer"
+mkdir -p "$approved_initializer/home-files" "$approved_initializer/sources"
+cat >"$approved_initializer/activate" <<'EOF'
+unset NIRI_SOCKET
+sleepyctl bindings reconcile
+test -e "${XDG_CONFIG_HOME}/niri/sleepy-user-bindings.kdl" || sleepyctl bindings init
+EOF
+bash "$contract" \
+  "$approved_initializer/home-files" \
+  "$approved_initializer/activate" \
+  "$approved_initializer/sources"
 
 printf 'update safety contract self-test: ok\n'

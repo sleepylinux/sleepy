@@ -27,6 +27,7 @@ artwork="$fixture/packages/sleepy-artwork"
 desktop="$fixture/packages/sleepy-desktop"
 preview="$fixture/packages/sleepy-settings-preview"
 sources="$fixture/sources"
+validators="$fixture/validators"
 
 mkdir -p \
   "$sdk/bin" \
@@ -40,6 +41,21 @@ mkdir -p \
   "$sources/sleepy-sdk/fixtures/v1/settings" \
   "$sources/sleepy-sdk/fixtures/v1/preset" \
   "$sources/sleepy-sdk/fixtures/v1/plugin"
+mkdir -p "$validators"
+
+printf '#!%s\n' "$fixture_bash" >"$validators/niri"
+cat >>"$validators/niri" <<'EOF'
+set -euo pipefail
+if test "${1:-}" = --version; then
+  printf 'niri 26.04\n'
+elif test "${1:-}" = validate && test "${2:-}" = --config; then
+  test -f "${3:?}"
+  test -f "$(dirname "$3")/bindings-core.kdl"
+else
+  exit 2
+fi
+EOF
+chmod +x "$validators/niri"
 
 printf '#!%s\n' "$fixture_bash" >"$sdk/bin/sleepy-contract"
 cat >>"$sdk/bin/sleepy-contract" <<'EOF'
@@ -89,17 +105,17 @@ if test ! -e "$presets"; then
   printf '%s\n' '{"presets":[{"schemaVersion":1,"id":"builtin.sleepy","name":"Sleepy","origin":"builtin","basePresetId":null,"layouts":{},"drawers":[],"keybindings":[],"pluginRequirements":[]}]}' >"$presets"
 fi
 
-case "${1:-} ${2:-}" in
-  'settings show')
+case "${1:-}:${2:-}:${4:-}" in
+  'settings:show:')
     cat "$settings"
     ;;
-  'presets list')
+  'presets:list:')
     cat "$presets"
     ;;
-  'presets duplicate')
+  presets:duplicate:*)
     printf '%s\n' '{"preset":{"id":"11111111-1111-4111-8111-111111111111","name":"Contract copy"}}'
     ;;
-  'presets rename')
+  presets:rename:*)
     if test "${3:-}" = builtin.sleepy; then
       printf '%s\n' '{"error":{"code":"immutable_preset","message":"built-in presets are immutable"}}' >&2
       exit 1
@@ -107,11 +123,22 @@ case "${1:-} ${2:-}" in
     jq -n --arg id "${3:?}" --arg name "${4:?}" \
       '{preset:{id:$id,name:$name}}'
     ;;
-  'presets activate')
+  'presets:activate:')
+    printf '%s\n' '{"error":{"code":"apply_required","message":"journaled apply is required"}}' >&2
+    exit 1
+    ;;
+  'presets:activate:--apply')
+    test ! -e "$config_root/niri/sleepy-user-bindings.kdl"
+    test ! -e "$state_root/sleepy/bindings-transaction.json"
+    "${SLEEPY_NIRI_VALIDATOR:?}" validate --config "$config_root/niri/config.kdl"
     candidate="$settings.tmp"
     jq --arg id "${3:?}" '.activePresetId = $id' "$settings" >"$candidate"
     mv "$candidate" "$settings"
-    cat "$settings"
+    printf '%s\n' 'binds { Mod+C { spawn "quickshell"; } }' \
+      >"$config_root/niri/sleepy-user-bindings.kdl"
+    printf '%s\n' '{"phase":"reloadPending"}' \
+      >"$state_root/sleepy/bindings-transaction.json"
+    jq -n --arg id "${3:?}" '{status:"reloadPending",activePresetId:$id}'
     ;;
   *)
     printf '%s\n' '{"error":{"code":"invalid_command","message":"invalid command"}}' >&2
@@ -123,10 +150,11 @@ chmod +x "$session/bin/sleepyctl"
 
 for fixture_executable in \
   "$sdk/bin/sleepy-contract" \
-  "$session/bin/sleepyctl"; do
+  "$session/bin/sleepyctl" \
+  "$validators/niri"; do
   IFS= read -r interpreter_line <"$fixture_executable"
   interpreter=${interpreter_line#\#!}
-  if test "$interpreter" = "$interpreter_line" || ! test -x "$interpreter"; then
+  if test "$interpreter" != "$fixture_bash" || ! test -x "$interpreter"; then
     printf 'component contract fixture has no executable interpreter: %s\n' \
       "$fixture_executable" >&2
     exit 1
@@ -181,6 +209,7 @@ EOF
 
 actual="$fixture/actual.json"
 jq -n \
+  --slurpfile reviewed "$manifest" \
   --arg sdk "$sdk" \
   --arg session "$session" \
   --arg unit "$unit" \
@@ -188,15 +217,12 @@ jq -n \
   --arg desktop "$desktop" \
   --arg preview "$preview" \
   --arg sdkSource "$sources/sleepy-sdk" \
+  --arg rootSource "$repo_root" \
+  --arg niriValidator "$validators/niri" \
   '{
     schemaVersion: 1,
     system: "x86_64-linux",
-    revisions: {
-      "sleepy-sdk": "2edbe8310eee69c40e4f75924da67a57942bd1c3",
-      "sleepy-session": "1e8863839b5c4310bce251b7e10ed15926039930",
-      "sleepy-artwork": "0dd59cc9d8a77700f7a415997e3dcde396f55e99",
-      "sleepy-desktop": "a88fba369d3926981c46b837c88483553559a60a"
-    },
+    revisions: ($reviewed[0].inputs | map_values(.revision)),
     packages: {
       "sleepy-contract": {input:"sleepy-sdk", output:"sleepy-contract", path:$sdk},
       "sleepy-session": {input:"sleepy-session", output:"sleepy-session", path:$session},
@@ -222,7 +248,8 @@ jq -n \
         execStart: [($session + "/bin/sleepyctl settings show")]
       }
     },
-    sources: {"sleepy-sdk": $sdkSource}
+    sources: {"sleepy-sdk": $sdkSource, root: $rootSource},
+    validators: {niri: $niriValidator}
   }' >"$actual"
 
 if ! bash "$contract" "$manifest" "$actual"; then
@@ -254,6 +281,8 @@ assert_rejected scalar-session-exec-start \
   '.homeManager.service.execStart = .homeManager.service.execStart[0]'
 assert_rejected legacy-in-tree-shell-layout \
   '.homeManager.quickshellConfig = (.homeManager.shellPackage + "/share/quickshell/sleepy")'
+assert_rejected unpinned-validator '.validators.niri = "/bin/false"'
+assert_rejected missing-root-niri-tree '.sources.root = "/does-not-exist"'
 
 cp "$session/bin/sleepyctl" "$fixture/sleepyctl.good"
 printf '#!%s\n' "$fixture_bash" >"$session/bin/sleepyctl"

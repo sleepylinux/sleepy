@@ -1,42 +1,57 @@
 # Sleepy desktop foundation acceptance
 
-## Desktop Milestone 1 integration candidate
+## Desktop Milestone 2 integration candidate
 
-**DEPLOYED; final drawer/preview interaction acceptance remains blocked.** The
+**PASS — permanently deployed and reboot-verified in the `Sleepy` VM.** The
 distribution integration consumes only these reviewed component revisions:
 
 | Component | Reviewed revision |
 |---|---|
-| `sleepy-sdk` | `2edbe8310eee69c40e4f75924da67a57942bd1c3` |
-| `sleepy-session` | `1e8863839b5c4310bce251b7e10ed15926039930` |
-| `sleepy-artwork` | `0dd59cc9d8a77700f7a415997e3dcde396f55e99` |
-| `sleepy-desktop` | `a88fba369d3926981c46b837c88483553559a60a` |
+| `sleepy-sdk` | `5dc792faea9d743fabbb576ae1b25ed7e1f729f9` |
+| `sleepy-session` | `b88f5b993ae449acf176d8fc6f0d6542776d06bd` |
+| `sleepy-artwork` | `108487617077254edb4e3a3b21047f5621eef151` |
+| `sleepy-desktop` | `0b612df154e0606ced56020a56a54fa1f42dd3db` |
 
 The generated `flake.lock` has SHA-256
-`64f819a051bdeb0be8e44b146316d8317b4a8e10ca700148ba2e93ff7b770bca`,
+`37077bba388939aa3b848cd53031f92c5ad07d5b13ac7314e4462985603bab82`,
 contains the four component inputs above, and passes the executable component
-lock contract. A clean-copy Docker run using `nixos/nix:latest` and a persistent
-cache executed:
+lock contract. The final clean-copy gate uses `nixos/nix:2.35.2` with a
+persistent cache and `/dev/kvm`; on 2026-08-24 it executed:
 
 ```bash
 nix --extra-experimental-features 'nix-command flakes' \
-  flake check --print-build-logs
+  flake check -L --no-write-lock-file
 ```
 
-It exited 0 with final output `all checks passed!` after building the SDK and
-session tests, standalone Home Manager activation, update-safety and component
-contracts, Quickshell checks, and the NixOS system closure. This records the
-full Nix evaluation/build gate as PASS. The 2026-08-24 VM deployment below
-closes boot, activation, state-preservation, service, and rail-rendering gates.
-Live drawer activation and settings-preview interaction remain unverified and
-are not claimed here.
+The clean-copy run exited 0 with final output `all checks passed!`; its
+`sleepy-m1-to-m2-update-safety` QEMU test completed in 17.73 seconds. Explicit
+builds produced these candidate outputs:
+
+| Output | Store path |
+|---|---|
+| `sleepy-contract` | `/nix/store/1hma6bvlaj9i4sf4dj25kp1hbkxd1mhv-sleepy-sdk-0.1.0` |
+| `sleepy-session` | `/nix/store/s05bf253170i8ahz2w2wa5dy9lncnbwh-sleepy-session-0.1.0` |
+| `sleepy-session-user-unit` | `/nix/store/9nlxhfr441yz5i43gf65qfqzab4s6sz5-sleepy-session.service` |
+| `sleepy-artwork` | `/nix/store/nh341wq9kf7bbx6nn4i2bqvcy6qyh6ar-sleepy-artwork-0.1.0` |
+| `sleepy-shell` | `/nix/store/xkplqqfncs3wnqvdb5zbr3vmc97cap9p-sleepy-shell-0.2.0` |
+| `sleepy-settings-preview` | `/nix/store/90q1fczz1r81vjimg3bp24n8r55znnsx-sleepy-settings-preview-0.2.0` |
+| NixOS toplevel | `/nix/store/5673q2vvkc57l0c7hja62ajzc1fz9b6i-nixos-system-sleepy-vm-26.11.20260822.2c423e0` |
+| Standalone Home Manager activation | `/nix/store/w30qvcz43n3300n8amk7baj7hlh4acbb-home-manager-generation` |
+| Artwork assets check | `/nix/store/2a4vdax6s2467mfnyhzhkmbs5zanm04x-sleepy-artwork-contracts` |
+| Desktop QML check | `/nix/store/6pmc2c02jj0931pn7rvkyfcw01q7ykb3-sleepy-desktop-qml-contracts` |
+| Desktop package check | `/nix/store/zbv9c9ds00a1wd5fs8cwlayqh8qq8vg0-sleepy-desktop-package-contracts` |
+| Desktop preview check | `/nix/store/3z7lv9jnxrdgickzlxavrs1ah3kh8dhl-sleepy-desktop-preview-contracts` |
+
+The accepted root source commit is
+`563ae07b50ccc8c5332e1fb0352d351d46c7f615`. Target-VM generation,
+state-preservation, live input, and visual acceptance are recorded below.
 
 Regenerate the lock only from the flake inputs and validate it; never add lock
 nodes or `narHash` values by hand:
 
 ```bash
 nix flake lock
-bash checks/component-lock.sh components/desktop-m1.json flake.lock
+bash checks/component-lock.sh components/desktop-m1.json components/desktop-m1-baseline.json flake.lock
 git diff -- flake.lock
 sha256sum flake.lock
 ```
@@ -66,6 +81,68 @@ The in-tree `packages/sleepy-shell` and `packages/sleepy-branding` remain as a
 reviewable fallback. Delete them only after the generated lock, full flake
 check, external package builds, standalone Home Manager activation, and VM
 visual/state acceptance all pass at one recorded candidate commit.
+
+## Desktop Milestone 2 VM deployment — 2026-08-24
+
+Commit `563ae07b50ccc8c5332e1fb0352d351d46c7f615` was exported from a clean
+worktree. Its public `git archive` SHA-256 was
+`7ee7506638f52aa828ba564f027c623fb2568cf443a7f6d86a84ad4c04f5d9dd`.
+That deployment source commit was pushed to and remains an ancestor of the
+public branch `feat/desktop-m2-control-center`.
+
+The clean-copy `nixos/nix:2.35.2` gate ran with `/dev/kvm` and ended with
+`all checks passed!`. It included the real M1-to-M2 QEMU update test, the exact
+Niri 26.04 validator, component ownership and lock contracts, Home Manager,
+session, artwork, desktop QML/package/preview, GPL-scope, and source-clean
+checks.
+
+The VM first activated the reviewed candidate reversibly. After live visual
+inspection it was permanently switched, rebooted, and inspected again. Both
+`/run/current-system` and `/nix/var/nix/profiles/system` now resolve to:
+
+```text
+/nix/store/5673q2vvkc57l0c7hja62ajzc1fz9b6i-nixos-system-sleepy-vm-26.11.20260822.2c423e0
+```
+
+The reboot preserved the three user-owned artifacts byte-for-byte:
+
+| User-owned artifact | Accepted SHA-256 |
+|---|---|
+| `~/.config/sleepy/settings.json` | `d8d0c1695362be643d00b8f1b9cc1acbb3b3abb6dc2dc63fe56acb570ec217a0` |
+| `~/.local/state/sleepy/presets.json` | `07bbad19c9c777e00a67651b41865cf251ef28877eafde550664c632b9103c01` |
+| `~/.config/niri/sleepy-user-bindings.kdl` | `9aa7b9a9058b247a4e4dbefdf51849e9fc4a759f4909afe1fa789e119932698d` |
+
+After the reboot, Niri, `sleepy-session`, `sleepy-bindings-online`, and
+Quickshell were all active. Quickshell carried
+`QML_XHR_ALLOW_FILE_READ=1`; its current-boot journal contained no local-file
+XHR, `QML Image:`, or unsupported-image-format error. The active user preset
+was `Sleepy M2 Preview`, and both its contract and the generated KDL bound
+`surface.controlCenter.toggle` to `Mod+Space`. A real guest `Mod+Space` input
+opened the drawer; a second input closed it.
+
+The final system adds an action-specific Polkit rule for wheel users so the
+unprivileged Control Center can use the managed power-profile adapter. After
+the permanent switch and again after the reboot, the packaged CLI completed a
+strict confirmed cycle `balanced -> power-saver -> balanced`. Mutation
+generations 2102 and 2104 matched their snapshot generations and confirmed the
+requested profile in the readback; the final profile remained `balanced`.
+
+The first untouched post-login frame contained only the lunar rail and no
+Niri hotkey overlay. The live drawer showed the glass surface, logical SVG
+icons, network/Bluetooth, volume/microphone, brightness, mute, night-light,
+power-profile, media, preset, and diagnostics widgets. Named-preset and
+keybinding pages rendered and were navigable. The power chooser opened without
+performing an action, and Cancel returned safely while the session remained
+active. Captured guest-frame hashes were:
+
+| Frame | SHA-256 |
+|---|---|
+| Clean post-reboot desktop | `ffa42ebe7488ce96b735756c83a9f556a9164bfdc20ec947028add26e7a767f0` |
+| Drawer opened by live `Mod+Space` | `3b497eba461cb5e8b4d5b271dffa4b21565d54033a176713c24e4857871b60dc` |
+| Safe power chooser | `a5bef49c0b7a1f1704973d9f5241c5acb713be9f4b224ed2fe8f7db08308e279` |
+| Final drawer after Polkit fix and reboot | `6426f416e88c066504457c2fa556e8133fabc0ed750a93ea677826646adb81b4` |
+
+No system generations were deleted and no garbage collection was run.
 
 ## Desktop Milestone 1 VM deployment — 2026-08-24
 

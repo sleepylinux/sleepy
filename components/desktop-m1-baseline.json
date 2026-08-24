@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "milestone": "desktop-m1-baseline",
+  "root": {
+    "url": "github:sleepylinux/sleepy/a4d8c45337c94c7e8c69a1aebe747ae8e66b0839",
+    "revision": "a4d8c45337c94c7e8c69a1aebe747ae8e66b0839"
+  },
+  "inputs": {
+    "sleepy-sdk": {
+      "revision": "2edbe8310eee69c40e4f75924da67a57942bd1c3"
+    },
+    "sleepy-session": {
+      "revision": "1e8863839b5c4310bce251b7e10ed15926039930"
+    },
+    "sleepy-artwork": {
+      "revision": "0dd59cc9d8a77700f7a415997e3dcde396f55e99"
+    },
+    "sleepy-desktop": {
+      "revision": "a88fba369d3926981c46b837c88483553559a60a"
+    }
+  }
+}

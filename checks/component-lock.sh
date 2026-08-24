@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2016 # Backticks below are literal user instructions.
 set -euo pipefail
 
 if ! command -v jq >/dev/null 2>&1; then
@@ -6,58 +7,94 @@ if ! command -v jq >/dev/null 2>&1; then
   exit 127
 fi
 
-if test "$#" -ne 2; then
-  printf 'usage: %s <reviewed-manifest.json> <flake.lock>\n' \
+if test "$#" -ne 3; then
+  printf 'usage: %s <reviewed-manifest.json> <baseline-manifest.json> <flake.lock>\n' \
     "${0##*/}" >&2
   exit 2
 fi
 
 manifest=$1
-lock=$2
+baseline_manifest=$2
+lock=$3
 
-if ! jq -e --slurpfile reviewed "$manifest" '
+if ! jq -e \
+  --slurpfile reviewed "$manifest" \
+  --slurpfile baseline "$baseline_manifest" '
+  def children($id):
+    [(.nodes[$id].inputs // {})[] | select(type == "string")];
+  def closure($starts):
+    def walk($todo; $seen):
+      if ($todo | length) == 0 then $seen
+      else $todo[0] as $node |
+        if ($seen | index($node)) != null then
+          walk($todo[1:]; $seen)
+        else
+          walk(($todo[1:] + children($node)); ($seen + [$node]))
+        end
+      end;
+    walk($starts; []);
+  def valid_hash($node):
+    ($node.locked.narHash | type == "string" and startswith("sha256-") and length > 7);
+
   . as $lock |
-  ($reviewed[0].inputs | map_values(.revision)) as $reviewedRevisions |
+  $reviewed[0] as $currentManifest |
+  $baseline[0] as $baselineManifest |
   .nodes[.root].inputs as $rootInputs |
-  (
-    all($reviewed[0].inputs | to_entries[];
-      . as $input |
-      ($rootInputs[$input.key] | type == "string") and
-      ($lock.nodes[$rootInputs[$input.key]].locked.type == "github") and
-      ($lock.nodes[$rootInputs[$input.key]].locked.owner == "sleepylinux") and
-      ($lock.nodes[$rootInputs[$input.key]].locked.repo == $input.key) and
-      ($lock.nodes[$rootInputs[$input.key]].locked.rev == $input.value.revision) and
-      ($lock.nodes[$rootInputs[$input.key]].locked.narHash |
-        type == "string" and startswith("sha256-") and length > 7)
-    )
+  [$currentManifest.inputs | keys[] | $rootInputs[.]] as $currentRoots |
+  $rootInputs["sleepy-m1-baseline"] as $baselineRoot |
+  closure($currentRoots) as $currentClosure |
+  closure([$baselineRoot]) as $baselineClosure |
+
+  ($baselineRoot | type == "string") and
+  (.nodes[$baselineRoot].locked.type == "github") and
+  (.nodes[$baselineRoot].locked.owner == "sleepylinux") and
+  (.nodes[$baselineRoot].locked.repo == "sleepy") and
+  (.nodes[$baselineRoot].locked.rev == $baselineManifest.root.revision) and
+  valid_hash(.nodes[$baselineRoot]) and
+
+  all($currentManifest.inputs | to_entries[];
+    . as $input |
+    ($rootInputs[$input.key] | type == "string") and
+    ($lock.nodes[$rootInputs[$input.key]].locked.type == "github") and
+    ($lock.nodes[$rootInputs[$input.key]].locked.owner == "sleepylinux") and
+    ($lock.nodes[$rootInputs[$input.key]].locked.repo == $input.key) and
+    ($lock.nodes[$rootInputs[$input.key]].locked.rev == $input.value.revision) and
+    valid_hash($lock.nodes[$rootInputs[$input.key]])
   ) and
-  (
-    [
-      $lock.nodes[].locked? |
-      . as $node |
-      select(
-        $node.type == "github" and
-        $node.owner == "sleepylinux" and
-        ($reviewedRevisions[$node.repo] != null)
-      ) |
-      ($node.rev == $reviewedRevisions[$node.repo]) and
-      ($node.narHash |
-        type == "string" and startswith("sha256-") and length > 7)
-    ] |
-    all
-  ) and
-  (
-    [$lock.nodes[].locked.rev?] |
-    all(
-      . != "4c4f7989b957f41f3748ddfb092b0348e2ba9e88" and
-      . != "7785ac5dac0daa6ac1a619f1e2a9a1b1d1374da1"
-    )
+
+  all(.nodes | to_entries[];
+    . as $entry |
+    $entry.value.locked? as $locked |
+    if ($locked.type == "github" and $locked.owner == "sleepylinux") then
+      ($currentClosure | index($entry.key)) as $inCurrent |
+      ($baselineClosure | index($entry.key)) as $inBaseline |
+      if $inCurrent != null and $inBaseline != null then
+        ($locked.repo != "sleepy") and
+        ($currentManifest.inputs[$locked.repo].revision ==
+          $baselineManifest.inputs[$locked.repo].revision) and
+        ($locked.rev == $currentManifest.inputs[$locked.repo].revision) and
+        valid_hash($entry.value)
+      elif $inCurrent != null then
+        ($currentManifest.inputs[$locked.repo] != null) and
+        ($locked.rev == $currentManifest.inputs[$locked.repo].revision) and
+        valid_hash($entry.value)
+      elif $inBaseline != null then
+        (if $locked.repo == "sleepy" then
+          $locked.rev == $baselineManifest.root.revision
+        else
+          ($baselineManifest.inputs[$locked.repo] != null) and
+          ($locked.rev == $baselineManifest.inputs[$locked.repo].revision)
+        end) and valid_hash($entry.value)
+      else false
+      end
+    else true
+    end
   )
 ' "$lock" >/dev/null; then
   printf '%s\n' \
-    'component lock: reviewed root/nested component nodes do not match the manifest or contain a legacy pre-GPL revision.' \
+    'component lock: current or historical Sleepy graph does not match its immutable manifest.' \
     'Run `nix flake lock`, review the generated lock diff, then run:' \
-    '  bash checks/component-lock.sh components/desktop-m1.json flake.lock' >&2
+    '  bash checks/component-lock.sh components/desktop-m1.json components/desktop-m1-baseline.json flake.lock' >&2
   exit 1
 fi
 

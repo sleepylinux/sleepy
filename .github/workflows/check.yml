@@ -41,16 +41,20 @@ jobs:
       - name: Run source contract fixtures
         run: |
           nix develop --command bash checks/source-clean-test.sh
+          nix develop --command bash checks/baseline-provenance-test.sh
+          nix develop --command bash checks/bindings-policy-test.sh
           nix develop --command bash checks/quickshell-contract-test.sh
           nix develop --command bash checks/component-contract-test.sh
           nix develop --command bash checks/component-lock-test.sh
           nix develop --command bash checks/flake-shape-test.sh
           nix develop --command bash checks/flake-input-contract-test.sh
           nix develop --command bash checks/license-contract-test.sh
+          nix develop --command bash checks/online-readiness-test.sh
           nix develop --command bash checks/update-safety-contract-test.sh
+          nix develop --command bash checks/root-integration-contract-test.sh
 
       - name: Validate locked component revisions
-        run: bash checks/component-lock.sh components/desktop-m1.json flake.lock
+        run: bash checks/component-lock.sh components/desktop-m1.json components/desktop-m1-baseline.json flake.lock
 
       - name: Evaluate all checks
         run: nix flake check --no-build --show-trace

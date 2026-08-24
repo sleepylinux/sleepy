@@ -1,5 +1,6 @@
 {
   activationPackage,
+  baselineActivationPackage,
   pkgs,
 }:
 pkgs.runCommand "sleepy-update-safety-check" {
@@ -8,11 +9,14 @@ pkgs.runCommand "sleepy-update-safety-check" {
   set -eu
 
   home_files=${activationPackage}/home-files
+  baseline_home_files=${baselineActivationPackage}/home-files
   niri_dir="$home_files/.config/niri"
 
   ${pkgs.bash}/bin/bash ${./update-safety-contract.sh} \
     "$home_files" ${activationPackage}/activate \
     ${../modules/home} ${../flake.nix}
+
+  test -d "$baseline_home_files"
 
   if [ ! -d "$niri_dir" ]; then
     echo "standalone activation has no managed Niri directory" >&2
@@ -56,7 +60,12 @@ pkgs.runCommand "sleepy-update-safety-check" {
     exit 1
   fi
 
-  for expected_file in config input appearance bindings rules startup; do
+  if [ -e "$niri_dir/sleepy-user-bindings.kdl" ] || [ -L "$niri_dir/sleepy-user-bindings.kdl" ]; then
+    echo "Home Manager must not own the generated Niri include" >&2
+    exit 1
+  fi
+
+  for expected_file in config input appearance bindings-core rules startup; do
     if [ ! -L "$niri_dir/$expected_file.kdl" ]; then
       echo "missing managed Niri file: $expected_file.kdl" >&2
       exit 1

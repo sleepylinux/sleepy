@@ -4,6 +4,7 @@
   inputs,
   integratedHomeConfig,
   pkgs,
+  source,
   standaloneHomeConfig,
 }: let
   system = pkgs.stdenv.hostPlatform.system;
@@ -21,10 +22,12 @@
     schemaVersion = 1;
     inherit system;
     revisions = builtins.mapAttrs (name: _: inputRevision name) componentContract.inputs;
-    packages = builtins.mapAttrs (name: contract: {
-      inherit (contract) input output;
-      path = toString componentPackages.${name};
-    }) componentContract.rootPackages;
+    packages =
+      builtins.mapAttrs (name: contract: {
+        inherit (contract) input output;
+        path = toString componentPackages.${name};
+      })
+      componentContract.rootPackages;
     defaultPackage = toString componentPackages.default;
     homeManager = {
       shellPackage = toString standaloneHomeConfig.sleepy.shellPackage;
@@ -42,7 +45,11 @@
         execStart = sessionService.Service.ExecStart;
       };
     };
-    sources.sleepy-sdk = toString inputs.sleepy-sdk;
+    sources = {
+      root = toString source;
+      sleepy-sdk = toString inputs.sleepy-sdk;
+    };
+    validators.niri = "${pkgs.niri}/bin/niri";
   });
 in
   assert pkgs.lib.assertMsg
