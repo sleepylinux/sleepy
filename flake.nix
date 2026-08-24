@@ -1,9 +1,9 @@
-let
-  componentContract = builtins.fromJSON (builtins.readFile ./components/desktop-m1.json);
-in {
+{
   description = "Sleepy Linux desktop foundation";
 
-  inputs = {
+  inputs = let
+    componentContract = builtins.fromJSON (builtins.readFile ./components/desktop-m1.json);
+  in {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     home-manager = {
       url = "github:nix-community/home-manager";
@@ -37,6 +37,7 @@ in {
     home-manager,
     ...
   }: let
+    componentContract = builtins.fromJSON (builtins.readFile ./components/desktop-m1.json);
     baseline = import ./hosts/sleepy-vm/baseline.nix;
     supportedSystems = [baseline.system];
     overlay = import ./overlays {inherit inputs;};
