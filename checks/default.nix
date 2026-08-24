@@ -81,6 +81,7 @@
       ${pkgs.bash}/bin/bash ${source}/checks/flake-shape-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/flake-input-contract-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/license-contract-test.sh
+      ${pkgs.bash}/bin/bash ${source}/checks/journal-fault-runner-source-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/online-readiness-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/update-safety-contract-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/root-integration-contract-test.sh
@@ -138,6 +139,9 @@ in
     update-safety = updateSafety;
     update-safety-vm = updateSafetyVm;
     source-contracts = sourceContracts;
+    journal-fault-runner = pkgs.callPackage ./journal-fault-runner.nix {
+      runner = componentPackages.sleepy-journal-fault-runner;
+    };
     fresh-clone-source = freshCloneSource;
     inherit quickshell;
     sleepy-artwork-assets = inputs.sleepy-artwork.checks.${pkgs.stdenv.hostPlatform.system}.assets;

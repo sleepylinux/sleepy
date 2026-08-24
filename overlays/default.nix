@@ -12,6 +12,9 @@ in {
   sleepy-artwork = artworkPackages.sleepy-artwork;
   sleepy-shell = desktopPackages.sleepy-shell;
   sleepy-settings-preview = desktopPackages.sleepy-settings-preview;
+  sleepy-journal-fault-runner = final.callPackage ../packages/sleepy-journal-fault-runner {
+    inherit (sessionPackages) sleepy-session;
+  };
 
   # Compatibility alias for existing consumers. Ownership is external.
   sleepy-branding = artworkPackages.sleepy-artwork;

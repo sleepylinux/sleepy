@@ -61,6 +61,7 @@
         sleepy-artwork
         sleepy-branding
         sleepy-contract
+        sleepy-journal-fault-runner
         sleepy-session
         sleepy-session-user-unit
         sleepy-settings-preview
