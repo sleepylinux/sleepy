@@ -38,6 +38,12 @@ in
   assert pkgs.lib.assertMsg
   (pkgs.lib.versionAtLeast niriPackage.version "26.04")
   "the configured Niri package must satisfy the M2 minimum";
+  assert pkgs.lib.assertMsg
+  (pkgs.lib.hasInfix "org.freedesktop.UPower.PowerProfiles.switch-profile" config.security.polkit.extraConfig)
+  "Sleepy must authorize wheel users to switch the managed power profile";
+  assert pkgs.lib.assertMsg
+  (pkgs.lib.hasInfix "subject.isInGroup(\"wheel\")" config.security.polkit.extraConfig)
+  "the power-profile authorization must remain scoped to wheel users";
     pkgs.runCommand "session-contract" {} ''
       test -x ${niriPackage}/bin/niri-session
       test -f ${niriPackage}/lib/systemd/user/niri.service
