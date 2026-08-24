@@ -9,7 +9,7 @@ is recorded. Its reviewed immutable inputs are:
 sleepy-sdk      5dc792faea9d743fabbb576ae1b25ed7e1f729f9
 sleepy-session  6f1857bd786323ad89ac91c250a8485f944eb39c
 sleepy-artwork  108487617077254edb4e3a3b21047f5621eef151
-sleepy-desktop  b04cdee46ed67490c6af62f9742d4426fb10ef4b
+sleepy-desktop  a93e59a60dc887efcb3da0bc4442869eb8713a18
 ```
 
 The generated candidate lock has SHA-256
@@ -19,7 +19,7 @@ revisions. Do not copy or hand-edit lock nodes from another checkout:
 
 ```bash
 nix flake lock
-bash checks/component-lock.sh components/desktop-m1.json flake.lock
+bash checks/component-lock.sh components/desktop-m1.json components/desktop-m1-baseline.json flake.lock
 git diff --check
 git diff -- flake.lock
 sha256sum flake.lock
@@ -46,7 +46,7 @@ bash checks/flake-shape-test.sh
 bash checks/flake-input-contract-test.sh
 bash checks/license-contract-test.sh
 bash checks/update-safety-contract-test.sh
-bash checks/component-lock.sh components/desktop-m1.json flake.lock
+bash checks/component-lock.sh components/desktop-m1.json components/desktop-m1-baseline.json flake.lock
 nix flake check -L --no-write-lock-file
 nix build .#sleepy-contract .#sleepy-session \
   .#sleepy-session-user-unit .#sleepy-artwork \

@@ -10,7 +10,7 @@ distribution integration consumes only these reviewed component revisions:
 | `sleepy-sdk` | `5dc792faea9d743fabbb576ae1b25ed7e1f729f9` |
 | `sleepy-session` | `6f1857bd786323ad89ac91c250a8485f944eb39c` |
 | `sleepy-artwork` | `108487617077254edb4e3a3b21047f5621eef151` |
-| `sleepy-desktop` | `b04cdee46ed67490c6af62f9742d4426fb10ef4b` |
+| `sleepy-desktop` | `a93e59a60dc887efcb3da0bc4442869eb8713a18` |
 
 The generated `flake.lock` has SHA-256
 `bb68b48718b7144f4ae1780f937031af0f3eeb30aa4ad8d24c1543f29da622b0`,
