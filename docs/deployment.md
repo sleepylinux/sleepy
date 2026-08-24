@@ -2,8 +2,8 @@
 
 ## Desktop Milestone 1 candidate gate
 
-The external desktop slice is not deployable until its generated lock and VM
-acceptance are recorded. Its reviewed immutable inputs are:
+The external desktop slice is not deployable until live Wayland/VM acceptance
+is recorded. Its reviewed immutable inputs are:
 
 ```text
 sleepy-sdk      2edbe8310eee69c40e4f75924da67a57942bd1c3
@@ -12,9 +12,11 @@ sleepy-artwork  0dd59cc9d8a77700f7a415997e3dcde396f55e99
 sleepy-desktop  a88fba369d3926981c46b837c88483553559a60a
 ```
 
-On a Nix-enabled clean checkout, generate the missing lock entries and verify
-that Nix selected those exact revisions. Do not copy or hand-edit lock nodes
-from another checkout:
+The generated lock is committed by
+`2e1346e5b806a8ff3153d1f070f3675100980dc3` and has SHA-256
+`64f819a051bdeb0be8e44b146316d8317b4a8e10ca700148ba2e93ff7b770bca`.
+Reproduce it only from the flake inputs and verify that Nix selected those exact
+revisions. Do not copy or hand-edit lock nodes from another checkout:
 
 ```bash
 nix flake lock
@@ -24,8 +26,19 @@ git diff -- flake.lock
 sha256sum flake.lock
 ```
 
-Commit the generated lock, start again from a clean checkout at that exact
-commit, and run:
+A clean-copy Docker run with `nixos/nix:latest` and a persistent cache executed
+
+```bash
+nix --extra-experimental-features 'nix-command flakes' \
+  flake check --print-build-logs
+```
+
+and exited 0 with final output `all checks passed!`. It built the SDK/session
+tests, standalone Home Manager activation, update-safety and component
+contracts, Quickshell checks, and the NixOS system closure. This proves the Nix
+evaluation/build gate, not live Wayland/VM boot, state preservation, or visual
+behavior; those remain unverified. From a clean checkout, reproduce the local
+and Nix gates with:
 
 ```bash
 bash checks/source-clean-test.sh

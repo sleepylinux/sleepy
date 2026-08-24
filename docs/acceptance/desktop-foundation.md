@@ -2,7 +2,7 @@
 
 ## Desktop Milestone 1 integration candidate
 
-**BLOCKED pending completion of Nix/VM acceptance.** The distribution
+**BLOCKED pending live Wayland/VM boot and visual acceptance.** The distribution
 integration consumes only these reviewed component revisions:
 
 | Component | Reviewed revision |
@@ -15,10 +15,21 @@ integration consumes only these reviewed component revisions:
 The generated `flake.lock` has SHA-256
 `64f819a051bdeb0be8e44b146316d8317b4a8e10ca700148ba2e93ff7b770bca`,
 contains the four component inputs above, and passes the executable component
-lock contract. This is generated-lock evidence only: the full Nix check is
-still in progress, VM acceptance is pending, and neither result is claimed
-here. Record the final integration source commit only after the candidate has
-passed the remaining commands below.
+lock contract. A clean-copy Docker run using `nixos/nix:latest` and a persistent
+cache executed:
+
+```bash
+nix --extra-experimental-features 'nix-command flakes' \
+  flake check --print-build-logs
+```
+
+It exited 0 with final output `all checks passed!` after building the SDK and
+session tests, standalone Home Manager activation, update-safety and component
+contracts, Quickshell checks, and the NixOS system closure. This records the
+full Nix evaluation/build gate as PASS. Live Wayland/VM boot, activation,
+user-state preservation, and visual smoke remain unverified and are not
+claimed here. Record final live acceptance only after the remaining VM steps
+below pass.
 
 Regenerate the lock only from the flake inputs and validate it; never add lock
 nodes or `narHash` values by hand:
