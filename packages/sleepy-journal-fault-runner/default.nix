@@ -2,12 +2,31 @@
   lib,
   pkgs,
   sleepy-session,
-}:
+}: let
+  fsHelper = pkgs.stdenv.mkDerivation {
+    pname = "sleepy-journal-fs";
+    version = "0.1.0";
+    src = ./journal-fs.c;
+    dontUnpack = true;
+    buildPhase = ''
+      runHook preBuild
+      $CC -std=c11 -O2 -Wall -Wextra -Werror "$src" -o sleepy-journal-fs
+      runHook postBuild
+    '';
+    installPhase = ''
+      runHook preInstall
+      install -Dm0555 sleepy-journal-fs "$out/bin/sleepy-journal-fs"
+      runHook postInstall
+    '';
+    meta.license = lib.licenses.gpl3Only;
+  };
+in
 (pkgs.writeShellScriptBin "sleepy-journal-fault-runner" (
   builtins.replaceStrings
-  ["@coreutils@" "@jq@" "@sleepyctl@"]
+  ["@coreutils@" "@fshelper@" "@jq@" "@sleepyctl@"]
   [
     "${pkgs.coreutils}/bin"
+    "${fsHelper}/bin/sleepy-journal-fs"
     "${pkgs.jq}/bin/jq"
     "${sleepy-session}/bin/sleepyctl"
   ]
@@ -17,4 +36,5 @@
   meta.license = lib.licenses.gpl3Only;
   meta.mainProgram = "sleepy-journal-fault-runner";
   meta.platforms = lib.platforms.linux;
+  passthru.fsHelper = fsHelper;
 })

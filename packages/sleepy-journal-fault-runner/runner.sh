@@ -65,8 +65,10 @@ validate_file "$canary"
 validate_file "$journal"
 test "$(@coreutils@/cat -- "$canary")" = "$phase" || die 'canary phase mismatch'
 
-expected_variant=old
-test "$phase" = reloadConfirmed && expected_variant=new
+case "$phase" in
+  prepared|presetCommitted|settingsCommitted) expected_variant=old ;;
+  bindingsCommitted|reloadPending|reloadConfirmed) expected_variant=new ;;
+esac
 @jq@ -e --arg phase "$phase" --arg journal "$journal" --arg expected "$expected_variant" '
   type == "object" and keys == ["expectedVariant","journal","phase","schemaVersion"] and
   .schemaVersion == 1 and .phase == $phase and .journal == $journal and
@@ -116,46 +118,9 @@ for label in settings presets bindings; do
 done
 
 transaction_id=00000000-0000-4000-8000-000000000001
-recovery_target=previous
-test "$phase" = reloadConfirmed && recovery_target=candidate
-production_journal=$runtime_root/.bindings-transaction.production.json
-cleanup_stage=$runtime_root/.bindings-transaction.cleanup.json
-for staging in "$production_journal" "$cleanup_stage"; do
-  test ! -e "$staging" && ! test -L "$staging" ||
-    die 'journal staging path already exists'
-done
-for label in settings presets bindings; do
-  case "$label" in
-    settings) live=$settings ;;
-    presets) live=$presets ;;
-    bindings) live=$bindings ;;
-  esac
-  name=${live##*/}
-  directory=${live%/*}
-  for product_sidecar in \
-    "$directory/.$name.$transaction_id.old" \
-    "$directory/.$name.$transaction_id.new"; do
-    test ! -e "$product_sidecar" && ! test -L "$product_sidecar" ||
-      die 'production sidecar path already exists'
-  done
-done
-
-@coreutils@/rm -- "$canary"
+recovery_target=candidate
+@fshelper@ consume "$runtime_root" "$phase"
 test ! -e "$canary" && ! test -L "$canary" || die 'fault canary was not consumed'
-
-for label in settings presets bindings; do
-  case "$label" in
-    settings) live=$settings ;;
-    presets) live=$presets ;;
-    bindings) live=$bindings ;;
-  esac
-  name=${live##*/}
-  directory=${live%/*}
-  @coreutils@/cp -- "$live.sleepy-transaction.old" \
-    "$directory/.$name.$transaction_id.old"
-  @coreutils@/cp -- "$live.sleepy-transaction.new" \
-    "$directory/.$name.$transaction_id.new"
-done
 
 @jq@ -n --arg phase "$phase" --arg transactionId "$transaction_id" \
   --arg recoveryTarget "$recovery_target" \
@@ -186,8 +151,7 @@ done
       artifact("bindings"; $bindings; $fixture[0].artifacts.bindings)
     ]
   }
-' >"$production_journal"
-@coreutils@/mv -- "$production_journal" "$journal"
+' | @fshelper@ prepare "$runtime_root"
 
 run_reconcile() {
   @coreutils@/env -i \
@@ -204,21 +168,15 @@ reconcile_output=$(run_reconcile) || die 'product reconciliation failed'
 cleanup_output=null
 if test "$phase" != reloadConfirmed; then
   validate_file "$journal"
-  @jq@ '.phase = "reloadConfirmed"' "$journal" >"$cleanup_stage"
-  @coreutils@/mv -- "$cleanup_stage" "$journal"
+  @jq@ '.phase = "reloadConfirmed"' "$journal" |
+    @fshelper@ replace-journal "$runtime_root"
   cleanup_output=$(run_reconcile) || die 'product reconciliation cleanup failed'
   @jq@ -e 'type == "object"' <<<"$cleanup_output" >/dev/null ||
     die 'product reconciliation cleanup returned non-object JSON'
 fi
 
 test ! -e "$journal" && ! test -L "$journal" || die 'product left transaction journal behind'
-for live in "$settings" "$presets" "$bindings"; do
-  @coreutils@/rm -- "$live.sleepy-transaction.old" "$live.sleepy-transaction.new"
-  name=${live##*/}
-  directory=${live%/*}
-  test ! -e "$directory/.$name.$transaction_id.old" || die 'product left old sidecar behind'
-  test ! -e "$directory/.$name.$transaction_id.new" || die 'product left new sidecar behind'
-done
+@fshelper@ cleanup "$runtime_root"
 
 @jq@ -n --arg phase "$phase" --argjson result "$reconcile_output" \
   --argjson cleanup "$cleanup_output" \

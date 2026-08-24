@@ -60,8 +60,10 @@ pkgs.runCommand "sleepy-journal-fault-runner-check" {
         settings:{path:$settings,oldPath:$settingsOld,newPath:$settingsNew,oldSha256:$settingsOldSha,newSha256:$settingsNewSha},
         presets:{path:$presets,oldPath:$presetsOld,newPath:$presetsNew,oldSha256:$presetsOldSha,newSha256:$presetsNewSha},
         bindings:{path:$bindings,oldPath:$bindingsOld,newPath:$bindingsNew,oldSha256:$bindingsOldSha,newSha256:$bindingsNewSha}}}' >"$journal"
-    variant=old
-    test "$phase" = reloadConfirmed && variant=new
+    case "$phase" in
+      prepared|presetCommitted|settingsCommitted) variant=old ;;
+      bindingsCommitted|reloadPending|reloadConfirmed) variant=new ;;
+    esac
     jq -n --arg phase "$phase" --arg journal "$journal" --arg expected "$variant" \
       '{schemaVersion:1,phase:$phase,journal:$journal,expectedVariant:$expected}' >"$root/fault-fixture.json"
     printf '%s\n' "$phase" >"$root/fault.must-consume"
@@ -107,6 +109,20 @@ pkgs.runCommand "sleepy-journal-fault-runner-check" {
     jq -e --arg phase "$phase" \
       'type == "object" and .faultPhase == $phase and .faultInjected and .reconcileInvoked' \
       <<<"$output" >/dev/null
+    case "$phase" in
+      prepared|presetCommitted|settingsCommitted)
+        jq -e '.result.status == "reloadPending" and
+          .cleanup.status == "rolledBackConfirmed"' <<<"$output" >/dev/null
+        ;;
+      bindingsCommitted|reloadPending)
+        jq -e '.result.status == "reloadPending" and
+          .cleanup.status == "committed"' <<<"$output" >/dev/null
+        ;;
+      reloadConfirmed)
+        jq -e '.result.status == "committed" and .cleanup == null' \
+          <<<"$output" >/dev/null
+        ;;
+    esac
     for live in "$settings" "$presets" "$bindings"; do
       cmp "$live.$variant.expected" "$live"
       test ! -e "$live.sleepy-transaction.old"
@@ -119,6 +135,68 @@ pkgs.runCommand "sleepy-journal-fault-runner-check" {
   for phase in prepared presetCommitted settingsCommitted bindingsCommitted reloadPending reloadConfirmed; do
     run_phase "$phase"
   done
+
+  helper_root="$TMPDIR/helper-adversarial"
+  mkdir -p "$helper_root/config/sleepy" "$helper_root/config/niri" \
+    "$helper_root/state/sleepy"
+  for file in \
+    "$helper_root/config/sleepy/settings.json" \
+    "$helper_root/state/sleepy/presets.json" \
+    "$helper_root/config/niri/sleepy-user-bindings.kdl"; do
+    printf 'live\n' >"$file"
+    printf 'old\n' >"$file.sleepy-transaction.old"
+    printf 'new\n' >"$file.sleepy-transaction.new"
+  done
+  printf '{}\n' >"$helper_root/state/sleepy/bindings-transaction.json"
+
+  race_root="$TMPDIR/helper-parent-race"
+  cp -a "$helper_root" "$race_root"
+  mkdir "$race_root/attacker-niri"
+  printf 'attacker-marker\n' >"$race_root/attacker-niri/marker"
+  (
+    for _attempt in $(seq 1 500); do
+      if mv "$race_root/config/niri" "$race_root/config/niri.real" 2>/dev/null; then
+        ln -s "$race_root/attacker-niri" "$race_root/config/niri"
+        rm "$race_root/config/niri"
+        mv "$race_root/config/niri.real" "$race_root/config/niri"
+      fi
+    done
+  ) &
+  swapper=$!
+  printf '{}\n' | ${runner.fsHelper}/bin/sleepy-journal-fs prepare \
+    "$race_root" >/dev/null 2>&1 || true
+  wait "$swapper"
+  test "$(cat "$race_root/attacker-niri/marker")" = attacker-marker
+  test "$(find "$race_root/attacker-niri" -mindepth 1 -maxdepth 1 | wc -l)" -eq 1
+
+  printf 'do-not-truncate\n' >"$helper_root/victim"
+  ln -s "$helper_root/victim" \
+    "$helper_root/state/sleepy/.bindings-transaction.runner.prepare.tmp"
+  if printf '{}\n' | ${runner.fsHelper}/bin/sleepy-journal-fs prepare \
+    "$helper_root" >/dev/null 2>&1; then
+    echo 'filesystem helper accepted a swapped deterministic staging path' >&2
+    exit 1
+  fi
+  test "$(cat "$helper_root/victim")" = do-not-truncate
+  rm "$helper_root/state/sleepy/.bindings-transaction.runner.prepare.tmp"
+  rm \
+    "$helper_root/config/sleepy/.settings.json.00000000-0000-4000-8000-000000000001.old" \
+    "$helper_root/config/sleepy/.settings.json.00000000-0000-4000-8000-000000000001.new" \
+    "$helper_root/state/sleepy/.presets.json.00000000-0000-4000-8000-000000000001.old" \
+    "$helper_root/state/sleepy/.presets.json.00000000-0000-4000-8000-000000000001.new" \
+    "$helper_root/config/niri/.sleepy-user-bindings.kdl.00000000-0000-4000-8000-000000000001.old" \
+    "$helper_root/config/niri/.sleepy-user-bindings.kdl.00000000-0000-4000-8000-000000000001.new"
+
+  rm "$helper_root/config/sleepy/settings.json.sleepy-transaction.old"
+  ln -s "$helper_root/missing" \
+    "$helper_root/config/sleepy/settings.json.sleepy-transaction.old"
+  rm "$helper_root/state/sleepy/bindings-transaction.json"
+  if ${runner.fsHelper}/bin/sleepy-journal-fs cleanup "$helper_root" \
+    >/dev/null 2>&1; then
+    echo 'filesystem helper accepted a dangling fixture sidecar' >&2
+    exit 1
+  fi
+  test -L "$helper_root/config/sleepy/settings.json.sleepy-transaction.old"
 
   touch "$out"
 ''
