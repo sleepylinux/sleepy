@@ -37,13 +37,20 @@ Control Center trigger is an actual named icon and has a default global action
 keyboard. Escape closes it, and focus returns to the exact invoking control on
 the correct display.
 
+The global action crosses a stable Quickshell IPC boundary named `sleepy`.
+Niri spawns an argv-only IPC call; the shell resolves the target from Niri's
+focused workspace/output state and records keyboard invocation provenance so
+focus returns to that display's rail trigger. Unknown actions or unavailable
+outputs fail without changing the open surface.
+
 The Control Center is a scrollable glass drawer, 408 px by default, which stays
 usable at 768 px height. It contains:
 
 - a clock/date and session header with lock, logout, and power actions;
 - network and Bluetooth status with connected-name/detail;
 - volume, mute, microphone, output-device, and brightness controls;
-- night-light and focus/do-not-disturb controls;
+- night-light control; focus/do-not-disturb arrives with the notification
+  service rather than being presented as a fake local toggle;
 - battery and power-profile status where supported;
 - current media title, artist, playback state, and controls where supported;
 - compact system status chips and a visible adapter diagnostic;
@@ -80,20 +87,65 @@ include terminal, launcher, window/workspace navigation, Control Center,
 session actions, media, volume, and brightness. Physical chords do not appear
 inside QML business logic.
 
+Session action identifiers are exact: `session.lock`, `session.logout`,
+`session.reboot`, and `session.powerOff` request those closed actions;
+`session.power` is retained as the non-destructive action that opens the power
+chooser through `openPowerMenu()` and never means immediate power-off.
+
 Canonical modifier order is `Mod`, `Ctrl`, `Alt`, `Shift`, followed by one key.
 The contract rejects blank actions, unknown or duplicate modifiers, missing or
 multiple keys, and duplicate canonical chords. Comparison happens after
 canonicalization. UI conflict feedback names both actions before any write.
 
-An immutable minimal recovery include remains outside preset state. It exists
-only to recover or reload a broken user configuration and does not duplicate
-normal editable actions.
+Input is trimmed only at the document boundary; whitespace inside a chord is
+invalid. Single ASCII letters canonicalize to uppercase, digits remain exact,
+`F1..F24` canonicalize uppercase, and common XKB names use an explicit mapping
+for Return, arrows, navigation, media, and brightness keys. Other XKB tokens
+must match `[A-Za-z0-9_]+` and remain case-sensitive; the complete generated
+KDL still requires Niri validation. SDK `SemanticAction`,
+`KeybindingConflict`, and `ConflictKind` types provide structured invalid,
+duplicate, and reserved-core results.
+
+An immutable minimal recovery include remains outside preset state. Its sole
+binding is `Mod+Shift+Escape` for `recovery.shell`; the SDK exports this exact
+reserved-core map and normal preset validation always checks against it. It
+exists only to recover a broken user configuration and is not part of the
+editable semantic-action registry.
+
+The packaged `builtin.sleepy` preset contains the complete normal M2 default
+bindings, including terminal, launcher, navigation, and Control Center. The
+core include contains only recovery. First initialization therefore never
+turns the effective binding set into an empty file.
+
+Editing bindings while the active preset is built-in is copy-on-write: the
+orchestrator creates a UUID user copy, applies the edit, activates the copy,
+installs its generated include, and confirms reload as one recoverable
+operation. Full-document update and import-replace of the active preset use the
+same orchestration path or are rejected unless application is requested.
 
 Activating or changing bindings compiles the active preset into a generated
 `sleepy-user-bindings.kdl`. The compiler validates the complete candidate Niri
 configuration before atomically replacing the generated include and requesting
 a Niri reload. Durable preset state and the last valid generated include remain
 recoverable on validation, write, or reload failure.
+
+Activation and active-preset binding edits use one orchestration operation,
+not separate user-visible `activate` and `apply` steps. Under the store lock it
+compiles and validates the candidate include, records the previous settings and
+include, commits the new settings/include, and requests reload. A failed install
+or reload restores both previous artifacts and reloads the previous config.
+The structured result distinguishes committed, rolled-back-confirmed, and
+commit-state-unknown outcomes; it never reports success while the effective
+Niri config is unconfirmed.
+
+Because presets, settings, and the generated include cross XDG roots, the
+orchestrator maintains a synced transaction journal with old/new hashes,
+same-directory durable old/new artifact files, and phases `prepared`,
+`presetCommitted`, `settingsCommitted`, `bindingsCommitted`, `reloadPending`,
+and `reloadConfirmed`. No old artifact is removed until the confirmed phase and a
+synced journal clear. Startup reconciliation either finishes the confirmed
+candidate or restores all previous artifacts and reloads the previous config.
+Fault/termination tests cover every rename, fsync, reload, and cleanup boundary.
 
 ## Contract model
 
@@ -108,8 +160,40 @@ The SDK adds:
 - known semantic action identifiers for the packaged preset;
 - structured duplicate/reserved/invalid conflict records;
 - validation helpers for preset keybindings;
-- typed system snapshot and mutation result documents shared by session and
-  desktop adapters.
+- typed system snapshot, state-mutation result, and session-action result
+  documents shared by session and desktop adapters.
+
+`SystemMutation` is a tagged enum, so every stateful capability has one exact
+value type. `SystemMutationResult` carries that request, a monotonically
+increasing `generation`, and the confirmed post-mutation snapshot. Logout,
+reboot, power-off, and lock are not state mutations: `SessionAction` and
+`SessionActionResult` report `initiated|failed` plus a diagnostic and never
+pretend that a post-session snapshot is possible. Per-capability diagnostics use strict kinds:
+`unsupported`, `busy`, `timeout`, `parse`, or `command`, plus a non-secret
+message. These are wire contracts, not strings inferred by the desktop.
+The SDK exposes `validate_system_snapshot`, `validate_system_mutation_result`,
+and `validate_session_action_result`; strict fixtures define every field and
+capability key consumed by the desktop.
+
+The closed `CapabilityId` wire keys are `network.enabled`,
+`bluetooth.enabled`, `audio.volume`, `audio.muted`,
+`audio.microphoneLevel`, `audio.microphoneMuted`, `audio.outputDevice`,
+`display.brightness`, `display.nightLightEnabled`, `power.profile`,
+`battery.status`, and `media.transport`. Capability and diagnostic maps use
+this enum; unknown keys are invalid. `battery.status` is read-only. Separate
+closed session actions are `lock`, `logout`, `reboot`, and `powerOff`.
+`SystemSnapshot.sessionActions` is a strict map from every `SessionAction` to
+its `CapabilityState`, so the shell can gate unavailable actions without
+pretending they are state mutations.
+
+`AudioState` exposes `outputDeviceId` plus selectable
+`AudioOutputDevice { id, label, isDefault }` records; UI never sends a display
+label as a sink identifier. `PowerState` exposes a typed current profile and
+available `power-saver|balanced|performance` profiles. Media transport accepts
+only `playPause|next|previous`. Snapshot and both result documents carry a
+generation supplied by the requesting desktop adapter and echoed unchanged by
+the process-per-request CLI. The desktop increments its counter before every
+show/set/perform request; stale lower generations never replace newer state.
 
 The complete preset document remains the import/export unit. A bundle format is
 not introduced.
@@ -132,14 +216,33 @@ the target NixOS desktop:
 - power profiles through `powerprofilesctl`;
 - battery through UPower;
 - media through `playerctl`;
+- night light through a managed user `gammastep` service;
+- lock through packaged `swaylock`; logout, reboot, and power through a Control
+  Center confirmation surface before the session facade invokes fixed Niri or
+  `systemctl` argument arrays; these semantic actions are never compiled to a
+  direct destructive binding;
 - Niri through its message interface for validated reload/application.
 
 Commands use fixed argument arrays, explicit timeouts, structured errors, and
 no shell interpolation. Parsers are pure and fixture-tested. `system show`
-returns one typed snapshot and `system set <capability> <value>` returns a
-post-mutation snapshot after readback. The desktop polls at a modest interval
-and may request an immediate refresh after a mutation. A future D-Bus daemon
-can replace transport without changing the documents or QML state interfaces.
+returns one typed snapshot and typed state mutations return a
+`SystemMutationResult` containing confirmed readback. Session actions return a
+separate `SessionActionResult` because logout/reboot/power-off cannot provide a
+post-action snapshot. Independent probes
+fan out concurrently under a total 1200 ms deadline; the desktop timeout is
+1800 ms and its poll interval is at least 3000 ms. Results carry request
+generations so stale completions cannot replace newer state. The desktop may
+request an immediate refresh after a mutation. A future D-Bus daemon can
+replace transport without changing the documents or QML state interfaces.
+
+Semantic validation must not make recovery depend on opening a fully valid
+store. A raw `StateInspector` reads settings/preset bytes without initializing
+or rewriting them and reports record/action errors. A journaled repair bundle
+contains complete replacement settings plus preset collection; the binding
+orchestrator validates their cross-reference, compiles the generated include,
+creates a synced non-overwriting directory containing the original malformed
+bytes, and applies all three artifacts through the normal transaction. Normal
+mutations remain disabled until inspection is clean or repair is confirmed.
 
 ## Desktop architecture
 
@@ -166,12 +269,34 @@ resolves only those names, and `SleepyIcon` supplies consistent size, color,
 and accessibility behavior. Missing icons render a visible diagnostic symbol
 without crashing the shell.
 
+The desktop package receives substituted artwork-root and manifest paths.
+`SleepyIcon` uses a Qt 6 `MultiEffect` mask/colorization path so `currentColor`
+SVG assets follow the requested QML color; package and pixel tests prove both
+resolution and tinting.
+
 ### Surfaces and navigation
 
 The M1 one-open-surface controller is generalized around descriptors with
 `id`, `edge`, `width`, `triggerIcon`, `triggerLabel`, availability, and initial
 focus target. The first descriptor is `controlCenter`; later surfaces register
 through the same interface.
+
+Descriptors also carry `availability` and a stable `initialFocusKey`. Each
+per-screen view resolves that key to its own Item; descriptors never store a
+QML Item shared across `Variants` instances.
+
+The shell declares `//@ pragma ShellId sleepy`, while Home Manager separately
+runs the named Quickshell config `sleepy`. `IpcHandler` target `sleepy` exposes
+typed `toggleControlCenter(): void`, `openControlCenter(): void`,
+`closeActiveSurface(): void`, `openPowerMenu(): void`, and
+`requestSessionAction(action: string): void`.
+The latter validates the closed session-action names and opens the appropriate
+confirmation surface; lock may run directly. Generated KDL uses exact argv
+`quickshell ipc --config sleepy call sleepy <method> [argument]`.
+`ShortcutRouter` maps those calls to semantic actions; it does not own physical
+keys. Every keyboard IPC invocation performs a fresh bounded Niri
+focused-output query and changes surfaces only after a successful result,
+avoiding normal workspace polling delay.
 
 Interactive widgets expose accessible names and roles. Arrow navigation is
 explicit within grids, Tab traversal never traps focus, Home/End work for lists,
@@ -197,13 +322,28 @@ Niri includes two binding files:
 
 ```kdl
 include "bindings-core.kdl"
-include "sleepy-user-bindings.kdl"
+include optional=true "sleepy-user-bindings.kdl"
 ```
 
 Home Manager owns only `bindings-core.kdl` and the surrounding static config.
-The generated user include is initialized once and thereafter owned by the
-Sleepy session layer. Update-safety checks prove that rebuilding or upgrading
-does not alter settings, presets, or the generated include.
+An idempotent pre-Niri Home Manager activation invokes session initialization
+to create the generated user include only when absent. The root pins and asserts
+Niri 26.04 or newer, whose optional include also keeps a pristine login usable
+if initialization fails. Thereafter the include is owned by the Sleepy session
+layer. Update-safety checks prove that rebuilding or upgrading does not alter
+settings, presets, or the generated include.
+
+Binding validation accepts an ownership-checked `BindingPaths` containing the
+real Niri config root, fixed generated include, and journal. The config root,
+generated include, journal, and their writable parents must remain inside the
+expected XDG roots and must not traverse symlinked writable directories. Static
+Home Manager files may be symlinks only when their fully resolved targets are
+regular root-owned files inside `/nix/store`; validation copies their resolved
+bytes. The generated include, journal, backups, and temporary files must be
+regular user-owned files with bounded modes and no symlinks. Validation stages
+a copy of the exact current config tree, substitutes only the candidate include,
+and runs the pinned Niri validator on that tree; session-owned static fixtures
+are not sufficient release evidence.
 
 The old in-tree shell and branding fallbacks are deleted only after the
 external shell tests, live drawer interaction, VM state-preservation, and
@@ -219,7 +359,24 @@ visual gates pass for one pinned candidate.
   are distinct states.
 - Binding application never removes the last valid generated include on
   compiler or reload failure.
+- Online apply subscribes to and drains the Niri event stream before the
+  candidate rename, persists `reloadPending`, explicitly invokes
+  `niri msg action load-config-file --path <trusted-config.kdl>`, then requires
+  the next `ConfigLoaded { failed: false }` within a bounded timeout. A
+  failed/timeout candidate is rolled back and the
+  rollback must receive its own successful `ConfigLoaded` event; otherwise the
+  result is commit-state-unknown.
+- Pre-Niri activation performs only offline initialization or file-level
+  rollback and leaves a `reloadPending` journal phase. A separate user service
+  ordered after `niri.service` completes online reconciliation and confirmation.
+- Preset activation and effective binding application are one recoverable
+  transaction with explicit rollback confirmation.
+- Raw state inspection and repair remain available when normal store open
+  rejects legacy semantic errors.
 - Core recovery bindings and previous NixOS generations remain available.
+- Lock can execute directly; logout, reboot, and power bindings open an
+  argv-only IPC confirmation surface with cancel/confirm/focus tests and never
+  invoke destructive commands directly from generated KDL.
 - No test, update, or deployment deletes user state or performs garbage
   collection.
 
@@ -237,6 +394,8 @@ visual gates pass for one pinned candidate.
   surfaces, keyboard navigation, accessibility, compact/tall layout, last-valid
   state preservation, busy/error states, and preset management flows.
 - Component packages expose their tests as Nix flake checks.
+- Artwork exposes `checks.assets`; desktop exposes QML, package, and preview
+  checks; root builds the exact pinned input check attributes.
 
 ### Distribution and VM gates
 
@@ -244,8 +403,15 @@ visual gates pass for one pinned candidate.
   contracts pass.
 - Full `nix flake check` and explicit component/toplevel/Home Manager builds
   pass in the NixOS VM.
+- A seeded pristine-home test runs old and new Home Manager activation plus
+  session initialization and proves settings, presets, and generated bindings
+  remain byte-identical after every phase.
 - Two-phase deployment proves settings, presets, and generated bindings remain
   byte-identical unless the acceptance action intentionally changes them.
+- Before deployment, acceptance creates a named user preset, assigns a
+  non-reserved Control Center binding, activates/applies it, and records the
+  preset plus generated-include hashes. Both survive dry, test, permanent,
+  Home Manager, and service restart gates.
 - A keyboard action opens the live Control Center, Escape closes it, and focus
   returns to the invoking rail control.
 - Final screenshots cover 1280×800 and a compact viewport, full and no-effects
