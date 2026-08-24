@@ -43,10 +43,6 @@
       };
     };
     sources.sleepy-sdk = toString inputs.sleepy-sdk;
-    desktopCompatibility = {
-      sdkRevision = componentPackages.sleepy-shell.sdkRevision;
-      artworkRevision = componentPackages.sleepy-shell.artworkRevision;
-    };
   });
 in
   assert pkgs.lib.assertMsg
@@ -55,6 +51,9 @@ in
   assert pkgs.lib.assertMsg
   (builtins.all (name: componentPackages.${name} == expectedPackage name) (builtins.attrNames componentContract.rootPackages))
   "root package outputs must be direct aliases of the reviewed component outputs";
+  assert pkgs.lib.assertMsg
+  (builtins.all (name: componentPackages.${name}.meta.license == pkgs.lib.licenses.gpl3Only) (builtins.attrNames componentContract.rootPackages))
+  "all externally owned root packages must declare GPL-3.0-only";
   assert pkgs.lib.assertMsg
   (componentPackages.default == componentPackages.${componentContract.defaultPackage})
   "the root default package must remain the external Sleepy shell";

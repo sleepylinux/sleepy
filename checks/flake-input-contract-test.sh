@@ -15,22 +15,22 @@ cat >"$fixture/valid.nix" <<'EOF'
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
     sleepy-sdk = {
-      url = "github:sleepylinux/sleepy-sdk/4c4f7989b957f41f3748ddfb092b0348e2ba9e88";
+      url = "github:sleepylinux/sleepy-sdk/2edbe8310eee69c40e4f75924da67a57942bd1c3";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
     sleepy-session = {
-      url = "github:sleepylinux/sleepy-session/76937a484ffa444572c9ae1460029e573fb108ca";
+      url = "github:sleepylinux/sleepy-session/bf7a23081fe9f9bf83c9f5668e45e91faf943bd1";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
     sleepy-artwork = {
-      url = "github:sleepylinux/sleepy-artwork/7785ac5dac0daa6ac1a619f1e2a9a1b1d1374da1";
+      url = "github:sleepylinux/sleepy-artwork/0dd59cc9d8a77700f7a415997e3dcde396f55e99";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
     sleepy-desktop = {
-      url = "github:sleepylinux/sleepy-desktop/b69fd4d97895600e029e10621a61113ad795dbd8";
+      url = "github:sleepylinux/sleepy-desktop/f76108510e000b0cb7a758d6992d922e24d8a802";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -59,7 +59,7 @@ if bash "$contract" "$fixture/computed.nix" "$manifest" >/dev/null 2>&1; then
 fi
 
 sed \
-  's/76937a484ffa444572c9ae1460029e573fb108ca/0000000000000000000000000000000000000000/' \
+  's/bf7a23081fe9f9bf83c9f5668e45e91faf943bd1/0000000000000000000000000000000000000000/' \
   "$fixture/valid.nix" >"$fixture/drifted.nix"
 if bash "$contract" "$fixture/drifted.nix" "$manifest" >/dev/null 2>&1; then
   printf 'flake input contract accepted revision drift from the manifest\n' >&2

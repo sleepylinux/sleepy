@@ -1,4 +1,7 @@
-{stdenvNoCC}:
+{
+  lib,
+  stdenvNoCC,
+}:
 stdenvNoCC.mkDerivation {
   pname = "sleepy-branding";
   version = "0.1.0";
@@ -9,4 +12,5 @@ stdenvNoCC.mkDerivation {
     install -Dm644 "$src" "$out/share/sleepy/branding/logo.svg"
     runHook postInstall
   '';
+  meta.license = lib.licenses.gpl3Only;
 }

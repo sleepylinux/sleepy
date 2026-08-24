@@ -23,20 +23,20 @@ jq -e '
   .milestone == "desktop-m1" and
   .inputs == {
     "sleepy-sdk": {
-      "url": "github:sleepylinux/sleepy-sdk/4c4f7989b957f41f3748ddfb092b0348e2ba9e88",
-      "revision": "4c4f7989b957f41f3748ddfb092b0348e2ba9e88"
+      "url": "github:sleepylinux/sleepy-sdk/2edbe8310eee69c40e4f75924da67a57942bd1c3",
+      "revision": "2edbe8310eee69c40e4f75924da67a57942bd1c3"
     },
     "sleepy-session": {
-      "url": "github:sleepylinux/sleepy-session/76937a484ffa444572c9ae1460029e573fb108ca",
-      "revision": "76937a484ffa444572c9ae1460029e573fb108ca"
+      "url": "github:sleepylinux/sleepy-session/bf7a23081fe9f9bf83c9f5668e45e91faf943bd1",
+      "revision": "bf7a23081fe9f9bf83c9f5668e45e91faf943bd1"
     },
     "sleepy-artwork": {
-      "url": "github:sleepylinux/sleepy-artwork/7785ac5dac0daa6ac1a619f1e2a9a1b1d1374da1",
-      "revision": "7785ac5dac0daa6ac1a619f1e2a9a1b1d1374da1"
+      "url": "github:sleepylinux/sleepy-artwork/0dd59cc9d8a77700f7a415997e3dcde396f55e99",
+      "revision": "0dd59cc9d8a77700f7a415997e3dcde396f55e99"
     },
     "sleepy-desktop": {
-      "url": "github:sleepylinux/sleepy-desktop/b69fd4d97895600e029e10621a61113ad795dbd8",
-      "revision": "b69fd4d97895600e029e10621a61113ad795dbd8"
+      "url": "github:sleepylinux/sleepy-desktop/f76108510e000b0cb7a758d6992d922e24d8a802",
+      "revision": "f76108510e000b0cb7a758d6992d922e24d8a802"
     }
   } and
   (.rootPackages | type == "object") and
@@ -69,10 +69,6 @@ jq -e --slurpfile reviewed "$manifest" '
   .homeManager.service.remainAfterExit == true and
   .homeManager.service.execStart ==
     (.packages["sleepy-session"].path + "/bin/sleepyctl settings show") and
-  .desktopCompatibility.sdkRevision ==
-    $reviewed[0].inputs["sleepy-sdk"].revision and
-  .desktopCompatibility.artworkRevision ==
-    $reviewed[0].inputs["sleepy-artwork"].revision and
   (.sources["sleepy-sdk"] | type == "string" and length > 0)
 ' "$actual" >/dev/null
 

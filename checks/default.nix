@@ -59,6 +59,7 @@
       ${pkgs.bash}/bin/bash ${source}/checks/component-lock-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/flake-shape-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/flake-input-contract-test.sh
+      ${pkgs.bash}/bin/bash ${source}/checks/license-contract-test.sh
       touch "$out"
     '';
   freshCloneSource = pkgs.runCommand "sleepy-fresh-clone-source-check" {} ''
@@ -92,16 +93,23 @@
       test -f ${fallbackShell}/share/quickshell/sleepy/shell.qml
       touch "$out"
     '';
-in {
-  apps-contract = appsContract;
-  component-contract = componentIntegration;
-  nixos = nixosConfiguration.config.system.build.toplevel;
-  home = homeConfiguration.activationPackage;
-  niri-config = niriConfig;
-  public-module = publicModule;
-  session-contract = sessionContract;
-  update-safety = updateSafety;
-  source-contracts = sourceContracts;
-  fresh-clone-source = freshCloneSource;
-  inherit quickshell;
-}
+in
+  assert pkgs.lib.assertMsg
+  (fallbackBranding.meta.license == pkgs.lib.licenses.gpl3Only)
+  "the retained branding fallback must declare GPL-3.0-only";
+  assert pkgs.lib.assertMsg
+  (fallbackShell.meta.license == pkgs.lib.licenses.gpl3Only)
+  "the retained shell fallback must declare GPL-3.0-only";
+  {
+    apps-contract = appsContract;
+    component-contract = componentIntegration;
+    nixos = nixosConfiguration.config.system.build.toplevel;
+    home = homeConfiguration.activationPackage;
+    niri-config = niriConfig;
+    public-module = publicModule;
+    session-contract = sessionContract;
+    update-safety = updateSafety;
+    source-contracts = sourceContracts;
+    fresh-clone-source = freshCloneSource;
+    inherit quickshell;
+  }

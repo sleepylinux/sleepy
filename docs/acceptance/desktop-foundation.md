@@ -7,10 +7,10 @@ integration consumes only these reviewed component revisions:
 
 | Component | Reviewed revision |
 |---|---|
-| `sleepy-sdk` | `4c4f7989b957f41f3748ddfb092b0348e2ba9e88` |
-| `sleepy-session` | `76937a484ffa444572c9ae1460029e573fb108ca` |
-| `sleepy-artwork` | `7785ac5dac0daa6ac1a619f1e2a9a1b1d1374da1` |
-| `sleepy-desktop` | `b69fd4d97895600e029e10621a61113ad795dbd8` |
+| `sleepy-sdk` | `2edbe8310eee69c40e4f75924da67a57942bd1c3` |
+| `sleepy-session` | `bf7a23081fe9f9bf83c9f5668e45e91faf943bd1` |
+| `sleepy-artwork` | `0dd59cc9d8a77700f7a415997e3dcde396f55e99` |
+| `sleepy-desktop` | `f76108510e000b0cb7a758d6992d922e24d8a802` |
 
 The integration source commit and generated `flake.lock` SHA-256 must be
 recorded here only after the candidate has passed the commands below. The
