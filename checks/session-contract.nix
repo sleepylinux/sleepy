@@ -12,6 +12,21 @@ in
   (builtins.elem pkgs.xwayland-satellite config.environment.systemPackages)
   "xwayland-satellite must be available in the Niri session PATH";
   assert pkgs.lib.assertMsg
+  (builtins.elem pkgs.quickshell config.environment.systemPackages)
+  "Quickshell must belong to the candidate system closure for deployment attestation";
+  assert pkgs.lib.assertMsg
+  (builtins.elem pkgs.grim config.environment.systemPackages)
+  "grim must belong to the candidate system closure for deployment screenshots";
+  assert pkgs.lib.assertMsg
+  (builtins.elem pkgs.jq config.environment.systemPackages)
+  "jq must belong to the candidate system closure for deployment validation";
+  assert pkgs.lib.assertMsg
+  (builtins.elem pkgs.git config.environment.systemPackages)
+  "git must belong to the candidate system closure for archive provenance";
+  assert pkgs.lib.assertMsg
+  (builtins.elem pkgs.ripgrep config.environment.systemPackages)
+  "ripgrep must belong to the candidate system closure for source contracts";
+  assert pkgs.lib.assertMsg
   (!(config.systemd.user.services ? xwayland-satellite))
   "Niri owns Xwayland Satellite; Sleepy must not define a user service";
   assert pkgs.lib.assertMsg
@@ -20,9 +35,34 @@ in
   assert pkgs.lib.assertMsg
   (builtins.elem niriPackage config.systemd.packages)
   "the upstream Niri systemd package must be installed";
+  assert pkgs.lib.assertMsg
+  (pkgs.lib.versionAtLeast niriPackage.version "26.04")
+  "the configured Niri package must satisfy the M2 minimum";
+  assert pkgs.lib.assertMsg
+  (pkgs.lib.hasInfix "org.freedesktop.UPower.PowerProfiles.switch-profile" config.security.polkit.extraConfig)
+  "Sleepy must authorize wheel users to switch the managed power profile";
+  assert pkgs.lib.assertMsg
+  (pkgs.lib.hasInfix "subject.isInGroup(\"wheel\")" config.security.polkit.extraConfig)
+  "the power-profile authorization must remain scoped to wheel users";
     pkgs.runCommand "session-contract" {} ''
       test -x ${niriPackage}/bin/niri-session
       test -f ${niriPackage}/lib/systemd/user/niri.service
       test -f ${niriPackage}/share/wayland-sessions/niri.desktop
+      test -L ${config.system.build.toplevel}/sw
+      test -x ${config.system.build.toplevel}/sw/bin/quickshell
+      test -x ${config.system.build.toplevel}/sw/bin/grim
+      test -x ${config.system.build.toplevel}/sw/bin/jq
+      test -x ${config.system.build.toplevel}/sw/bin/git
+      test -x ${config.system.build.toplevel}/sw/bin/rg
+      test "$(readlink -f ${config.system.build.toplevel}/sw/bin/quickshell)" = \
+        ${pkgs.quickshell}/bin/quickshell
+      test "$(readlink -f ${config.system.build.toplevel}/sw/bin/grim)" = \
+        ${pkgs.grim}/bin/grim
+      test "$(readlink -f ${config.system.build.toplevel}/sw/bin/jq)" = \
+        ${pkgs.jq}/bin/jq
+      test "$(readlink -f ${config.system.build.toplevel}/sw/bin/git)" = \
+        ${pkgs.git}/bin/git
+      test "$(readlink -f ${config.system.build.toplevel}/sw/bin/rg)" = \
+        ${pkgs.ripgrep}/bin/rg
       touch "$out"
     ''

@@ -5,6 +5,7 @@
 }: let
   cfg = config.sleepy;
 in {
+  imports = [./niri-version.nix];
   users.users.${cfg.primaryUser} = {
     isNormalUser = true;
     extraGroups = ["wheel"];
@@ -12,6 +13,7 @@ in {
   };
 
   networking.networkmanager.enable = true;
+  hardware.bluetooth.enable = true;
 
   i18n.defaultLocale = "en_US.UTF-8";
   services.xserver.xkb = {
@@ -36,5 +38,6 @@ in {
       pulse.enable = true;
     };
     upower.enable = true;
+    power-profiles-daemon.enable = true;
   };
 }

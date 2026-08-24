@@ -1,5 +1,109 @@
 # Deploying the Sleepy desktop
 
+## Desktop Milestone 2 candidate gate
+
+The external desktop slice is not deployable until live Wayland/VM acceptance
+is recorded. Its reviewed immutable inputs are:
+
+```text
+sleepy-sdk      5dc792faea9d743fabbb576ae1b25ed7e1f729f9
+sleepy-session  b88f5b993ae449acf176d8fc6f0d6542776d06bd
+sleepy-artwork  108487617077254edb4e3a3b21047f5621eef151
+sleepy-desktop  0b612df154e0606ced56020a56a54fa1f42dd3db
+```
+
+The generated candidate lock has SHA-256
+`37077bba388939aa3b848cd53031f92c5ad07d5b13ac7314e4462985603bab82`.
+Reproduce it only from the flake inputs and verify that Nix selected those exact
+revisions. Do not copy or hand-edit lock nodes from another checkout:
+
+```bash
+nix flake lock
+bash checks/component-lock.sh components/desktop-m1.json components/desktop-m1-baseline.json flake.lock
+git diff --check
+git diff -- flake.lock
+sha256sum flake.lock
+```
+
+A clean-copy Docker run with `nixos/nix:2.35.2`, the persistent
+`sleepy-nix-cache` volume, and `/dev/kvm` passed on 2026-08-24. It executed
+
+```bash
+nix --extra-experimental-features 'nix-command flakes' \
+  flake check -L --no-write-lock-file
+```
+
+and exited 0 with final output `all checks passed!`. The included
+`sleepy-m1-to-m2-update-safety` QEMU test ran to completion in 17.73 seconds.
+The explicit builds produced:
+
+```text
+sleepy-contract             /nix/store/1hma6bvlaj9i4sf4dj25kp1hbkxd1mhv-sleepy-sdk-0.1.0
+sleepy-session              /nix/store/s05bf253170i8ahz2w2wa5dy9lncnbwh-sleepy-session-0.1.0
+sleepy-session-user-unit    /nix/store/9nlxhfr441yz5i43gf65qfqzab4s6sz5-sleepy-session.service
+sleepy-artwork              /nix/store/nh341wq9kf7bbx6nn4i2bqvcy6qyh6ar-sleepy-artwork-0.1.0
+sleepy-shell                /nix/store/xkplqqfncs3wnqvdb5zbr3vmc97cap9p-sleepy-shell-0.2.0
+sleepy-settings-preview     /nix/store/90q1fczz1r81vjimg3bp24n8r55znnsx-sleepy-settings-preview-0.2.0
+nixos toplevel              /nix/store/5673q2vvkc57l0c7hja62ajzc1fz9b6i-nixos-system-sleepy-vm-26.11.20260822.2c423e0
+home-manager activation     /nix/store/w30qvcz43n3300n8amk7baj7hlh4acbb-home-manager-generation
+artwork assets check        /nix/store/2a4vdax6s2467mfnyhzhkmbs5zanm04x-sleepy-artwork-contracts
+desktop QML check           /nix/store/6pmc2c02jj0931pn7rvkyfcw01q7ykb3-sleepy-desktop-qml-contracts
+desktop package check       /nix/store/zbv9c9ds00a1wd5fs8cwlayqh8qq8vg0-sleepy-desktop-package-contracts
+desktop preview check       /nix/store/3z7lv9jnxrdgickzlxavrs1ah3kh8dhl-sleepy-desktop-preview-contracts
+```
+
+Live target-VM deployment, reboot persistence, state preservation, and visual
+behavior passed for root commit
+`563ae07b50ccc8c5332e1fb0352d351d46c7f615`. The permanent VM profile is
+`/nix/store/5673q2vvkc57l0c7hja62ajzc1fz9b6i-nixos-system-sleepy-vm-26.11.20260822.2c423e0`.
+The exact state and screenshot hashes are recorded in
+`docs/acceptance/desktop-foundation.md`. From a clean checkout, reproduce the
+local and Nix gates with:
+
+```bash
+bash checks/source-clean-test.sh
+bash checks/quickshell-contract-test.sh
+bash checks/component-contract-test.sh
+bash checks/component-lock-test.sh
+bash checks/flake-shape-test.sh
+bash checks/flake-input-contract-test.sh
+bash checks/license-contract-test.sh
+bash checks/update-safety-contract-test.sh
+bash checks/component-lock.sh components/desktop-m1.json components/desktop-m1-baseline.json flake.lock
+nix flake check -L --no-write-lock-file
+nix build .#sleepy-contract .#sleepy-session \
+  .#sleepy-session-user-unit .#sleepy-artwork \
+  .#sleepy-shell .#sleepy-settings-preview --no-link -L
+nix build .#nixosConfigurations.sleepy-vm.config.system.build.toplevel \
+  --no-link --no-write-lock-file --print-out-paths -L
+nix build '.#homeConfigurations."lazy@sleepy-vm".activationPackage' \
+  --no-link --no-write-lock-file -L
+```
+
+Before VM activation, record hashes and metadata for any existing settings and
+preset documents under their effective XDG roots. Run `dry-activate`, then
+`test`; stop if either document changes. In the graphical session verify:
+
+```bash
+systemctl --user show sleepy-session.service \
+  -p ActiveState -p SubState -p PartOf -p ExecStart
+systemctl --user is-active graphical-session.target quickshell.service
+
+contract_file=$(mktemp)
+sleepyctl settings show >"$contract_file"
+sleepy-contract validate settings "$contract_file"
+rm -- "$contract_file"
+```
+
+Confirm the left rail, quick-settings drawer, logical lunar mark, and settings
+preview render from the external packages. Only then may the permanent switch
+procedure below be used and the exact root commit, generated lock SHA-256,
+toplevel, state hashes, and visual results be added to the acceptance record.
+
+The in-tree shell and branding derivations are intentionally retained until
+this gate passes. They are fallback/parity evidence, not the configured package
+owners. Removing them before one-candidate Nix and VM acceptance is prohibited.
+
 ## Deployment boundary
 
 Deploy only a clean, committed public tree. Do not copy `.git`, `.superpowers`,
@@ -318,6 +422,34 @@ public copies:
 
 On 2026-08-23 the switch created system generation 5 and retained generations
 1 through 4. No generation deletion or garbage collection was performed.
+
+### Desktop Milestone 1 deployment record
+
+On 2026-08-24 the public archive for
+`0267c7bba0ed9d4ac3360583d7a6726c865f6b47` (SHA-256
+`d9205eda068d04b4ca6acb2de977f1c25f029e69610e138d274bd0e323099f02`)
+passed the full flake check inside the VM. A separately reviewed two-phase
+activation preserved the permanent profile during `dry-activate` and `test`,
+then switched `/etc/sleepy` to the verified root-owned source. The accepted
+toplevel is:
+
+```text
+/nix/store/12mhf8a8cjcfz889srfldgnm2zgf7hal-nixos-system-sleepy-vm-26.11.20260822.2c423e0
+```
+
+The permanent switch created generation 6 and retained all predecessors. The
+immediately previous source is preserved at:
+
+```text
+/etc/sleepy.pre-0267c7b-20260824T023543Z
+```
+
+The root-only deployment evidence is retained at
+`/var/tmp/sleepy-deploy-0267c7b.tDLLbJ`. No generation was deleted and no
+garbage collection ran. Settings and preset stores remained user-owned and
+byte-identical through every activation stage. Live rail rendering passed;
+live drawer activation remains an explicit follow-up and therefore does not
+authorize deletion of the in-tree fallback packages.
 
 ## Interactive authorization
 

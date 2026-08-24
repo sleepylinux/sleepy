@@ -1,4 +1,5 @@
 {
+  lib,
   sleepy-branding,
   stdenvNoCC,
 }:
@@ -14,4 +15,5 @@ stdenvNoCC.mkDerivation {
       --replace-fail "@sleepyBrandingLogo@" "${sleepy-branding}/share/sleepy/branding/logo.svg"
     runHook postInstall
   '';
+  meta.license = lib.licenses.gpl3Only;
 }

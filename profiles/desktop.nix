@@ -18,7 +18,8 @@
       sleepy = {
         enable = true;
         inherit primaryUser;
-        brandingPackage = pkgs.sleepy-branding;
+        brandingPackage = pkgs.sleepy-artwork;
+        sessionPackage = pkgs.sleepy-session;
         shellPackage = pkgs.sleepy-shell;
       };
     };

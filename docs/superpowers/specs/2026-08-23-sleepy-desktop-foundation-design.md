@@ -311,7 +311,7 @@ CI will run on feature branches and pull requests. A weekly automation may propo
 - Development uses feature branches and pull requests.
 - Commits follow Conventional Commits.
 - Releases use SemVer, beginning with `v0.1.0`.
-- The project is intended for public release under `GPL-3.0-or-later`.
+- The project is released under `GPL-3.0-only`.
 - The GitHub `origin` will be added when its URL is provided.
 
 The first commit contains the approved design and repository hygiene rules. Implementation begins only after this specification is reviewed and the implementation plan is approved.
