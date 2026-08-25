@@ -17,7 +17,7 @@
     inputs.${contract.input}.packages.${system}.${contract.output};
   sessionService = standaloneHomeConfig.systemd.user.services.sleepy-session;
   integratedSessionService = integratedHomeConfig.systemd.user.services.sleepy-session;
-  expectedSessionExec = ["${componentPackages.sleepy-session}/bin/sleepyctl settings show"];
+  expectedSessionExec = ["${componentPackages.sleepy-session}/bin/sleepy-sessiond"];
   actualContract = pkgs.writeText "sleepy-component-contract.json" (builtins.toJSON {
     schemaVersion = 1;
     inherit system;
@@ -40,8 +40,14 @@
         partOf = sessionService.Unit.PartOf;
         after = sessionService.Unit.After;
         requisite = sessionService.Unit.Requisite;
+        requires = sessionService.Unit.Requires;
         type = sessionService.Service.Type;
-        remainAfterExit = sessionService.Service.RemainAfterExit;
+        restart = sessionService.Service.Restart;
+        runtimeDirectory = sessionService.Service.RuntimeDirectory;
+        runtimeDirectoryMode = sessionService.Service.RuntimeDirectoryMode;
+        killSignal = sessionService.Service.KillSignal;
+        timeoutStopSec = sessionService.Service.TimeoutStopSec;
+        environment = sessionService.Service.Environment;
         execStart = sessionService.Service.ExecStart;
       };
     };
@@ -93,7 +99,7 @@ in
   "standalone and integrated Home Manager must share the session service contract";
   assert pkgs.lib.assertMsg
   (sessionService.Service.ExecStart == expectedSessionExec)
-  "the session service must execute sleepyctl from the external session package";
+  "the session service must execute sleepy-sessiond from the external session package";
     pkgs.runCommand "sleepy-component-contract" {
       nativeBuildInputs = with pkgs; [
         bash

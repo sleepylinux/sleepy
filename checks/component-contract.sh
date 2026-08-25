@@ -20,7 +20,7 @@ actual=$2
 
 jq -e '
   .schemaVersion == 1 and
-  (.milestone == "desktop-m1" or .milestone == "desktop-m2") and
+  (.milestone == "desktop-m1" or .milestone == "desktop-m2" or .milestone == "desktop-m3") and
   (.inputs | keys == ["sleepy-artwork", "sleepy-desktop", "sleepy-sdk", "sleepy-session"]) and
   all(.inputs | to_entries[];
     (.value.revision | type == "string" and test("^[0-9a-f]{40}$")) and
@@ -50,12 +50,19 @@ jq -e --slurpfile reviewed "$manifest" '
   .homeManager.service.unit == "sleepy-session.service" and
   .homeManager.service.wantedBy == ["graphical-session.target"] and
   .homeManager.service.partOf == ["graphical-session.target"] and
-  .homeManager.service.after == ["graphical-session.target"] and
+  .homeManager.service.after == ["graphical-session.target", "dbus.socket"] and
   .homeManager.service.requisite == ["graphical-session.target"] and
-  .homeManager.service.type == "oneshot" and
-  .homeManager.service.remainAfterExit == true and
+  .homeManager.service.requires == ["dbus.socket"] and
+  .homeManager.service.type == "simple" and
+  .homeManager.service.restart == "on-failure" and
+  .homeManager.service.runtimeDirectory == "sleepy" and
+  .homeManager.service.runtimeDirectoryMode == "0700" and
+  .homeManager.service.killSignal == "SIGINT" and
+  .homeManager.service.timeoutStopSec == 20 and
+  (.homeManager.service.environment | length == 1) and
+  (.homeManager.service.environment[0] | startswith("PATH=/nix/store/")) and
   .homeManager.service.execStart ==
-    [(.packages["sleepy-session"].path + "/bin/sleepyctl settings show")] and
+    [(.packages["sleepy-session"].path + "/bin/sleepy-sessiond")] and
   (.sources["sleepy-sdk"] | type == "string" and length > 0) and
   (.sources.root | type == "string" and length > 0) and
   (.validators.niri | type == "string" and startswith("/") and length > 1)
@@ -75,6 +82,7 @@ sdk_cli="$sdk/bin/sleepy-contract"
 session_cli="$session/bin/sleepyctl"
 test -x "$sdk_cli"
 test -x "$session_cli"
+test -x "$session/bin/sleepy-sessiond"
 test -x "$desktop/bin/sleepy-shell"
 test -x "$preview/bin/sleepy-settings-preview"
 test -f "$unit/share/systemd/user/sleepy-session.service"

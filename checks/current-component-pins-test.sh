@@ -12,33 +12,33 @@ done
 
 repo_root=${SLEEPY_CURRENT_PINS_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}
 manifest="$repo_root/components/desktop-m1.json"
-baseline="$repo_root/components/desktop-m1-baseline.json"
+baseline="$repo_root/components/desktop-m2-baseline.json"
 expected=$(mktemp /tmp/sleepy-current-component-pins.XXXXXX.json)
 deployment_candidate=$(mktemp /tmp/sleepy-deployment-candidate.XXXXXX.md)
 acceptance_candidate=$(mktemp /tmp/sleepy-acceptance-candidate.XXXXXX.md)
 trap 'rm -f -- "$expected" "$deployment_candidate" "$acceptance_candidate"' EXIT
-approved_lock_sha=37077bba388939aa3b848cd53031f92c5ad07d5b13ac7314e4462985603bab82
+approved_lock_sha=f8b178c286b871ebdc267d67f66decf606a603295a21e883358a75f4c248992d
 
 cat >"$expected" <<'EOF'
 {
   "schemaVersion": 1,
-  "milestone": "desktop-m2",
+  "milestone": "desktop-m3",
   "inputs": {
     "sleepy-sdk": {
-      "url": "github:sleepylinux/sleepy-sdk/5dc792faea9d743fabbb576ae1b25ed7e1f729f9",
-      "revision": "5dc792faea9d743fabbb576ae1b25ed7e1f729f9"
+      "url": "github:sleepylinux/sleepy-sdk/152173b470fa7d1e90c6d3d6be103a4a4d3529bc",
+      "revision": "152173b470fa7d1e90c6d3d6be103a4a4d3529bc"
     },
     "sleepy-session": {
-      "url": "github:sleepylinux/sleepy-session/b88f5b993ae449acf176d8fc6f0d6542776d06bd",
-      "revision": "b88f5b993ae449acf176d8fc6f0d6542776d06bd"
+      "url": "github:sleepylinux/sleepy-session/03eef8fa32595d7887ed36830212f9abc6c01a84",
+      "revision": "03eef8fa32595d7887ed36830212f9abc6c01a84"
     },
     "sleepy-artwork": {
-      "url": "github:sleepylinux/sleepy-artwork/108487617077254edb4e3a3b21047f5621eef151",
-      "revision": "108487617077254edb4e3a3b21047f5621eef151"
+      "url": "github:sleepylinux/sleepy-artwork/175314b9c236c1b412e8e1ebc54bbe3937b0c90d",
+      "revision": "175314b9c236c1b412e8e1ebc54bbe3937b0c90d"
     },
     "sleepy-desktop": {
-      "url": "github:sleepylinux/sleepy-desktop/0b612df154e0606ced56020a56a54fa1f42dd3db",
-      "revision": "0b612df154e0606ced56020a56a54fa1f42dd3db"
+      "url": "github:sleepylinux/sleepy-desktop/e52bf09a6472366d182209de9ea083a69364721c",
+      "revision": "e52bf09a6472366d182209de9ea083a69364721c"
     }
   }
 }
@@ -47,27 +47,27 @@ EOF
 failures=0
 
 if ! jq -e --slurpfile expected "$expected" \
-  '.milestone == "desktop-m2" and .inputs == $expected[0].inputs' \
+  '.milestone == "desktop-m3" and .inputs == $expected[0].inputs' \
   "$manifest" >/dev/null; then
-  printf 'current component pins: current manifest does not match the approved M2 revisions\n' >&2
+  printf 'current component pins: current manifest does not match the approved M3 revisions\n' >&2
   failures=1
 fi
 
 if ! bash "$repo_root/checks/flake-input-contract.sh" \
   "$repo_root/flake.nix" "$expected" "$baseline" >/dev/null 2>&1; then
-  printf 'current component pins: flake input literals do not match the approved M2 revisions\n' >&2
+  printf 'current component pins: flake input literals do not match the approved M3 revisions\n' >&2
   failures=1
 fi
 
 if ! bash "$repo_root/checks/component-lock.sh" \
   "$expected" "$baseline" "$repo_root/flake.lock" >/dev/null 2>&1; then
-  printf 'current component pins: generated lock graph does not match the approved M2 revisions\n' >&2
+  printf 'current component pins: generated lock graph does not match the approved M3 revisions\n' >&2
   failures=1
 fi
 
-awk '/^## Desktop Milestone 2 candidate gate$/ { keep=1 } /^## Deployment boundary$/ { keep=0 } keep' \
+awk '/^## Desktop Milestone 3 candidate gate$/ { keep=1 } /^## Desktop Milestone 2 candidate gate$/ { keep=0 } keep' \
   "$repo_root/docs/deployment.md" >"$deployment_candidate"
-awk '/^## Desktop Milestone 2 integration candidate$/ { keep=1 } /^## Desktop Milestone 2 VM deployment/ { keep=0 } /^## Desktop Milestone 1 VM deployment/ { keep=0 } keep' \
+awk '/^## Desktop Milestone 3 integration candidate$/ { keep=1 } /^## Desktop Milestone 2 integration candidate$/ { keep=0 } keep' \
   "$repo_root/docs/acceptance/desktop-foundation.md" >"$acceptance_candidate"
 
 computed_lock_sha=$(sha256sum "$repo_root/flake.lock" | awk '{print $1}')
@@ -103,10 +103,10 @@ if test "${#deployment_rows[@]}" -ne 4; then
 fi
 
 for expected_line in \
-  'sleepy-sdk      5dc792faea9d743fabbb576ae1b25ed7e1f729f9' \
-  'sleepy-session  b88f5b993ae449acf176d8fc6f0d6542776d06bd' \
-  'sleepy-artwork  108487617077254edb4e3a3b21047f5621eef151' \
-  'sleepy-desktop  0b612df154e0606ced56020a56a54fa1f42dd3db'; do
+  'sleepy-sdk      152173b470fa7d1e90c6d3d6be103a4a4d3529bc' \
+  'sleepy-session  03eef8fa32595d7887ed36830212f9abc6c01a84' \
+  'sleepy-artwork  175314b9c236c1b412e8e1ebc54bbe3937b0c90d' \
+  'sleepy-desktop  e52bf09a6472366d182209de9ea083a69364721c'; do
   if test "$(grep -Fxc -- "$expected_line" "$deployment_candidate")" -ne 1; then
     printf 'current component pins: deployment candidate must contain exactly one %s\n' \
       "$expected_line" >&2
@@ -131,10 +131,10 @@ while IFS=$'\t' read -r component revision; do
     failures=1
   fi
 done <<'EOF'
-sleepy-sdk	5dc792faea9d743fabbb576ae1b25ed7e1f729f9
-sleepy-session	b88f5b993ae449acf176d8fc6f0d6542776d06bd
-sleepy-artwork	108487617077254edb4e3a3b21047f5621eef151
-sleepy-desktop	0b612df154e0606ced56020a56a54fa1f42dd3db
+sleepy-sdk	152173b470fa7d1e90c6d3d6be103a4a4d3529bc
+sleepy-session	03eef8fa32595d7887ed36830212f9abc6c01a84
+sleepy-artwork	175314b9c236c1b412e8e1ebc54bbe3937b0c90d
+sleepy-desktop	e52bf09a6472366d182209de9ea083a69364721c
 EOF
 
 if test "$failures" -ne 0; then
@@ -147,7 +147,7 @@ if test "${SLEEPY_CURRENT_PINS_FIXTURE:-0}" != 1; then
   mkdir -p "$fixture/checks" "$fixture/components" "$fixture/docs/acceptance"
   cp "$repo_root/flake.nix" "$repo_root/flake.lock" "$fixture/"
   cp "$repo_root/components/desktop-m1.json" \
-    "$repo_root/components/desktop-m1-baseline.json" "$fixture/components/"
+    "$repo_root/components/desktop-m2-baseline.json" "$fixture/components/"
   cp "$repo_root/checks/flake-input-contract.sh" \
     "$repo_root/checks/component-lock.sh" "$fixture/checks/"
   cp "$repo_root/docs/deployment.md" "$fixture/docs/"
@@ -166,23 +166,23 @@ if test "${SLEEPY_CURRENT_PINS_FIXTURE:-0}" != 1; then
     fi
   }
 
-  sed -i '0,/37077bba388939aa3b848cd53031f92c5ad07d5b13ac7314e4462985603bab82/s//0000000000000000000000000000000000000000000000000000000000000000/' \
+  sed -i '0,/f8b178c286b871ebdc267d67f66decf606a603295a21e883358a75f4c248992d/s//0000000000000000000000000000000000000000000000000000000000000000/' \
     "$fixture/docs/deployment.md"
   assert_rejected deployment-lock-sha
   cp "$repo_root/docs/deployment.md" "$fixture/docs/deployment.md"
 
-  sed -i '0,/37077bba388939aa3b848cd53031f92c5ad07d5b13ac7314e4462985603bab82/s//0000000000000000000000000000000000000000000000000000000000000000/' \
+  sed -i '0,/f8b178c286b871ebdc267d67f66decf606a603295a21e883358a75f4c248992d/s//0000000000000000000000000000000000000000000000000000000000000000/' \
     "$fixture/docs/acceptance/desktop-foundation.md"
   assert_rejected acceptance-lock-sha
   cp "$repo_root/docs/acceptance/desktop-foundation.md" \
     "$fixture/docs/acceptance/desktop-foundation.md"
 
-  sed -i '/^sleepy-session  b88f5b993ae449acf176d8fc6f0d6542776d06bd$/a sleepy-session  6f1857bd786323ad89ac91c250a8485f944eb39c' \
+  sed -i '/^sleepy-session  03eef8fa32595d7887ed36830212f9abc6c01a84$/a sleepy-session  6f1857bd786323ad89ac91c250a8485f944eb39c' \
     "$fixture/docs/deployment.md"
   assert_rejected deployment-stale-duplicate
   cp "$repo_root/docs/deployment.md" "$fixture/docs/deployment.md"
 
-  sed -i '/^| `sleepy-session` | `b88f5b993ae449acf176d8fc6f0d6542776d06bd` |$/a | `sleepy-session` | `6f1857bd786323ad89ac91c250a8485f944eb39c` |' \
+  sed -i '/^| `sleepy-session` | `03eef8fa32595d7887ed36830212f9abc6c01a84` |$/a | `sleepy-session` | `6f1857bd786323ad89ac91c250a8485f944eb39c` |' \
     "$fixture/docs/acceptance/desktop-foundation.md"
   assert_rejected acceptance-stale-duplicate
 

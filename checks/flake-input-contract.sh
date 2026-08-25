@@ -79,7 +79,7 @@ if ! awk '
       next
     }
 
-    if (current_input == "sleepy-m1-baseline" && trimmed ~ /^inputs\./) {
+    if (current_input == "sleepy-m2-baseline" && trimmed ~ /^inputs\./) {
       print "flake input contract: historical root inputs must retain their exact locked graph" > "/dev/stderr"
       exit 1
     }
@@ -125,7 +125,7 @@ fi
 
 if ! jq -e --slurpfile actual "$extracted_json" '
   .root.url as $expected |
-  $actual[0]["sleepy-m1-baseline"] == $expected
+  $actual[0]["sleepy-m2-baseline"] == $expected
 ' "$baseline_manifest" >/dev/null; then
   printf 'flake input contract: historical root URL drifts from baseline manifest\n' >&2
   exit 1

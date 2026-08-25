@@ -43,7 +43,7 @@ in
         ${source}/modules/home/quickshell/default.nix
       ${pkgs.gnugrep}/bin/grep -Fx '      activeConfig = "sleepy";' \
         ${source}/modules/home/quickshell/default.nix
-      ${pkgs.gnugrep}/bin/grep -Fx '        Requires = ["sleepy-bindings-online.service"];' \
+      ${pkgs.gnugrep}/bin/grep -Fx '        Requires = ["sleepy-session.service" "sleepy-bindings-online.service"];' \
         ${source}/modules/home/quickshell/default.nix
       ${pkgs.gnugrep}/bin/grep -F 'CommandSpec::new("systemctl", ["--user", "is-active", "gammastep.service"])' \
         ${sessionSource}/src/system/night_light.rs

@@ -4,7 +4,7 @@ set -euo pipefail
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 contract="$repo_root/checks/flake-input-contract.sh"
 manifest="$repo_root/components/desktop-m1.json"
-baseline_manifest="$repo_root/components/desktop-m1-baseline.json"
+baseline_manifest="$repo_root/components/desktop-m2-baseline.json"
 fixture=$(mktemp -d /tmp/sleepy-flake-input-contract.XXXXXX)
 trap 'rm -rf -- "$fixture"' EXIT
 
@@ -40,7 +40,7 @@ if bash "$contract" "$fixture/drifted.nix" "$manifest" "$baseline_manifest" >/de
   exit 1
 fi
 
-sed '/sleepy-m1-baseline = {/a\      inputs.nixpkgs.follows = "nixpkgs";' \
+sed '/sleepy-m2-baseline = {/a\      inputs.nixpkgs.follows = "nixpkgs";' \
   "$fixture/valid.nix" >"$fixture/following-baseline.nix"
 if bash "$contract" "$fixture/following-baseline.nix" "$manifest" "$baseline_manifest" >/dev/null 2>&1; then
   printf 'flake input contract accepted a baseline graph redirected to current nixpkgs\n' >&2

@@ -45,6 +45,18 @@ assert_owned_path_rejected presets-owned \
   '.local/state/sleepy/presets.json'
 assert_owned_path_rejected generated-bindings-owned \
   '.config/niri/sleepy-user-bindings.kdl'
+assert_owned_path_rejected themes-owned \
+  '.config/sleepy/themes/user-theme.json'
+assert_owned_path_rejected overrides-owned \
+  '.config/sleepy/overrides.json'
+assert_owned_path_rejected launcher-owned \
+  '.local/state/sleepy/launcher.json'
+assert_owned_path_rejected notifications-active-owned \
+  '.local/state/sleepy/notifications/active.json'
+assert_owned_path_rejected notifications-archive-owned \
+  '.local/state/sleepy/notifications/archive.json'
+assert_owned_path_rejected notifications-preferences-owned \
+  '.local/state/sleepy/notifications/preferences.json'
 
 dangling="$fixture/dangling-presets"
 mkdir -p "$dangling/home-files/.local/state/sleepy" "$dangling/sources"
@@ -73,6 +85,14 @@ assert_activation_reference_rejected activation-settings \
   '.config/sleepy/settings.json'
 assert_activation_reference_rejected activation-presets \
   '.local/state/sleepy/presets.json'
+assert_activation_reference_rejected activation-theme \
+  '.config/sleepy/themes/user-theme.json'
+assert_activation_reference_rejected activation-overrides \
+  '.config/sleepy/overrides.json'
+assert_activation_reference_rejected activation-launcher \
+  '.local/state/sleepy/launcher.json'
+assert_activation_reference_rejected activation-notifications \
+  '.local/state/sleepy/notifications/active.json'
 
 approved_initializer="$fixture/approved-initializer"
 mkdir -p "$approved_initializer/home-files" "$approved_initializer/sources"

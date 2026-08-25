@@ -24,7 +24,11 @@ fi
 
 for relative_path in \
   '.config/sleepy/settings.json' \
+  '.config/sleepy/themes' \
+  '.config/sleepy/overrides.json' \
   '.local/state/sleepy/presets.json' \
+  '.local/state/sleepy/launcher.json' \
+  '.local/state/sleepy/notifications' \
   '.config/niri/sleepy-user-bindings.kdl'; do
   managed_path="$home_files/$relative_path"
   if test -e "$managed_path" || test -L "$managed_path"; then
@@ -34,15 +38,17 @@ for relative_path in \
   fi
 done
 
-if rg -n 'settings\.json|presets\.json' "$activation_script"; then
-  printf 'Home Manager activation must not reference mutable settings/presets\n' >&2
+mutable_pattern='settings\.json|presets\.json|overrides\.json|launcher\.json|sleepy/themes|sleepy/notifications'
+
+if rg -n "$mutable_pattern" "$activation_script"; then
+  printf 'Home Manager activation must not reference mutable Sleepy state\n' >&2
   exit 1
 fi
 
 if rg -n --glob '*.nix' \
-  'settings\.json|presets\.json|force[[:space:]]*=[[:space:]]*true[[:space:]]*;' \
+  "$mutable_pattern|force[[:space:]]*=[[:space:]]*true[[:space:]]*;" \
   "$@"; then
-  printf 'Home Manager sources must not reference mutable settings/presets or force file ownership\n' >&2
+  printf 'Home Manager sources must not reference mutable Sleepy state or force file ownership\n' >&2
   exit 1
 fi
 

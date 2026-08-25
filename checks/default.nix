@@ -2,6 +2,7 @@
   componentContract,
   componentPackages,
   baselineActivationPackage,
+  baselineSessionPackage,
   homeConfiguration,
   inputs,
   nixosModule,
@@ -52,7 +53,7 @@
     inherit baselineActivationPackage;
   };
   updateSafetyVm = pkgs.callPackage ./update-safety-vm.nix {
-    inherit baselineActivationPackage source;
+    inherit baselineActivationPackage baselineSessionPackage;
     inherit (homeConfiguration) activationPackage;
     sessionPackage = componentPackages.sleepy-session;
   };
@@ -87,6 +88,7 @@
       ${pkgs.bash}/bin/bash ${source}/checks/online-readiness-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/update-safety-contract-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/root-integration-contract-test.sh
+      ${pkgs.bash}/bin/bash ${source}/checks/desktop-m3-root-contract-test.sh
       touch "$out"
     '';
   freshCloneSource = pkgs.runCommand "sleepy-fresh-clone-source-check" {} ''
@@ -139,6 +141,7 @@ in
     session-contract = sessionContract;
     update-safety = updateSafety;
     update-safety-vm = updateSafetyVm;
+    pristine-login-vm = updateSafetyVm;
     source-contracts = sourceContracts;
     journal-fault-runner = pkgs.callPackage ./journal-fault-runner.nix {
       runner = componentPackages.sleepy-journal-fault-runner;
