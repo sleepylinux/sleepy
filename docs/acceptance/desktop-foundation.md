@@ -1,5 +1,31 @@
 # Sleepy desktop foundation acceptance
 
+## Desktop Milestone 3 integration candidate
+
+The root integration pins the exact reviewed component commits merged into
+each repository's `main` branch:
+
+| Component | Reviewed revision |
+|---|---|
+| `sleepy-sdk` | `152173b470fa7d1e90c6d3d6be103a4a4d3529bc` |
+| `sleepy-session` | `03eef8fa32595d7887ed36830212f9abc6c01a84` |
+| `sleepy-artwork` | `175314b9c236c1b412e8e1ebc54bbe3937b0c90d` |
+| `sleepy-desktop` | `e52bf09a6472366d182209de9ea083a69364721c` |
+
+The generated `flake.lock` SHA-256 is
+`f8b178c286b871ebdc267d67f66decf606a603295a21e883358a75f4c248992d`.
+The exact public graph completed all 21 root flake checks on 2026-08-26. Its
+M2-to-M3 update/pristine-login QEMU test passed in 167.15 seconds. It preserved
+the seeded settings, presets, bindings, theme, launcher, notification, and
+override documents byte-for-byte; started the real M3 daemon and verified all
+six sockets at mode `0600`; drained and removed the runtime directory; then
+created a distinct pristine user-manager session and exercised the injected
+failure path. Desktop software and Vulkan/lavapipe suites, package/preview
+checks, and component x86_64-linux/aarch64-linux evaluation passed against the
+same revisions. The test uses typed fake destructive requests only; it does
+not execute real logout, reboot, power-off, disk, installer, network, or
+physical-hardware mutations.
+
 ## Desktop Milestone 2 integration candidate
 
 **PASS — permanently deployed and reboot-verified in the `Sleepy` VM.** The

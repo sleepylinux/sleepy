@@ -1,5 +1,30 @@
 # Deploying the Sleepy desktop
 
+## Desktop Milestone 3 candidate gate
+
+The M3 integration consumes only the reviewed component trees merged into each
+repository's `main` branch:
+
+```text
+sleepy-sdk      152173b470fa7d1e90c6d3d6be103a4a4d3529bc
+sleepy-session  03eef8fa32595d7887ed36830212f9abc6c01a84
+sleepy-artwork  175314b9c236c1b412e8e1ebc54bbe3937b0c90d
+sleepy-desktop  e52bf09a6472366d182209de9ea083a69364721c
+```
+
+The generated candidate lock SHA-256 is
+`f8b178c286b871ebdc267d67f66decf606a603295a21e883358a75f4c248992d`.
+Regenerate it only with Nix and validate the current graph together with the
+immutable M2 and M1 historical graphs.
+
+On 2026-08-26 the exact public graph completed all 21 root flake checks. The
+M2-to-M3 update/pristine-login QEMU test passed in 167.15 seconds, including
+durable-state preservation, the real daemon's six private sockets, bounded
+shutdown cleanup, a distinct pristine user manager, and the injected failure
+path. Desktop checks passed under both the software renderer and Vulkan via
+lavapipe; component evaluation covered x86_64-linux and aarch64-linux. No
+physical or destructive hardware test is part of this gate.
+
 ## Desktop Milestone 2 candidate gate
 
 The external desktop slice is not deployable until live Wayland/VM acceptance
