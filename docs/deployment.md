@@ -13,13 +13,13 @@ sleepy-desktop  0b612df154e0606ced56020a56a54fa1f42dd3db
 ```
 
 The generated candidate lock has SHA-256
-`37077bba388939aa3b848cd53031f92c5ad07d5b13ac7314e4462985603bab82`.
+`35f7e6dadff7e80f6f0cc92a61a2d5672e427f5d128e875f130a4124928eeaa3`.
 Reproduce it only from the flake inputs and verify that Nix selected those exact
 revisions. Do not copy or hand-edit lock nodes from another checkout:
 
 ```bash
 nix flake lock
-bash checks/component-lock.sh components/desktop-m1.json components/desktop-m1-baseline.json flake.lock
+bash checks/component-lock.sh components/desktop-m1.json components/desktop-m2-baseline.json flake.lock
 git diff --check
 git diff -- flake.lock
 sha256sum flake.lock
@@ -69,7 +69,7 @@ bash checks/flake-shape-test.sh
 bash checks/flake-input-contract-test.sh
 bash checks/license-contract-test.sh
 bash checks/update-safety-contract-test.sh
-bash checks/component-lock.sh components/desktop-m1.json components/desktop-m1-baseline.json flake.lock
+bash checks/component-lock.sh components/desktop-m1.json components/desktop-m2-baseline.json flake.lock
 nix flake check -L --no-write-lock-file
 nix build .#sleepy-contract .#sleepy-session \
   .#sleepy-session-user-unit .#sleepy-artwork \

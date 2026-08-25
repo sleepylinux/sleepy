@@ -28,8 +28,8 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    sleepy-m1-baseline = {
-      url = "github:sleepylinux/sleepy/a4d8c45337c94c7e8c69a1aebe747ae8e66b0839";
+    sleepy-m2-baseline = {
+      url = "github:sleepylinux/sleepy/563ae07b50ccc8c5332e1fb0352d351d46c7f615";
     };
   };
 
@@ -82,7 +82,8 @@
         nixosModule = self.nixosModules.sleepy;
         nixosConfiguration = self.nixosConfigurations.sleepy-vm;
         homeConfiguration = self.homeConfigurations."lazy@sleepy-vm";
-        baselineActivationPackage = inputs.sleepy-m1-baseline.homeConfigurations."lazy@sleepy-vm".activationPackage;
+        baselineActivationPackage = inputs.sleepy-m2-baseline.homeConfigurations."lazy@sleepy-vm".activationPackage;
+        baselineSessionPackage = inputs.sleepy-m2-baseline.packages.${system}.sleepy-session;
       });
 
     devShells = forAllSystems (system: let

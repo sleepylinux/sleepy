@@ -12,12 +12,12 @@ done
 
 repo_root=${SLEEPY_CURRENT_PINS_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}
 manifest="$repo_root/components/desktop-m1.json"
-baseline="$repo_root/components/desktop-m1-baseline.json"
+baseline="$repo_root/components/desktop-m2-baseline.json"
 expected=$(mktemp /tmp/sleepy-current-component-pins.XXXXXX.json)
 deployment_candidate=$(mktemp /tmp/sleepy-deployment-candidate.XXXXXX.md)
 acceptance_candidate=$(mktemp /tmp/sleepy-acceptance-candidate.XXXXXX.md)
 trap 'rm -f -- "$expected" "$deployment_candidate" "$acceptance_candidate"' EXIT
-approved_lock_sha=37077bba388939aa3b848cd53031f92c5ad07d5b13ac7314e4462985603bab82
+approved_lock_sha=35f7e6dadff7e80f6f0cc92a61a2d5672e427f5d128e875f130a4124928eeaa3
 
 cat >"$expected" <<'EOF'
 {
@@ -147,7 +147,7 @@ if test "${SLEEPY_CURRENT_PINS_FIXTURE:-0}" != 1; then
   mkdir -p "$fixture/checks" "$fixture/components" "$fixture/docs/acceptance"
   cp "$repo_root/flake.nix" "$repo_root/flake.lock" "$fixture/"
   cp "$repo_root/components/desktop-m1.json" \
-    "$repo_root/components/desktop-m1-baseline.json" "$fixture/components/"
+    "$repo_root/components/desktop-m2-baseline.json" "$fixture/components/"
   cp "$repo_root/checks/flake-input-contract.sh" \
     "$repo_root/checks/component-lock.sh" "$fixture/checks/"
   cp "$repo_root/docs/deployment.md" "$fixture/docs/"
@@ -166,12 +166,12 @@ if test "${SLEEPY_CURRENT_PINS_FIXTURE:-0}" != 1; then
     fi
   }
 
-  sed -i '0,/37077bba388939aa3b848cd53031f92c5ad07d5b13ac7314e4462985603bab82/s//0000000000000000000000000000000000000000000000000000000000000000/' \
+  sed -i '0,/35f7e6dadff7e80f6f0cc92a61a2d5672e427f5d128e875f130a4124928eeaa3/s//0000000000000000000000000000000000000000000000000000000000000000/' \
     "$fixture/docs/deployment.md"
   assert_rejected deployment-lock-sha
   cp "$repo_root/docs/deployment.md" "$fixture/docs/deployment.md"
 
-  sed -i '0,/37077bba388939aa3b848cd53031f92c5ad07d5b13ac7314e4462985603bab82/s//0000000000000000000000000000000000000000000000000000000000000000/' \
+  sed -i '0,/35f7e6dadff7e80f6f0cc92a61a2d5672e427f5d128e875f130a4124928eeaa3/s//0000000000000000000000000000000000000000000000000000000000000000/' \
     "$fixture/docs/acceptance/desktop-foundation.md"
   assert_rejected acceptance-lock-sha
   cp "$repo_root/docs/acceptance/desktop-foundation.md" \

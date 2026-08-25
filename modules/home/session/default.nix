@@ -5,7 +5,24 @@
   ...
 }: let
   sleepyctl = "${config.sleepy.sessionPackage}/bin/sleepyctl";
-  niri = "${pkgs.niri}/bin/niri";
+  niriBin = "${pkgs.niri}/bin/niri";
+  sessionRuntimePackages = with pkgs; [
+    config.sleepy.sessionPackage
+    networkmanager
+    bluez
+    wireplumber
+    pipewire
+    brightnessctl
+    power-profiles-daemon
+    upower
+    playerctl
+    gammastep
+    swaylock
+    niri
+    systemd
+    curl
+  ];
+  sessionRuntimePath = lib.makeBinPath sessionRuntimePackages;
   onlineReconcile = pkgs.writeShellScript "sleepy-bindings-online" ''
     export SLEEPYCTL=${lib.escapeShellArg sleepyctl}
     export SLEEPY_JQ=${lib.escapeShellArg "${pkgs.jq}/bin/jq"}
@@ -17,30 +34,16 @@
 in {
   config = lib.mkIf (config.sleepy.enable && config.sleepy.sessionPackage != null) {
     home = {
-      packages = [
-        config.sleepy.sessionPackage
-        pkgs.networkmanager
-        pkgs.bluez
-        pkgs.wireplumber
-        pkgs.brightnessctl
-        pkgs.power-profiles-daemon
-        pkgs.upower
-        pkgs.playerctl
-        pkgs.gammastep
-        pkgs.swaylock
-        pkgs.niri
-        pkgs.systemd
-        pkgs.quickshell
-      ];
+      packages = sessionRuntimePackages ++ [pkgs.quickshell];
 
       sessionVariables = {
-        SLEEPY_NIRI = niri;
-        SLEEPY_NIRI_VALIDATOR = niri;
+        SLEEPY_NIRI = niriBin;
+        SLEEPY_NIRI_VALIDATOR = niriBin;
       };
 
       activation.sleepyBindings = lib.hm.dag.entryAfter ["linkGeneration"] ''
-        export SLEEPY_NIRI=${lib.escapeShellArg niri}
-        export SLEEPY_NIRI_VALIDATOR=${lib.escapeShellArg niri}
+        export SLEEPY_NIRI=${lib.escapeShellArg niriBin}
+        export SLEEPY_NIRI_VALIDATOR=${lib.escapeShellArg niriBin}
         unset NIRI_SOCKET
         ${sleepyctl} bindings reconcile
         generated_bindings=${lib.escapeShellArg "${config.xdg.configHome}/niri/sleepy-user-bindings.kdl"}
@@ -60,16 +63,23 @@ in {
     systemd.user.services = {
       sleepy-session = {
         Unit = {
-          Description = "Initialize Sleepy session settings state";
+          Description = "Sleepy desktop session event service";
           PartOf = ["graphical-session.target"];
-          After = ["graphical-session.target"];
+          After = ["graphical-session.target" "dbus.socket"];
           Requisite = ["graphical-session.target"];
+          Requires = ["dbus.socket"];
         };
 
         Service = {
-          Type = "oneshot";
-          ExecStart = "${config.sleepy.sessionPackage}/bin/sleepyctl settings show";
-          RemainAfterExit = true;
+          Type = "simple";
+          ExecStart = "${config.sleepy.sessionPackage}/bin/sleepy-sessiond";
+          Environment = ["PATH=${sessionRuntimePath}"];
+          Restart = "on-failure";
+          RestartSec = 2;
+          RuntimeDirectory = "sleepy";
+          RuntimeDirectoryMode = "0700";
+          KillSignal = "SIGINT";
+          TimeoutStopSec = 20;
         };
 
         Install.WantedBy = ["graphical-session.target"];
@@ -86,8 +96,8 @@ in {
           Type = "oneshot";
           ExecStart = onlineReconcile;
           Environment = [
-            "SLEEPY_NIRI=${niri}"
-            "SLEEPY_NIRI_VALIDATOR=${niri}"
+            "SLEEPY_NIRI=${niriBin}"
+            "SLEEPY_NIRI_VALIDATOR=${niriBin}"
           ];
           RemainAfterExit = true;
         };

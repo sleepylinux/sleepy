@@ -13,7 +13,7 @@ distribution integration consumes only these reviewed component revisions:
 | `sleepy-desktop` | `0b612df154e0606ced56020a56a54fa1f42dd3db` |
 
 The generated `flake.lock` has SHA-256
-`37077bba388939aa3b848cd53031f92c5ad07d5b13ac7314e4462985603bab82`,
+`35f7e6dadff7e80f6f0cc92a61a2d5672e427f5d128e875f130a4124928eeaa3`,
 contains the four component inputs above, and passes the executable component
 lock contract. The final clean-copy gate uses `nixos/nix:2.35.2` with a
 persistent cache and `/dev/kvm`; on 2026-08-24 it executed:
@@ -51,7 +51,7 @@ nodes or `narHash` values by hand:
 
 ```bash
 nix flake lock
-bash checks/component-lock.sh components/desktop-m1.json components/desktop-m1-baseline.json flake.lock
+bash checks/component-lock.sh components/desktop-m1.json components/desktop-m2-baseline.json flake.lock
 git diff -- flake.lock
 sha256sum flake.lock
 ```

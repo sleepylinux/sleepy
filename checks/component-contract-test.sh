@@ -147,6 +147,8 @@ case "${1:-}:${2:-}:${4:-}" in
 esac
 EOF
 chmod +x "$session/bin/sleepyctl"
+printf '#!%s\nexit 0\n' "$fixture_bash" >"$session/bin/sleepy-sessiond"
+chmod +x "$session/bin/sleepy-sessiond"
 
 for fixture_executable in \
   "$sdk/bin/sleepy-contract" \
@@ -204,7 +206,8 @@ chmod +x "$desktop/bin/sleepy-shell" "$preview/bin/sleepy-settings-preview"
 
 cat >"$unit/share/systemd/user/sleepy-session.service" <<EOF
 [Service]
-ExecStart=$session/bin/sleepyctl settings show
+Type=simple
+ExecStart=$session/bin/sleepy-sessiond
 EOF
 
 actual="$fixture/actual.json"
@@ -241,11 +244,17 @@ jq -n \
         unit: "sleepy-session.service",
         wantedBy: ["graphical-session.target"],
         partOf: ["graphical-session.target"],
-        after: ["graphical-session.target"],
+        after: ["graphical-session.target", "dbus.socket"],
         requisite: ["graphical-session.target"],
-        type: "oneshot",
-        remainAfterExit: true,
-        execStart: [($session + "/bin/sleepyctl settings show")]
+        requires: ["dbus.socket"],
+        type: "simple",
+        restart: "on-failure",
+        runtimeDirectory: "sleepy",
+        runtimeDirectoryMode: "0700",
+        killSignal: "SIGINT",
+        timeoutStopSec: 20,
+        environment: ["PATH=/nix/store/fake-session-runtime/bin"],
+        execStart: [($session + "/bin/sleepy-sessiond")]
       }
     },
     sources: {"sleepy-sdk": $sdkSource, root: $rootSource},
@@ -254,6 +263,13 @@ jq -n \
 
 if ! bash "$contract" "$manifest" "$actual"; then
   printf 'component contract rejected Home Manager normalized ExecStart list\n' >&2
+  exit 1
+fi
+
+m3_manifest="$fixture/desktop-m3.json"
+jq '.milestone = "desktop-m3"' "$manifest" >"$m3_manifest"
+if ! bash "$contract" "$m3_manifest" "$actual" >/dev/null; then
+  printf 'component contract rejected the strict desktop-m3 milestone\n' >&2
   exit 1
 fi
 
@@ -279,6 +295,10 @@ assert_rejected non-graphical-service \
   '.homeManager.service.wantedBy = ["default.target"]'
 assert_rejected scalar-session-exec-start \
   '.homeManager.service.execStart = .homeManager.service.execStart[0]'
+assert_rejected unbounded-session-path \
+  '.homeManager.service.environment = ["PATH=/run/current-system/sw/bin"]'
+assert_rejected wrong-runtime-mode \
+  '.homeManager.service.runtimeDirectoryMode = "0755"'
 assert_rejected legacy-in-tree-shell-layout \
   '.homeManager.quickshellConfig = (.homeManager.shellPackage + "/share/quickshell/sleepy")'
 assert_rejected unpinned-validator '.validators.niri = "/bin/false"'
