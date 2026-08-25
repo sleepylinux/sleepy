@@ -25,6 +25,7 @@ reject_literal() {
 session_module=modules/home/session/default.nix
 quickshell_module=modules/home/quickshell/default.nix
 update_vm=checks/update-safety-vm.nix
+ci_workflow=.github/workflows/check.yml
 
 require_literal "$session_module" 'sleepy-sessiond'
 require_literal "$session_module" 'Type = "simple";'
@@ -68,6 +69,9 @@ require_literal "$update_vm" 'systemctl --user stop sleepy-test-session.target g
 require_literal "$update_vm" 'systemctl stop user@$uid.service'
 require_literal "$update_vm" 'loginctl disable-linger lazy'
 reject_literal flake.nix 'sleepy-m1-baseline'
+require_literal "$ci_workflow" 'bash checks/component-lock.sh components/desktop-m1.json components/desktop-m2-baseline.json flake.lock'
+reject_literal "$ci_workflow" 'bash checks/component-lock.sh components/desktop-m1.json components/desktop-m1-baseline.json flake.lock'
+require_literal "$ci_workflow" 'nix develop --command bash checks/desktop-m3-root-contract-test.sh'
 test -f "$repo_root/docs/roadmaps/desktop-m4-installer-hardware-validation.md"
 
 printf 'desktop M3 root contract self-test: ok\n'
