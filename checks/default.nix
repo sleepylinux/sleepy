@@ -96,28 +96,27 @@
     test ! -e ${source}/secrets
     ${pkgs.coreutils}/bin/sha256sum ${source}/flake.lock >"$out"
   '';
-in
-  {
-    apps-contract = appsContract;
-    bindings-contract = bindingsContract;
-    component-contract = componentIntegration;
-    control-center-contract = controlCenterContract;
-    nixos = nixosConfiguration.config.system.build.toplevel;
-    home = homeConfiguration.activationPackage;
-    niri-config = niriConfig;
-    niri-version-contract = niriVersionContract;
-    public-module = publicModule;
-    session-contract = sessionContract;
-    update-safety = updateSafety;
-    update-safety-vm = updateSafetyVm;
-    pristine-login-vm = updateSafetyVm;
-    source-contracts = sourceContracts;
-    journal-fault-runner = pkgs.callPackage ./journal-fault-runner.nix {
-      runner = componentPackages.sleepy-journal-fault-runner;
-    };
-    fresh-clone-source = freshCloneSource;
-    sleepy-artwork-assets = inputs.sleepy-artwork.checks.${pkgs.stdenv.hostPlatform.system}.assets;
-    sleepy-desktop-qml = inputs.sleepy-desktop.checks.${pkgs.stdenv.hostPlatform.system}.qml;
-    sleepy-desktop-package = inputs.sleepy-desktop.checks.${pkgs.stdenv.hostPlatform.system}.package;
-    sleepy-desktop-preview = inputs.sleepy-desktop.checks.${pkgs.stdenv.hostPlatform.system}.preview;
-  }
+in {
+  apps-contract = appsContract;
+  bindings-contract = bindingsContract;
+  component-contract = componentIntegration;
+  control-center-contract = controlCenterContract;
+  nixos = nixosConfiguration.config.system.build.toplevel;
+  home = homeConfiguration.activationPackage;
+  niri-config = niriConfig;
+  niri-version-contract = niriVersionContract;
+  public-module = publicModule;
+  session-contract = sessionContract;
+  update-safety = updateSafety;
+  update-safety-vm = updateSafetyVm;
+  pristine-login-vm = updateSafetyVm;
+  source-contracts = sourceContracts;
+  journal-fault-runner = pkgs.callPackage ./journal-fault-runner.nix {
+    runner = componentPackages.sleepy-journal-fault-runner;
+  };
+  fresh-clone-source = freshCloneSource;
+  sleepy-artwork-assets = inputs.sleepy-artwork.checks.${pkgs.stdenv.hostPlatform.system}.assets;
+  sleepy-desktop-qml = inputs.sleepy-desktop.checks.${pkgs.stdenv.hostPlatform.system}.qml;
+  sleepy-desktop-package = inputs.sleepy-desktop.checks.${pkgs.stdenv.hostPlatform.system}.package;
+  sleepy-desktop-preview = inputs.sleepy-desktop.checks.${pkgs.stdenv.hostPlatform.system}.preview;
+}

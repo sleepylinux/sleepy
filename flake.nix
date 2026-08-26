@@ -58,10 +58,12 @@
   in {
     packages = forAllSystems (system: let
       pkgs = mkPkgs system;
-      mappedPackages = builtins.mapAttrs (
-        _packageName: mapping:
-          inputs.${mapping.input}.packages.${system}.${mapping.output}
-      ) componentContract.rootPackages;
+      mappedPackages =
+        builtins.mapAttrs (
+          _packageName: mapping:
+            inputs.${mapping.input}.packages.${system}.${mapping.output}
+        )
+        componentContract.rootPackages;
     in
       mappedPackages
       // {
