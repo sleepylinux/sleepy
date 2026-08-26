@@ -67,7 +67,7 @@
     in
       mappedPackages
       // {
-        sleepy-journal-fault-runner = pkgs.sleepy-journal-fault-runner;
+        inherit (pkgs) sleepy-journal-fault-runner;
         default = mappedPackages.${componentContract.defaultPackage};
       });
 

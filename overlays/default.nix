@@ -11,6 +11,6 @@ in
   mappedPackages
   // {
     sleepy-journal-fault-runner = final.callPackage ../packages/sleepy-journal-fault-runner {
-      sleepy-session = mappedPackages.sleepy-session;
+      inherit (mappedPackages) sleepy-session;
     };
   }
