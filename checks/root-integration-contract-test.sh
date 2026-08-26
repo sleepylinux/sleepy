@@ -60,6 +60,8 @@ assert_contains checks/default.nix 'sleepy-desktop-preview'
 assert_contains .github/workflows/check.yml 'timeout-minutes:'
 assert_contains .github/workflows/check.yml 'nix flake check --all-systems --no-build --show-trace'
 assert_contains .github/workflows/check.yml 'nix build .#checks.x86_64-linux.sleepy-desktop-qml --no-link -L'
+assert_contains .github/workflows/check.yml 'test -c /dev/kvm'
+assert_contains .github/workflows/check.yml 'system-features = nixos-test benchmark big-parallel kvm'
 assert_contains checks/bindings-contract.nix "'focus-workspace-down;'"
 assert_contains checks/bindings-contract.nix "'focus-workspace-up;'"
 assert_not_contains checks/bindings-contract.nix "'focus-workspace-next;'"

@@ -79,6 +79,14 @@ jobs:
 
       - name: Install Nix
         uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            system-features = nixos-test benchmark big-parallel kvm
+
+      - name: Enable KVM for the update VM checks
+        run: |
+          test -c /dev/kvm
+          sudo chmod 0666 /dev/kvm
 
       - name: Prove fresh-clone reproducibility
         run: bash checks/fresh-clone.sh
