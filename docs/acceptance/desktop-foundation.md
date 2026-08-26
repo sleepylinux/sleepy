@@ -10,13 +10,16 @@ each repository's `main` branch:
 | `sleepy-sdk` | `152173b470fa7d1e90c6d3d6be103a4a4d3529bc` |
 | `sleepy-session` | `03eef8fa32595d7887ed36830212f9abc6c01a84` |
 | `sleepy-artwork` | `175314b9c236c1b412e8e1ebc54bbe3937b0c90d` |
-| `sleepy-desktop` | `e52bf09a6472366d182209de9ea083a69364721c` |
+| `sleepy-desktop` | `08630cf77d7c9abb337f6f5f0df61cabb1fb030a` |
 
 The generated `flake.lock` SHA-256 is
-`f8b178c286b871ebdc267d67f66decf606a603295a21e883358a75f4c248992d`.
-The exact public graph completed all 21 root flake checks on 2026-08-26. Its
-M2-to-M3 update/pristine-login QEMU test passed in 167.15 seconds. It preserved
-the seeded settings, presets, bindings, theme, launcher, notification, and
+`30a383fc3ae7458dfc1beb2a392274a59730972679365bb71fed24ff848f29c4`.
+The preceding public candidate completed all 21 root flake checks on 2026-08-26;
+its M2-to-M3 update/pristine-login QEMU test passed in 167.15 seconds. This
+updated candidate retains the same reviewed implementation graph and advances
+only the desktop CI-hardened revision. The root candidate PR must repeat the
+full checks, including QEMU. The preceding run preserved the seeded settings,
+presets, bindings, theme, launcher, notification, and
 override documents byte-for-byte; started the real M3 daemon and verified all
 six sockets at mode `0600`; drained and removed the runtime directory; then
 created a distinct pristine user-manager session and exercised the injected

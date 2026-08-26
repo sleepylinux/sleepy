@@ -17,7 +17,7 @@ expected=$(mktemp /tmp/sleepy-current-component-pins.XXXXXX.json)
 deployment_candidate=$(mktemp /tmp/sleepy-deployment-candidate.XXXXXX.md)
 acceptance_candidate=$(mktemp /tmp/sleepy-acceptance-candidate.XXXXXX.md)
 trap 'rm -f -- "$expected" "$deployment_candidate" "$acceptance_candidate"' EXIT
-approved_lock_sha=f8b178c286b871ebdc267d67f66decf606a603295a21e883358a75f4c248992d
+approved_lock_sha=30a383fc3ae7458dfc1beb2a392274a59730972679365bb71fed24ff848f29c4
 
 cat >"$expected" <<'EOF'
 {
@@ -37,8 +37,8 @@ cat >"$expected" <<'EOF'
       "revision": "175314b9c236c1b412e8e1ebc54bbe3937b0c90d"
     },
     "sleepy-desktop": {
-      "url": "github:sleepylinux/sleepy-desktop/e52bf09a6472366d182209de9ea083a69364721c",
-      "revision": "e52bf09a6472366d182209de9ea083a69364721c"
+      "url": "github:sleepylinux/sleepy-desktop/08630cf77d7c9abb337f6f5f0df61cabb1fb030a",
+      "revision": "08630cf77d7c9abb337f6f5f0df61cabb1fb030a"
     }
   }
 }
@@ -106,7 +106,7 @@ for expected_line in \
   'sleepy-sdk      152173b470fa7d1e90c6d3d6be103a4a4d3529bc' \
   'sleepy-session  03eef8fa32595d7887ed36830212f9abc6c01a84' \
   'sleepy-artwork  175314b9c236c1b412e8e1ebc54bbe3937b0c90d' \
-  'sleepy-desktop  e52bf09a6472366d182209de9ea083a69364721c'; do
+  'sleepy-desktop  08630cf77d7c9abb337f6f5f0df61cabb1fb030a'; do
   if test "$(grep -Fxc -- "$expected_line" "$deployment_candidate")" -ne 1; then
     printf 'current component pins: deployment candidate must contain exactly one %s\n' \
       "$expected_line" >&2
@@ -134,7 +134,7 @@ done <<'EOF'
 sleepy-sdk	152173b470fa7d1e90c6d3d6be103a4a4d3529bc
 sleepy-session	03eef8fa32595d7887ed36830212f9abc6c01a84
 sleepy-artwork	175314b9c236c1b412e8e1ebc54bbe3937b0c90d
-sleepy-desktop	e52bf09a6472366d182209de9ea083a69364721c
+sleepy-desktop	08630cf77d7c9abb337f6f5f0df61cabb1fb030a
 EOF
 
 if test "$failures" -ne 0; then
@@ -166,12 +166,12 @@ if test "${SLEEPY_CURRENT_PINS_FIXTURE:-0}" != 1; then
     fi
   }
 
-  sed -i '0,/f8b178c286b871ebdc267d67f66decf606a603295a21e883358a75f4c248992d/s//0000000000000000000000000000000000000000000000000000000000000000/' \
+  sed -i '0,/30a383fc3ae7458dfc1beb2a392274a59730972679365bb71fed24ff848f29c4/s//0000000000000000000000000000000000000000000000000000000000000000/' \
     "$fixture/docs/deployment.md"
   assert_rejected deployment-lock-sha
   cp "$repo_root/docs/deployment.md" "$fixture/docs/deployment.md"
 
-  sed -i '0,/f8b178c286b871ebdc267d67f66decf606a603295a21e883358a75f4c248992d/s//0000000000000000000000000000000000000000000000000000000000000000/' \
+  sed -i '0,/30a383fc3ae7458dfc1beb2a392274a59730972679365bb71fed24ff848f29c4/s//0000000000000000000000000000000000000000000000000000000000000000/' \
     "$fixture/docs/acceptance/desktop-foundation.md"
   assert_rejected acceptance-lock-sha
   cp "$repo_root/docs/acceptance/desktop-foundation.md" \
