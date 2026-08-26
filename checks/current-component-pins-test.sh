@@ -56,7 +56,7 @@ done
 component_count=$(jq '.inputs | length' "$manifest")
 test "$(grep -Ec '^sleepy-[a-z0-9-]+[[:space:]]+[0-9a-f]{40}$' "$deployment_section")" \
   -eq "$component_count"
-test "$(grep -Ec '^\| `sleepy-[a-z0-9-]+` \| `[0-9a-f]{40}` \|$' "$acceptance_section")" \
+test "$(grep -Ec "^\| \`sleepy-[a-z0-9-]+\` \| \`[0-9a-f]{40}\` \|$" "$acceptance_section")" \
   -eq "$component_count"
 
 while IFS=$'\t' read -r component revision; do

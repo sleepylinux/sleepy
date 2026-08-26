@@ -20,7 +20,7 @@ for component in sleepy-sdk sleepy-session sleepy-artwork sleepy-desktop; do
   revision=$(jq -er --arg component "$component" \
     '.inputs[$component].revision | select(test("^[0-9a-f]{40}$"))' "$manifest")
   printf -v deployment_rows '%s%-16s%s\n' "$deployment_rows" "$component" "$revision"
-  printf -v acceptance_rows '%s| `%s` | `%s` |\n' \
+  printf -v acceptance_rows "%s| \`%s\` | \`%s\` |\n" \
     "$acceptance_rows" "$component" "$revision"
 done
 
