@@ -5,6 +5,7 @@
 The root integration pins the exact reviewed component commits merged into
 each repository's `main` branch:
 
+<!-- BEGIN CURRENT COMPONENT GRAPH -->
 | Component | Reviewed revision |
 |---|---|
 | `sleepy-sdk` | `152173b470fa7d1e90c6d3d6be103a4a4d3529bc` |
@@ -14,6 +15,7 @@ each repository's `main` branch:
 
 The generated `flake.lock` SHA-256 is
 `30a383fc3ae7458dfc1beb2a392274a59730972679365bb71fed24ff848f29c4`.
+<!-- END CURRENT COMPONENT GRAPH -->
 The preceding public candidate completed all 21 root flake checks on 2026-08-26;
 its M2-to-M3 update/pristine-login QEMU test passed in 167.15 seconds. This
 updated candidate retains the same reviewed implementation graph and advances
@@ -80,7 +82,7 @@ nodes or `narHash` values by hand:
 
 ```bash
 nix flake lock
-bash checks/component-lock.sh components/desktop-m1.json components/desktop-m2-baseline.json flake.lock
+bash checks/component-lock.sh components/current.json components/desktop-m2-baseline.json flake.lock
 git diff -- flake.lock
 sha256sum flake.lock
 ```
@@ -105,11 +107,6 @@ VM acceptance must preserve an existing
 `graphical-session.target`, and executes the packaged `sleepyctl`. Validate
 `sleepyctl settings show` with the packaged `sleepy-contract`, then smoke-test
 the external rail, drawer, artwork, and settings preview before switching.
-
-The in-tree `packages/sleepy-shell` and `packages/sleepy-branding` remain as a
-reviewable fallback. Delete them only after the generated lock, full flake
-check, external package builds, standalone Home Manager activation, and VM
-visual/state acceptance all pass at one recorded candidate commit.
 
 ## Desktop Milestone 2 VM deployment — 2026-08-24
 

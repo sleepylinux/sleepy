@@ -71,7 +71,8 @@ in {
         };
 
         Service = {
-          Type = "simple";
+          Type = "notify";
+          NotifyAccess = "main";
           ExecStart = "${config.sleepy.sessionPackage}/bin/sleepy-sessiond";
           Environment = ["PATH=${sessionRuntimePath}"];
           Restart = "on-failure";
@@ -80,6 +81,11 @@ in {
           RuntimeDirectoryMode = "0700";
           KillSignal = "SIGINT";
           TimeoutStopSec = 20;
+          LimitNOFILE = 512;
+          TasksMax = 128;
+          MemoryHigh = "256M";
+          MemoryMax = "512M";
+          OOMPolicy = "stop";
         };
 
         Install.WantedBy = ["graphical-session.target"];

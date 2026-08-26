@@ -3,7 +3,7 @@ set -euo pipefail
 
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 contract="$repo_root/checks/flake-input-contract.sh"
-manifest="$repo_root/components/desktop-m1.json"
+manifest="$repo_root/components/current.json"
 baseline_manifest="$repo_root/components/desktop-m2-baseline.json"
 fixture=$(mktemp -d /tmp/sleepy-flake-input-contract.XXXXXX)
 trap 'rm -rf -- "$fixture"' EXIT

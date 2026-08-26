@@ -11,7 +11,7 @@ done
 
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 contract="$repo_root/checks/component-contract.sh"
-manifest="$repo_root/components/desktop-m1.json"
+manifest="$repo_root/components/current.json"
 fixture=$(mktemp -d /tmp/sleepy-component-contract.XXXXXX)
 trap 'rm -rf -- "$fixture"' EXIT
 
@@ -206,7 +206,7 @@ chmod +x "$desktop/bin/sleepy-shell" "$preview/bin/sleepy-settings-preview"
 
 cat >"$unit/share/systemd/user/sleepy-session.service" <<EOF
 [Service]
-Type=simple
+Type=notify
 ExecStart=$session/bin/sleepy-sessiond
 EOF
 
@@ -247,12 +247,18 @@ jq -n \
         after: ["graphical-session.target", "dbus.socket"],
         requisite: ["graphical-session.target"],
         requires: ["dbus.socket"],
-        type: "simple",
+        type: "notify",
+        notifyAccess: "main",
         restart: "on-failure",
         runtimeDirectory: "sleepy",
         runtimeDirectoryMode: "0700",
         killSignal: "SIGINT",
         timeoutStopSec: 20,
+        limitNOFILE: 512,
+        tasksMax: 128,
+        memoryHigh: "256M",
+        memoryMax: "512M",
+        oomPolicy: "stop",
         environment: ["PATH=/nix/store/fake-session-runtime/bin"],
         execStart: [($session + "/bin/sleepy-sessiond")]
       }

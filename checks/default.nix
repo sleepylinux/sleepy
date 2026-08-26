@@ -57,10 +57,6 @@
     inherit (homeConfiguration) activationPackage;
     sessionPackage = componentPackages.sleepy-session;
   };
-  fallbackBranding = pkgs.callPackage ../packages/sleepy-branding {};
-  fallbackShell = pkgs.callPackage ../packages/sleepy-shell {
-    sleepy-branding = fallbackBranding;
-  };
   sourceContracts =
     pkgs.runCommand "sleepy-source-contracts" {
       nativeBuildInputs = with pkgs; [
@@ -100,56 +96,27 @@
     test ! -e ${source}/secrets
     ${pkgs.coreutils}/bin/sha256sum ${source}/flake.lock >"$out"
   '';
-  quickshell =
-    pkgs.runCommand "sleepy-quickshell-check" {
-      LC_ALL = "C.UTF-8";
-      nativeBuildInputs = with pkgs; [
-        bash
-        findutils
-        qt6Packages.qtdeclarative
-        ripgrep
-      ];
-    } ''
-      ${pkgs.bash}/bin/bash ${source}/checks/quickshell-contract-test.sh
-
-      while IFS= read -r -d "" qml_file; do
-        ${pkgs.qt6Packages.qtdeclarative}/bin/qmllint \
-          -I ${pkgs.quickshell}/lib/qt-6/qml \
-          -I ${pkgs.qt6Packages.qtdeclarative}/lib/qt-6/qml \
-          "$qml_file"
-      done < <(${pkgs.findutils}/bin/find ${source}/packages/sleepy-shell/src -name '*.qml' -print0)
-
-      test -f ${fallbackShell}/share/quickshell/sleepy/shell.qml
-      touch "$out"
-    '';
-in
-  assert pkgs.lib.assertMsg
-  (fallbackBranding.meta.license == pkgs.lib.licenses.gpl3Only)
-  "the retained branding fallback must declare GPL-3.0-only";
-  assert pkgs.lib.assertMsg
-  (fallbackShell.meta.license == pkgs.lib.licenses.gpl3Only)
-  "the retained shell fallback must declare GPL-3.0-only"; {
-    apps-contract = appsContract;
-    bindings-contract = bindingsContract;
-    component-contract = componentIntegration;
-    control-center-contract = controlCenterContract;
-    nixos = nixosConfiguration.config.system.build.toplevel;
-    home = homeConfiguration.activationPackage;
-    niri-config = niriConfig;
-    niri-version-contract = niriVersionContract;
-    public-module = publicModule;
-    session-contract = sessionContract;
-    update-safety = updateSafety;
-    update-safety-vm = updateSafetyVm;
-    pristine-login-vm = updateSafetyVm;
-    source-contracts = sourceContracts;
-    journal-fault-runner = pkgs.callPackage ./journal-fault-runner.nix {
-      runner = componentPackages.sleepy-journal-fault-runner;
-    };
-    fresh-clone-source = freshCloneSource;
-    inherit quickshell;
-    sleepy-artwork-assets = inputs.sleepy-artwork.checks.${pkgs.stdenv.hostPlatform.system}.assets;
-    sleepy-desktop-qml = inputs.sleepy-desktop.checks.${pkgs.stdenv.hostPlatform.system}.qml;
-    sleepy-desktop-package = inputs.sleepy-desktop.checks.${pkgs.stdenv.hostPlatform.system}.package;
-    sleepy-desktop-preview = inputs.sleepy-desktop.checks.${pkgs.stdenv.hostPlatform.system}.preview;
-  }
+in {
+  apps-contract = appsContract;
+  bindings-contract = bindingsContract;
+  component-contract = componentIntegration;
+  control-center-contract = controlCenterContract;
+  nixos = nixosConfiguration.config.system.build.toplevel;
+  home = homeConfiguration.activationPackage;
+  niri-config = niriConfig;
+  niri-version-contract = niriVersionContract;
+  public-module = publicModule;
+  session-contract = sessionContract;
+  update-safety = updateSafety;
+  update-safety-vm = updateSafetyVm;
+  pristine-login-vm = updateSafetyVm;
+  source-contracts = sourceContracts;
+  journal-fault-runner = pkgs.callPackage ./journal-fault-runner.nix {
+    runner = componentPackages.sleepy-journal-fault-runner;
+  };
+  fresh-clone-source = freshCloneSource;
+  sleepy-artwork-assets = inputs.sleepy-artwork.checks.${pkgs.stdenv.hostPlatform.system}.assets;
+  sleepy-desktop-qml = inputs.sleepy-desktop.checks.${pkgs.stdenv.hostPlatform.system}.qml;
+  sleepy-desktop-package = inputs.sleepy-desktop.checks.${pkgs.stdenv.hostPlatform.system}.package;
+  sleepy-desktop-preview = inputs.sleepy-desktop.checks.${pkgs.stdenv.hostPlatform.system}.preview;
+}

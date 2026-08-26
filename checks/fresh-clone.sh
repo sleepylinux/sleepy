@@ -14,7 +14,7 @@ test ! -e secrets
 test ! -L secrets
 
 cp -- flake.lock "$clone_root/flake.lock"
-nix build .#nixosConfigurations.sleepy-vm.config.system.build.toplevel \
+nix build --no-write-lock-file .#nixosConfigurations.sleepy-vm.config.system.build.toplevel \
   --no-link \
   --no-write-lock-file
 cmp --silent -- flake.lock "$clone_root/flake.lock"

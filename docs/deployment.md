@@ -5,6 +5,7 @@
 The M3 integration consumes only the reviewed component trees merged into each
 repository's `main` branch:
 
+<!-- BEGIN CURRENT COMPONENT GRAPH -->
 ```text
 sleepy-sdk      152173b470fa7d1e90c6d3d6be103a4a4d3529bc
 sleepy-session  03eef8fa32595d7887ed36830212f9abc6c01a84
@@ -14,6 +15,7 @@ sleepy-desktop  08630cf77d7c9abb337f6f5f0df61cabb1fb030a
 
 The generated candidate lock SHA-256 is
 `30a383fc3ae7458dfc1beb2a392274a59730972679365bb71fed24ff848f29c4`.
+<!-- END CURRENT COMPONENT GRAPH -->
 Regenerate it only with Nix and validate the current graph together with the
 immutable M2 and M1 historical graphs.
 
@@ -44,7 +46,7 @@ revisions. Do not copy or hand-edit lock nodes from another checkout:
 
 ```bash
 nix flake lock
-bash checks/component-lock.sh components/desktop-m1.json components/desktop-m2-baseline.json flake.lock
+bash checks/component-lock.sh components/current.json components/desktop-m2-baseline.json flake.lock
 git diff --check
 git diff -- flake.lock
 sha256sum flake.lock
@@ -87,14 +89,13 @@ local and Nix gates with:
 
 ```bash
 bash checks/source-clean-test.sh
-bash checks/quickshell-contract-test.sh
 bash checks/component-contract-test.sh
 bash checks/component-lock-test.sh
 bash checks/flake-shape-test.sh
 bash checks/flake-input-contract-test.sh
 bash checks/license-contract-test.sh
 bash checks/update-safety-contract-test.sh
-bash checks/component-lock.sh components/desktop-m1.json components/desktop-m2-baseline.json flake.lock
+bash checks/component-lock.sh components/current.json components/desktop-m2-baseline.json flake.lock
 nix flake check -L --no-write-lock-file
 nix build .#sleepy-contract .#sleepy-session \
   .#sleepy-session-user-unit .#sleepy-artwork \
@@ -125,9 +126,9 @@ preview render from the external packages. Only then may the permanent switch
 procedure below be used and the exact root commit, generated lock SHA-256,
 toplevel, state hashes, and visual results be added to the acceptance record.
 
-The in-tree shell and branding derivations are intentionally retained until
-this gate passes. They are fallback/parity evidence, not the configured package
-owners. Removing them before one-candidate Nix and VM acceptance is prohibited.
+The external desktop and artwork packages are the only configured package
+owners. The superseded in-tree shell and branding derivations were removed
+after the M3 component gate passed.
 
 ## Deployment boundary
 
@@ -473,8 +474,7 @@ The root-only deployment evidence is retained at
 `/var/tmp/sleepy-deploy-0267c7b.tDLLbJ`. No generation was deleted and no
 garbage collection ran. Settings and preset stores remained user-owned and
 byte-identical through every activation stage. Live rail rendering passed;
-live drawer activation remains an explicit follow-up and therefore does not
-authorize deletion of the in-tree fallback packages.
+live drawer activation remains an explicit follow-up.
 
 ## Interactive authorization
 

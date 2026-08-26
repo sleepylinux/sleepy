@@ -7,7 +7,7 @@ done
 
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 contract="$repo_root/checks/component-lock.sh"
-manifest="$repo_root/components/desktop-m1.json"
+manifest="$repo_root/components/current.json"
 baseline="$repo_root/components/desktop-m2-baseline.json"
 fixture=$(mktemp -d /tmp/sleepy-component-lock.XXXXXX)
 trap 'rm -rf -- "$fixture"' EXIT
