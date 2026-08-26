@@ -9,11 +9,11 @@ repository's `main` branch:
 sleepy-sdk      152173b470fa7d1e90c6d3d6be103a4a4d3529bc
 sleepy-session  03eef8fa32595d7887ed36830212f9abc6c01a84
 sleepy-artwork  175314b9c236c1b412e8e1ebc54bbe3937b0c90d
-sleepy-desktop  e52bf09a6472366d182209de9ea083a69364721c
+sleepy-desktop  08630cf77d7c9abb337f6f5f0df61cabb1fb030a
 ```
 
 The generated candidate lock SHA-256 is
-`f8b178c286b871ebdc267d67f66decf606a603295a21e883358a75f4c248992d`.
+`30a383fc3ae7458dfc1beb2a392274a59730972679365bb71fed24ff848f29c4`.
 Regenerate it only with Nix and validate the current graph together with the
 immutable M2 and M1 historical graphs.
 
