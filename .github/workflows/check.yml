@@ -3,14 +3,20 @@ name: Check
 on:
   pull_request:
   push:
+    branches: [main]
 
 permissions:
   contents: read
+
+concurrency:
+  group: check-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   fast:
     name: Fast checks
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Check out committed source
         uses: actions/checkout@v6
@@ -57,12 +63,13 @@ jobs:
         run: bash checks/component-lock.sh components/desktop-m1.json components/desktop-m1-baseline.json flake.lock
 
       - name: Evaluate all checks
-        run: nix flake check --no-build --show-trace
+        run: nix flake check --all-systems --no-build --show-trace
 
   build:
     name: Build checks and configurations
     needs: fast
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     steps:
       - name: Check out committed source
         uses: actions/checkout@v6
@@ -78,6 +85,9 @@ jobs:
 
       - name: Build all checks
         run: nix flake check -L
+
+      - name: Build packaged desktop production smoke
+        run: nix build .#checks.x86_64-linux.sleepy-desktop-qml --no-link -L
 
       - name: Build Sleepy NixOS
         run: nix build .#nixosConfigurations.sleepy-vm.config.system.build.toplevel --no-link -L
