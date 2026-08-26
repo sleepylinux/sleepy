@@ -53,12 +53,18 @@ jq -e --slurpfile reviewed "$manifest" '
   .homeManager.service.after == ["graphical-session.target", "dbus.socket"] and
   .homeManager.service.requisite == ["graphical-session.target"] and
   .homeManager.service.requires == ["dbus.socket"] and
-  .homeManager.service.type == "simple" and
+  .homeManager.service.type == "notify" and
+  .homeManager.service.notifyAccess == "main" and
   .homeManager.service.restart == "on-failure" and
   .homeManager.service.runtimeDirectory == "sleepy" and
   .homeManager.service.runtimeDirectoryMode == "0700" and
   .homeManager.service.killSignal == "SIGINT" and
   .homeManager.service.timeoutStopSec == 20 and
+  .homeManager.service.limitNOFILE == 512 and
+  .homeManager.service.tasksMax == 128 and
+  .homeManager.service.memoryHigh == "256M" and
+  .homeManager.service.memoryMax == "512M" and
+  .homeManager.service.oomPolicy == "stop" and
   (.homeManager.service.environment | length == 1) and
   (.homeManager.service.environment[0] | startswith("PATH=/nix/store/")) and
   .homeManager.service.execStart ==

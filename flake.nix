@@ -39,7 +39,9 @@
     home-manager,
     ...
   }: let
-    componentContract = builtins.fromJSON (builtins.readFile ./components/desktop-m1.json);
+    primaryUser = "lazy";
+    componentContract = builtins.fromJSON (builtins.readFile ./components/current.json);
+    sleepyVersion = componentContract.distributionVersion;
     baseline = import ./hosts/sleepy-vm/baseline.nix;
     supportedSystems = [baseline.system];
     overlay = import ./overlays {inherit inputs;};
@@ -56,20 +58,16 @@
   in {
     packages = forAllSystems (system: let
       pkgs = mkPkgs system;
-    in {
-      inherit
-        (pkgs)
-        sleepy-artwork
-        sleepy-branding
-        sleepy-contract
-        sleepy-journal-fault-runner
-        sleepy-session
-        sleepy-session-user-unit
-        sleepy-settings-preview
-        sleepy-shell
-        ;
-      default = pkgs.sleepy-shell;
-    });
+      mappedPackages = builtins.mapAttrs (
+        _packageName: mapping:
+          inputs.${mapping.input}.packages.${system}.${mapping.output}
+      ) componentContract.rootPackages;
+    in
+      mappedPackages
+      // {
+        sleepy-journal-fault-runner = pkgs.sleepy-journal-fault-runner;
+        default = mappedPackages.${componentContract.defaultPackage};
+      });
 
     formatter = forAllSystems (system: (mkPkgs system).alejandra);
 
@@ -81,7 +79,7 @@
         componentPackages = self.packages.${system};
         nixosModule = self.nixosModules.sleepy;
         nixosConfiguration = self.nixosConfigurations.sleepy-vm;
-        homeConfiguration = self.homeConfigurations."lazy@sleepy-vm";
+        homeConfiguration = self.homeConfigurations."${primaryUser}@sleepy-vm";
         baselineActivationPackage = inputs.sleepy-m2-baseline.homeConfigurations."lazy@sleepy-vm".activationPackage;
         baselineSessionPackage = inputs.sleepy-m2-baseline.packages.${system}.sleepy-session;
       });
@@ -122,29 +120,28 @@
     homeManagerModules.sleepy = import ./modules/home;
 
     nixosConfigurations.sleepy-vm = import ./hosts/sleepy-vm {
-      inherit mkSleepyHost;
+      inherit mkSleepyHost primaryUser sleepyVersion;
     };
 
-    homeConfigurations."lazy@sleepy-vm" = home-manager.lib.homeManagerConfiguration {
+    homeConfigurations."${primaryUser}@sleepy-vm" = home-manager.lib.homeManagerConfiguration {
       pkgs = mkPkgs baseline.system;
       extraSpecialArgs = {
         inherit inputs;
-        primaryUser = "lazy";
-        sleepyVersion = "0.1.0";
+        inherit primaryUser sleepyVersion;
       };
       modules = [
         self.homeManagerModules.sleepy
         {
           sleepy = {
             enable = true;
-            primaryUser = "lazy";
+            inherit primaryUser;
             brandingPackage = self.packages.${baseline.system}.sleepy-artwork;
             sessionPackage = self.packages.${baseline.system}.sleepy-session;
             shellPackage = self.packages.${baseline.system}.sleepy-shell;
           };
           home = {
-            username = "lazy";
-            homeDirectory = "/home/lazy";
+            username = primaryUser;
+            homeDirectory = "/home/${primaryUser}";
             stateVersion = "26.05";
           };
         }

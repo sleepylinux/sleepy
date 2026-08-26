@@ -42,11 +42,17 @@
         requisite = sessionService.Unit.Requisite;
         requires = sessionService.Unit.Requires;
         type = sessionService.Service.Type;
+        notifyAccess = sessionService.Service.NotifyAccess;
         restart = sessionService.Service.Restart;
         runtimeDirectory = sessionService.Service.RuntimeDirectory;
         runtimeDirectoryMode = sessionService.Service.RuntimeDirectoryMode;
         killSignal = sessionService.Service.KillSignal;
         timeoutStopSec = sessionService.Service.TimeoutStopSec;
+        limitNOFILE = sessionService.Service.LimitNOFILE;
+        tasksMax = sessionService.Service.TasksMax;
+        memoryHigh = sessionService.Service.MemoryHigh;
+        memoryMax = sessionService.Service.MemoryMax;
+        oomPolicy = sessionService.Service.OOMPolicy;
         environment = sessionService.Service.Environment;
         execStart = sessionService.Service.ExecStart;
       };
@@ -108,6 +114,6 @@ in
         jq
       ];
     } ''
-      bash ${./component-contract.sh} ${../components/desktop-m1.json} ${actualContract}
+      bash ${./component-contract.sh} ${../components/current.json} ${actualContract}
       touch "$out"
     ''

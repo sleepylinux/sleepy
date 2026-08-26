@@ -57,10 +57,6 @@
     inherit (homeConfiguration) activationPackage;
     sessionPackage = componentPackages.sleepy-session;
   };
-  fallbackBranding = pkgs.callPackage ../packages/sleepy-branding {};
-  fallbackShell = pkgs.callPackage ../packages/sleepy-shell {
-    sleepy-branding = fallbackBranding;
-  };
   sourceContracts =
     pkgs.runCommand "sleepy-source-contracts" {
       nativeBuildInputs = with pkgs; [
@@ -100,35 +96,8 @@
     test ! -e ${source}/secrets
     ${pkgs.coreutils}/bin/sha256sum ${source}/flake.lock >"$out"
   '';
-  quickshell =
-    pkgs.runCommand "sleepy-quickshell-check" {
-      LC_ALL = "C.UTF-8";
-      nativeBuildInputs = with pkgs; [
-        bash
-        findutils
-        qt6Packages.qtdeclarative
-        ripgrep
-      ];
-    } ''
-      ${pkgs.bash}/bin/bash ${source}/checks/quickshell-contract-test.sh
-
-      while IFS= read -r -d "" qml_file; do
-        ${pkgs.qt6Packages.qtdeclarative}/bin/qmllint \
-          -I ${pkgs.quickshell}/lib/qt-6/qml \
-          -I ${pkgs.qt6Packages.qtdeclarative}/lib/qt-6/qml \
-          "$qml_file"
-      done < <(${pkgs.findutils}/bin/find ${source}/packages/sleepy-shell/src -name '*.qml' -print0)
-
-      test -f ${fallbackShell}/share/quickshell/sleepy/shell.qml
-      touch "$out"
-    '';
 in
-  assert pkgs.lib.assertMsg
-  (fallbackBranding.meta.license == pkgs.lib.licenses.gpl3Only)
-  "the retained branding fallback must declare GPL-3.0-only";
-  assert pkgs.lib.assertMsg
-  (fallbackShell.meta.license == pkgs.lib.licenses.gpl3Only)
-  "the retained shell fallback must declare GPL-3.0-only"; {
+  {
     apps-contract = appsContract;
     bindings-contract = bindingsContract;
     component-contract = componentIntegration;
@@ -147,7 +116,6 @@ in
       runner = componentPackages.sleepy-journal-fault-runner;
     };
     fresh-clone-source = freshCloneSource;
-    inherit quickshell;
     sleepy-artwork-assets = inputs.sleepy-artwork.checks.${pkgs.stdenv.hostPlatform.system}.assets;
     sleepy-desktop-qml = inputs.sleepy-desktop.checks.${pkgs.stdenv.hostPlatform.system}.qml;
     sleepy-desktop-package = inputs.sleepy-desktop.checks.${pkgs.stdenv.hostPlatform.system}.package;

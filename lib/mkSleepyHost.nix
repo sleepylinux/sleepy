@@ -2,6 +2,7 @@
   system,
   hostName,
   primaryUser,
+  sleepyVersion,
   hardwareModule,
   extraModules ? [],
 }:
@@ -21,7 +22,7 @@ inputs.nixpkgs.lib.nixosSystem {
         networking.hostName = hostName;
         sleepy = {
           inherit primaryUser;
-          version = "0.1.0";
+          version = sleepyVersion;
         };
       }
     ]

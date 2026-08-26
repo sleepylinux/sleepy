@@ -171,7 +171,7 @@ if ! jq -e \
   printf '%s\n' \
     'component lock: current or historical Sleepy graph does not match its immutable manifest.' \
     'Run `nix flake lock`, review the generated lock diff, then run:' \
-    '  bash checks/component-lock.sh components/desktop-m1.json components/desktop-m2-baseline.json flake.lock' >&2
+    '  bash checks/component-lock.sh components/current.json components/desktop-m2-baseline.json flake.lock' >&2
   exit 1
 fi
 

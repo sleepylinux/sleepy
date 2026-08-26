@@ -19,67 +19,65 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Check out committed source
-        uses: actions/checkout@v6
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 1
           persist-credentials: false
 
       - name: Install Nix
-        uses: cachix/install-nix-action@v31
+        uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
 
       - name: Check formatting
-        run: nix fmt -- --check .
+        run: nix fmt --no-write-lock-file -- --check .
 
       - name: Run Statix
-        run: nix develop --command statix check --ignore hosts/sleepy-vm/hardware-configuration.nix .
+        run: nix develop --no-write-lock-file --command statix check --ignore hosts/sleepy-vm/hardware-configuration.nix .
 
       - name: Run deadnix
-        run: nix develop --command deadnix --fail --exclude hosts/sleepy-vm/hardware-configuration.nix .
+        run: nix develop --no-write-lock-file --command deadnix --fail --exclude hosts/sleepy-vm/hardware-configuration.nix .
 
       - name: Run ShellCheck
         shell: bash
         run: |
           mapfile -d '' scripts < <(git ls-files -z '*.sh')
           if ((${#scripts[@]})); then
-            nix develop --command shellcheck "${scripts[@]}"
+            nix develop --no-write-lock-file --command shellcheck "${scripts[@]}"
           fi
 
       - name: Run source contract fixtures
         run: |
-          nix develop --command bash checks/source-clean-test.sh
-          nix develop --command bash checks/baseline-provenance-test.sh
-          nix develop --command bash checks/bindings-policy-test.sh
-          nix develop --command bash checks/quickshell-contract-test.sh
-          nix develop --command bash checks/component-contract-test.sh
-          nix develop --command bash checks/component-lock-test.sh
-          nix develop --command bash checks/flake-shape-test.sh
-          nix develop --command bash checks/flake-input-contract-test.sh
-          nix develop --command bash checks/license-contract-test.sh
-          nix develop --command bash checks/online-readiness-test.sh
-          nix develop --command bash checks/update-safety-contract-test.sh
-          nix develop --command bash checks/root-integration-contract-test.sh
-          nix develop --command bash checks/desktop-m3-root-contract-test.sh
+          nix develop --no-write-lock-file --command bash checks/source-clean-test.sh
+          nix develop --no-write-lock-file --command bash checks/baseline-provenance-test.sh
+          nix develop --no-write-lock-file --command bash checks/bindings-policy-test.sh
+          nix develop --no-write-lock-file --command bash checks/component-contract-test.sh
+          nix develop --no-write-lock-file --command bash checks/component-lock-test.sh
+          nix develop --no-write-lock-file --command bash checks/flake-shape-test.sh
+          nix develop --no-write-lock-file --command bash checks/flake-input-contract-test.sh
+          nix develop --no-write-lock-file --command bash checks/license-contract-test.sh
+          nix develop --no-write-lock-file --command bash checks/online-readiness-test.sh
+          nix develop --no-write-lock-file --command bash checks/update-safety-contract-test.sh
+          nix develop --no-write-lock-file --command bash checks/root-integration-contract-test.sh
+          nix develop --no-write-lock-file --command bash checks/desktop-m3-root-contract-test.sh
 
       - name: Validate locked component revisions
-        run: bash checks/component-lock.sh components/desktop-m1.json components/desktop-m2-baseline.json flake.lock
+        run: bash checks/component-lock.sh components/current.json components/desktop-m2-baseline.json flake.lock
 
       - name: Evaluate all checks
-        run: nix flake check --all-systems --no-build --show-trace
+        run: nix flake check --no-write-lock-file --all-systems --no-build --show-trace
 
   build:
     name: Build checks and configurations
-    needs: fast
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
       - name: Check out committed source
-        uses: actions/checkout@v6
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 1
           persist-credentials: false
 
       - name: Install Nix
-        uses: cachix/install-nix-action@v31
+        uses: cachix/install-nix-action@8aa03977d8d733052d78f4e008a241fd1dbf36b3 # v31.10.6
         with:
           extra_nix_config: |
             system-features = nixos-test benchmark big-parallel kvm
@@ -93,16 +91,16 @@ jobs:
         run: bash checks/fresh-clone.sh
 
       - name: Build all checks
-        run: nix flake check -L
+        run: nix flake check --no-write-lock-file -L
 
       - name: Build packaged desktop production smoke
-        run: nix build .#checks.x86_64-linux.sleepy-desktop-qml --no-link -L
+        run: nix build --no-write-lock-file .#checks.x86_64-linux.sleepy-desktop-qml --no-link -L
 
       - name: Build Sleepy NixOS
-        run: nix build .#nixosConfigurations.sleepy-vm.config.system.build.toplevel --no-link -L
+        run: nix build --no-write-lock-file .#nixosConfigurations.sleepy-vm.config.system.build.toplevel --no-link -L
 
       - name: Build standalone Home Manager
-        run: nix build '.#homeConfigurations."lazy@sleepy-vm".activationPackage' --no-link -L
+        run: nix build --no-write-lock-file '.#homeConfigurations."lazy@sleepy-vm".activationPackage' --no-link -L
 
       - name: Assert clean checkout
         shell: bash
