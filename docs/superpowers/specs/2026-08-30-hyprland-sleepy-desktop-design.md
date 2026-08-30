@@ -194,6 +194,28 @@ the general daemon socket, are zeroized immediately after each PAM exchange,
 and are subject to bounded retries and delay. Fingerprint or other mechanisms
 are disabled until separately specified and tested.
 
+`sleepy-desktop` builds and packages `sleepy-locker` because it owns the lock
+surfaces and compositor-connected client. `sleepy-session` owns lock policy,
+the public typed `lock` request, the suspend gate, and redacted lock state. It
+sends only a lock request over the locker-only peer-verified endpoint; the
+locker is the sole authority that can authenticate and issue the Wayland
+unlock-and-destroy request.
+
+The locker is a persistent systemd user service started with and `PartOf=` the
+UWSM graphical session, ordered after the Wayland environment is available,
+and supervised independently of both the decorative shell and daemon. Root
+NixOS configuration defines `security.pam.services.sleepy-locker`; the PAM
+service file is not taken from the fork. A locker unit failure activates a
+fail-safe unit that terminates the UWSM graphical session and returns to
+ReGreet rather than exposing the desktop.
+
+Password key and input-method events terminate in a native secure prompt item
+inside the locker. It holds input in a mutable locked-memory buffer, passes it
+directly to the PAM conversation, and explicitly zeroizes the buffer on submit,
+cancel, failure, destruction, and process shutdown. QML receives only input
+length and authentication status; plaintext never becomes a QML property,
+JavaScript string, `QString`, log field, signal argument, or IPC frame.
+
 Only a successful PAM result may call the Wayland unlock-and-destroy request.
 Shell, daemon, or IPC clients cannot synthesize that result. If the decorative
 shell crashes, the locker remains secure and shows a minimal fallback prompt.
