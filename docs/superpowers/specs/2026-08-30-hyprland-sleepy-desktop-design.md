@@ -214,7 +214,10 @@ inside the locker. It holds input in a mutable locked-memory buffer, passes it
 directly to the PAM conversation, and explicitly zeroizes the buffer on submit,
 cancel, failure, destruction, and process shutdown. QML receives only input
 length and authentication status; plaintext never becomes a QML property,
-JavaScript string, `QString`, log field, signal argument, or IPC frame.
+JavaScript string, persistent `QString`, log field, signal argument, or IPC
+frame. An unavoidable transient `QString` owned by a native Qt key or input
+method event is consumed immediately into the locked buffer, is never retained
+or forwarded, and has the shortest toolkit-controlled lifetime available.
 
 Only a successful PAM result may call the Wayland unlock-and-destroy request.
 Shell, daemon, or IPC clients cannot synthesize that result. If the decorative
