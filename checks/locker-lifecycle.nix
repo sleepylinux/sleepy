@@ -24,14 +24,14 @@ in
   (locker.Service.ExecStart == "${homeConfig.sleepy.lockerPackage}/bin/sleepy-locker")
   "the locker unit must execute the pinned package binary";
   assert pkgs.lib.assertMsg
-  (locker.Service.Restart == "always")
-  "the persistent locker must restart after every unexpected exit";
+  (locker.Service.Restart == "no")
+  "a crashed secure locker must fail once instead of trying to reclaim an orphaned lock";
   assert pkgs.lib.assertMsg
-  (locker.Unit.StartLimitIntervalSec == 10 && locker.Unit.StartLimitBurst == 3)
-  "locker failures must trip a bounded start limit";
+  (locker.Service.ExecStop == "${homeConfig.sleepy.lockerPackage}/bin/sleepy-locker-control --pid $MAINPID")
+  "orderly target shutdown must ask the exact Quickshell locker instance to quit";
   assert pkgs.lib.assertMsg
-  (locker.Service.RestartSec == "250ms")
-  "locker restarts must use the reviewed bounded delay";
+  (locker.Service.TimeoutStopSec == 5)
+  "orderly locker shutdown must be bounded before systemd sends SIGTERM";
   assert pkgs.lib.assertMsg
   (failsafe.Service.ExecStart == "${pkgs.uwsm}/bin/uwsm stop")
   "the locker fail-safe must terminate the UWSM session with a fixed command";
@@ -50,5 +50,6 @@ in
     pkgs.runCommand "sleepy-locker-lifecycle" {} ''
       test -f ${pamFile}
       test -x ${homeConfig.sleepy.lockerPackage}/bin/sleepy-locker
+      test -x ${homeConfig.sleepy.lockerPackage}/bin/sleepy-locker-control
       touch "$out"
     ''

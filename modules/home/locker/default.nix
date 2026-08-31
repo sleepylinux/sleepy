@@ -13,8 +13,6 @@
           After = ["graphical-session.target"];
           Requisite = ["graphical-session.target"];
           OnFailure = ["sleepy-locker-failsafe.service"];
-          StartLimitIntervalSec = 10;
-          StartLimitBurst = 3;
         };
 
         Service = {
@@ -24,8 +22,9 @@
             "SLEEPY_LOCKER_PAM_SERVICE=sleepy-locker"
             "SLEEPY_LOCKER_SOCKET=%t/sleepy/locker.sock"
           ];
-          Restart = "always";
-          RestartSec = "250ms";
+          ExecStop = "${config.sleepy.lockerPackage}/bin/sleepy-locker-control --pid $MAINPID";
+          Restart = "no";
+          TimeoutStopSec = 5;
           RuntimeDirectory = "sleepy";
           RuntimeDirectoryMode = "0700";
           UMask = "0077";
