@@ -27,8 +27,17 @@ in
   (locker.Service.Restart == "always")
   "the persistent locker must restart after every unexpected exit";
   assert pkgs.lib.assertMsg
+  (locker.Unit.StartLimitIntervalSec == 10 && locker.Unit.StartLimitBurst == 3)
+  "locker failures must trip a bounded start limit";
+  assert pkgs.lib.assertMsg
+  (locker.Service.RestartSec == "250ms")
+  "locker restarts must use the reviewed bounded delay";
+  assert pkgs.lib.assertMsg
   (failsafe.Service.ExecStart == "${pkgs.uwsm}/bin/uwsm stop")
   "the locker fail-safe must terminate the UWSM session with a fixed command";
+  assert pkgs.lib.assertMsg
+  (failsafe.Service.Type == "oneshot" && failsafe.Service.TimeoutStartSec == 15)
+  "the fixed fail-safe must be bounded and one-shot";
   assert pkgs.lib.assertMsg
   (builtins.elem "sleepy-locker.service" session.Unit.Wants)
   "the session daemon must start the independently supervised locker";

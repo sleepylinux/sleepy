@@ -244,7 +244,8 @@ jq -n \
         unit: "sleepy-session.service",
         wantedBy: ["graphical-session.target"],
         partOf: ["graphical-session.target"],
-        after: ["graphical-session.target", "dbus.socket"],
+        wants: ["sleepy-locker.service"],
+        after: ["graphical-session.target", "dbus.socket", "sleepy-locker.service"],
         requisite: ["graphical-session.target"],
         requires: ["dbus.socket"],
         type: "simple",
@@ -253,7 +254,7 @@ jq -n \
         runtimeDirectoryMode: "0700",
         killSignal: "SIGINT",
         timeoutStopSec: 20,
-        environment: ["PATH=/nix/store/fake-session-runtime/bin"],
+        environment: ["PATH=/nix/store/fake-session-runtime/bin", "SLEEPY_LOCKER_SOCKET=%t/sleepy/locker.sock"],
         execStart: [($session + "/bin/sleepy-sessiond")]
       }
     },

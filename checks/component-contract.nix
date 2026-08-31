@@ -38,6 +38,7 @@
         unit = "sleepy-session.service";
         wantedBy = sessionService.Install.WantedBy;
         partOf = sessionService.Unit.PartOf;
+        wants = sessionService.Unit.Wants;
         after = sessionService.Unit.After;
         requisite = sessionService.Unit.Requisite;
         requires = sessionService.Unit.Requires;

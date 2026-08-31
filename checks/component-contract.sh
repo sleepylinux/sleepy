@@ -50,7 +50,8 @@ jq -e --slurpfile reviewed "$manifest" '
   .homeManager.service.unit == "sleepy-session.service" and
   .homeManager.service.wantedBy == ["graphical-session.target"] and
   .homeManager.service.partOf == ["graphical-session.target"] and
-  .homeManager.service.after == ["graphical-session.target", "dbus.socket"] and
+  .homeManager.service.wants == ["sleepy-locker.service"] and
+  .homeManager.service.after == ["graphical-session.target", "dbus.socket", "sleepy-locker.service"] and
   .homeManager.service.requisite == ["graphical-session.target"] and
   .homeManager.service.requires == ["dbus.socket"] and
   .homeManager.service.type == "simple" and
@@ -59,8 +60,9 @@ jq -e --slurpfile reviewed "$manifest" '
   .homeManager.service.runtimeDirectoryMode == "0700" and
   .homeManager.service.killSignal == "SIGINT" and
   .homeManager.service.timeoutStopSec == 20 and
-  (.homeManager.service.environment | length == 1) and
+  (.homeManager.service.environment | length == 2) and
   (.homeManager.service.environment[0] | startswith("PATH=/nix/store/")) and
+  .homeManager.service.environment[1] == "SLEEPY_LOCKER_SOCKET=%t/sleepy/locker.sock" and
   .homeManager.service.execStart ==
     [(.packages["sleepy-session"].path + "/bin/sleepy-sessiond")] and
   (.sources["sleepy-sdk"] | type == "string" and length > 0) and
