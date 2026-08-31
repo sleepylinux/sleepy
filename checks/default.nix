@@ -48,6 +48,11 @@
     inherit pkgs;
     inherit (nixosConfiguration) config;
   };
+  lockerLifecycle = import ./locker-lifecycle.nix {
+    inherit pkgs;
+    homeConfig = integratedHomeConfig;
+    nixosConfig = nixosConfiguration.config;
+  };
   updateSafety = pkgs.callPackage ./update-safety.nix {
     inherit (homeConfiguration) activationPackage;
     inherit baselineActivationPackage;
@@ -89,6 +94,7 @@
       ${pkgs.bash}/bin/bash ${source}/checks/update-safety-contract-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/root-integration-contract-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/desktop-m3-root-contract-test.sh
+      ${pkgs.bash}/bin/bash ${source}/checks/locker-lifecycle-test.sh
       touch "$out"
     '';
   freshCloneSource = pkgs.runCommand "sleepy-fresh-clone-source-check" {} ''
@@ -146,6 +152,7 @@ in
     journal-fault-runner = pkgs.callPackage ./journal-fault-runner.nix {
       runner = componentPackages.sleepy-journal-fault-runner;
     };
+    locker-lifecycle = lockerLifecycle;
     fresh-clone-source = freshCloneSource;
     inherit quickshell;
     sleepy-artwork-assets = inputs.sleepy-artwork.checks.${pkgs.stdenv.hostPlatform.system}.assets;

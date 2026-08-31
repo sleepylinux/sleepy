@@ -63,6 +63,7 @@
         sleepy-branding
         sleepy-contract
         sleepy-journal-fault-runner
+        sleepy-locker
         sleepy-session
         sleepy-session-user-unit
         sleepy-settings-preview
@@ -139,6 +140,7 @@
             enable = true;
             primaryUser = "lazy";
             brandingPackage = self.packages.${baseline.system}.sleepy-artwork;
+            lockerPackage = self.packages.${baseline.system}.sleepy-locker;
             sessionPackage = self.packages.${baseline.system}.sleepy-session;
             shellPackage = self.packages.${baseline.system}.sleepy-shell;
           };

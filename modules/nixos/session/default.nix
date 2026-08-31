@@ -1,4 +1,6 @@
 {pkgs, ...}: {
+  imports = [./pam.nix];
+
   programs.niri.enable = true;
 
   security.polkit.extraConfig = ''

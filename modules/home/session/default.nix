@@ -65,7 +65,10 @@ in {
         Unit = {
           Description = "Sleepy desktop session event service";
           PartOf = ["graphical-session.target"];
-          After = ["graphical-session.target" "dbus.socket"];
+          Wants = lib.optionals (config.sleepy.lockerPackage != null) ["sleepy-locker.service"];
+          After =
+            ["graphical-session.target" "dbus.socket"]
+            ++ lib.optionals (config.sleepy.lockerPackage != null) ["sleepy-locker.service"];
           Requisite = ["graphical-session.target"];
           Requires = ["dbus.socket"];
         };
@@ -73,7 +76,10 @@ in {
         Service = {
           Type = "simple";
           ExecStart = "${config.sleepy.sessionPackage}/bin/sleepy-sessiond";
-          Environment = ["PATH=${sessionRuntimePath}"];
+          Environment = [
+            "PATH=${sessionRuntimePath}"
+            "SLEEPY_LOCKER_SOCKET=%t/sleepy/locker.sock"
+          ];
           Restart = "on-failure";
           RestartSec = 2;
           RuntimeDirectory = "sleepy";
