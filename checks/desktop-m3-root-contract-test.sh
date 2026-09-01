@@ -37,7 +37,7 @@ require_literal "$session_module" 'PATH=${sessionRuntimePath}'
 reject_literal "$session_module" 'ExecStart = "/'
 
 require_literal "$quickshell_module" 'Wants = ["sleepy-session.service"'
-require_literal "$quickshell_module" 'After = ["sleepy-session.service"'
+require_literal "$quickshell_module" 'After = ["graphical-session.target" "sleepy-session.service"'
 require_literal "$quickshell_module" 'systemd.user.services.sleepy-shell = {'
 reject_literal "$quickshell_module" 'Requires = ["sleepy-session.service"'
 reject_literal "$quickshell_module" 'systemd.user.services.quickshell'

@@ -32,10 +32,11 @@ in
     && sessionUnit.Service.NotifyAccess == "main")
   "sleepy-sessiond must signal readiness before shell startup";
   assert pkgs.lib.assertMsg
-  (builtins.elem "sleepy-session.service" shellUnit.Unit.Wants
+  (builtins.elem "graphical-session.target" shellUnit.Unit.After
+    && builtins.elem "sleepy-session.service" shellUnit.Unit.Wants
     && builtins.elem "sleepy-session.service" shellUnit.Unit.After
     && !(builtins.elem "sleepy-session.service" (shellUnit.Unit.Requires or [])))
-  "the shell must order after daemon readiness without failure coupling";
+  "the shell must order after the graphical target and daemon readiness without failure coupling";
   assert pkgs.lib.assertMsg
   (builtins.elem "graphical-session.target" lockerUnit.Unit.PartOf
     && builtins.elem "graphical-session.target" shellUnit.Unit.PartOf

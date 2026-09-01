@@ -36,6 +36,7 @@ validate_production_contract() {
     'modulePath = "${config.systemd.package}/lib/security/pam_systemd.so";' \
     "grep -F 'Creating session for username: lazy' /var/log/regreet/log" \
     'systemctl --user is-active wayland-wm@hyprland.desktop.service", timeout=timedelta(seconds=30))' \
+    'builtins.elem "graphical-session.target" shellUnit.Unit.After' \
     'DAEMON_RESTART_RECOVERY_GATE' \
     'post_daemon = read_snapshot("/tmp/desktop-post-daemon.json")' \
     'SHELL_RESTART_RECOVERY_GATE' \
@@ -195,6 +196,12 @@ install -m 0600 -- "$repo_root/checks/hyprland-production-vm.nix" "$mutated_prod
 sed -i 's/rules = lib.mkForce {/rules = {/' "$mutated_production"
 if validate_production_contract "$mutated_production"; then
   printf 'VM acceptance assets: unforced test PAM rules mutation passed\n' >&2
+  exit 1
+fi
+install -m 0600 -- "$repo_root/checks/hyprland-production-vm.nix" "$mutated_production"
+sed -i '/builtins.elem "graphical-session.target" shellUnit.Unit.After/d' "$mutated_production"
+if validate_production_contract "$mutated_production"; then
+  printf 'VM acceptance assets: removed shell graphical ordering mutation passed\n' >&2
   exit 1
 fi
 mutated_runbook="$fixture/source/sleepy-vm-hyprland.md"

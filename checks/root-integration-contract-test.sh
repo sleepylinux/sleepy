@@ -34,7 +34,7 @@ assert_not_contains modules/home/session/default.nix 'sleepy-bindings-online'
 assert_not_contains modules/home/session/default.nix 'NIRI_SOCKET'
 
 assert_contains modules/home/quickshell/default.nix 'Wants = ["sleepy-session.service"]'
-assert_contains modules/home/quickshell/default.nix 'After = ["sleepy-session.service"]'
+assert_contains modules/home/quickshell/default.nix 'After = ["graphical-session.target" "sleepy-session.service"]'
 assert_contains modules/home/quickshell/default.nix 'systemd.user.services.sleepy-shell = {'
 assert_not_contains modules/home/quickshell/default.nix 'Requires = ["sleepy-session.service"'
 assert_not_contains modules/home/quickshell/default.nix 'systemd.user.services.quickshell'

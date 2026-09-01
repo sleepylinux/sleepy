@@ -121,7 +121,7 @@ quickshell_module=modules/home/quickshell/default.nix
 require_literal "$quickshell_module" 'systemd.user.services.sleepy-shell = {'
 require_literal "$quickshell_module" 'ExecStart = "${config.sleepy.shellPackage}/bin/sleepy-shell";'
 require_literal "$quickshell_module" 'Wants = ["sleepy-session.service"];'
-require_literal "$quickshell_module" 'After = ["sleepy-session.service"];'
+require_literal "$quickshell_module" 'After = ["graphical-session.target" "sleepy-session.service"];'
 reject_literal "$quickshell_module" 'programs.quickshell'
 reject_literal "$quickshell_module" 'systemd.user.services.quickshell'
 reject_literal "$quickshell_module" 'pkgs.quickshell'

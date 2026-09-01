@@ -10,7 +10,7 @@
         PartOf = ["graphical-session.target"];
         Requisite = ["graphical-session.target"];
         Wants = ["sleepy-session.service"];
-        After = ["sleepy-session.service"];
+        After = ["graphical-session.target" "sleepy-session.service"];
         StartLimitIntervalSec = 30;
         StartLimitBurst = 3;
       };
