@@ -279,6 +279,10 @@ in
         machine.succeed(niri_absent)
         daemon_pid = machine.succeed(f"{user_env} systemctl --user show sleepy-session.service -P MainPID").strip()
         shell_pid = machine.succeed(f"{user_env} systemctl --user show sleepy-shell.service -P MainPID").strip()
+        # INITIAL_SHELL_STREAM_GATE: prove the shell completed QML startup and
+        # connected before interrupting its daemon.  An active systemd service
+        # alone does not establish that recovery is being exercised.
+        wait_for_shell_stream(shell_pid)
 
         # DAEMON_RESTART_RECOVERY_GATE: reconnect to the replacement
         # daemon socket and validate a fresh full snapshot.

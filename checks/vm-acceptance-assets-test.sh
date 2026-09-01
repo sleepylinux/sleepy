@@ -53,6 +53,8 @@ validate_production_contract() {
     'production-vm-sentinel'; do
     ! grep -F "$forbidden_literal" "$production_check" >/dev/null || return 1
   done
+  test "$(grep -Fc 'wait_for_shell_stream(shell_pid)' "$production_check")" -ge 3 \
+    || return 1
 }
 
 validate_production_contract "$repo_root/checks/hyprland-production-vm.nix" || {
@@ -202,6 +204,12 @@ install -m 0600 -- "$repo_root/checks/hyprland-production-vm.nix" "$mutated_prod
 sed -i '/builtins.elem "graphical-session.target" shellUnit.Unit.After/d' "$mutated_production"
 if validate_production_contract "$mutated_production"; then
   printf 'VM acceptance assets: removed shell graphical ordering mutation passed\n' >&2
+  exit 1
+fi
+install -m 0600 -- "$repo_root/checks/hyprland-production-vm.nix" "$mutated_production"
+sed -i '/INITIAL_SHELL_STREAM_GATE/,/wait_for_shell_stream(shell_pid)/{/wait_for_shell_stream(shell_pid)/d;}' "$mutated_production"
+if validate_production_contract "$mutated_production"; then
+  printf 'VM acceptance assets: removed initial shell stream mutation passed\n' >&2
   exit 1
 fi
 mutated_runbook="$fixture/source/sleepy-vm-hyprland.md"
