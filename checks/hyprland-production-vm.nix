@@ -16,6 +16,7 @@
   hyprlandPackage = nixosConfig.programs.hyprland.package;
   eventSchema = "${sdkSource}/schemas/desktop-event-v3.schema.json";
   schemaPython = pkgs.python3.withPackages (pythonPackages: [pythonPackages.jsonschema]);
+  selectedSessionName = "Hyprland (uwsm-managed)";
 in
   assert pkgs.lib.assertMsg nixosConfig.services.greetd.enable
   "production acceptance requires greetd";
@@ -42,12 +43,21 @@ in
   "candidate services must share the UWSM graphical lifecycle";
     pkgs.testers.runNixOSTest {
       name = "sleepy-hyprland-production";
+      enableOCR = true;
 
       nodes.machine = {
+        config,
         lib,
         pkgs,
         ...
-      }: {
+      }: let
+        regreetTestState = pkgs.writeText "regreet-test-state.toml" ''
+          last_user = "lazy"
+
+          [user_to_last_sess]
+          lazy = "${selectedSessionName}"
+        '';
+      in {
         imports = [../modules/nixos];
 
         sleepy.primaryUser = "lazy";
@@ -58,13 +68,40 @@ in
         };
         # Credential-free test-only PAM: proves the ReGreet/greetd exchange and
         # selected session launch. Real-password PAM remains a manual VM gate.
-        security.pam.services.greetd.text = lib.mkForce ''
-          auth required pam_permit.so
-          account required pam_permit.so
-          session required pam_env.so
-          session required pam_systemd.so
-        '';
+        security.pam.services.greetd = {
+          useDefaultRules = false;
+          rules = lib.mkForce {
+            auth.permit = {
+              order = 100;
+              control = "required";
+              modulePath = "${config.security.pam.package}/lib/security/pam_permit.so";
+            };
+            account.permit = {
+              order = 100;
+              control = "required";
+              modulePath = "${config.security.pam.package}/lib/security/pam_permit.so";
+            };
+            session.env = {
+              order = 100;
+              control = "required";
+              modulePath = "${config.security.pam.package}/lib/security/pam_env.so";
+            };
+            session.systemd = {
+              order = 200;
+              control = "required";
+              modulePath = "${config.systemd.package}/lib/security/pam_systemd.so";
+            };
+          };
+        };
         services.displayManager.regreet.settings.skip_selection = false;
+        # ReGreet officially remembers the last authenticated user/session.
+        # Seed that state for this credential-free test so the graphical gate
+        # can assert the exact UWSM selection before activating Login, without
+        # relying on GTK's layout-dependent tab order.
+        systemd.services.greetd.preStart = lib.mkBefore ''
+          install -d -o greeter -g greeter -m 0700 /var/lib/regreet
+          install -o greeter -g greeter -m 0600 ${regreetTestState} /var/lib/regreet/state.toml
+        '';
         services.qemuGuest.enable = true;
         environment.systemPackages = [
           pkgs.coreutils
@@ -99,7 +136,9 @@ in
 
       testScript = ''
         import json
+        import re
         import shlex
+        from datetime import timedelta
 
         start_all()
         machine.wait_for_unit("multi-user.target")
@@ -107,6 +146,8 @@ in
 
         machine.succeed("test -f /run/current-system/sw/share/wayland-sessions/hyprland-uwsm.desktop")
         session_exec = machine.succeed("sed -n 's/^Exec=//p' /run/current-system/sw/share/wayland-sessions/hyprland-uwsm.desktop").strip()
+        session_name = machine.succeed("sed -n 's/^Name=//p' /run/current-system/sw/share/wayland-sessions/hyprland-uwsm.desktop").strip()
+        assert session_name == "${selectedSessionName}"
         assert "/bin/uwsm start " in session_exec
         assert session_exec.endswith("hyprland.desktop")
         machine.succeed("! systemctl list-unit-files --no-legend 'niri*.service' | grep -q .")
@@ -129,25 +170,53 @@ in
         machine.succeed("test $(stat -c %a /home/lazy/.config/hypr/sleepy-user.conf) = 600")
         machine.succeed("test ! -e /home/lazy/.config/niri/config.kdl")
 
-        # REGREET_LOGIN_GATE: drive the actual graphical greeter. Its
-        # only available Wayland desktop is the generated UWSM entry.
-        machine.wait_until_succeeds("pgrep -x cage >/dev/null && pgrep -x regreet >/dev/null")
-        machine.send_chars("lazy")
-        machine.send_key("tab")
-        machine.send_key("tab")
+        # REGREET_LOGIN_GATE: drive the actual graphical greeter and choose
+        # the generated UWSM entry instead of Hyprland's direct entry.
+        # Nix wrappers intentionally change /proc/$pid/comm (for example to
+        # .cage-wrapped), so match the complete argv instead of a mutable
+        # wrapper process name.  -x also prevents a partial command match.
+        regreet_ready = "pgrep -f -x '${pkgs.cage}/bin/cage -s -d -- ${pkgs.regreet}/bin/regreet' >/dev/null && pgrep -f -x '${pkgs.regreet}/bin/regreet' >/dev/null"
+        try:
+          machine.wait_until_succeeds(regreet_ready, timeout=timedelta(seconds=30))
+        except Exception:
+          print(machine.succeed("ps -eo pid,comm,args"))
+          print(machine.succeed("systemctl status greetd --no-pager || true"))
+          print(machine.succeed("journalctl -b -u greetd --no-pager || true"))
+          print(machine.succeed("test ! -f /var/log/greetd/log || cat /var/log/greetd/log"))
+          print(machine.succeed("test ! -f /var/log/regreet/log || cat /var/log/regreet/log"))
+          raise
+        # A live process is not yet an interactive greeter: first require its
+        # configuration load, then require GTK-rendered model state via OCR.
+        # A cached session intentionally omits the former "Last session ...
+        # missing" log, so that absence cannot be used as readiness.
+        machine.wait_until_succeeds("grep -F 'Loaded TOML file:' /var/log/regreet/log", timeout=timedelta(seconds=30))
+        machine.wait_for_text("Welcome back!", timeout=timedelta(seconds=30))
+        machine.wait_for_text(re.escape("${selectedSessionName}"), timeout=timedelta(seconds=30))
+        regreet_pid = machine.succeed("pgrep -f -x '${pkgs.regreet}/bin/regreet'").strip()
+        # ReGreet focuses Login after initialization.  Return activates the
+        # visible, asserted UWSM selection and enters the real greetd exchange.
         machine.send_key("ret")
-        machine.wait_until_succeeds("grep -F 'Creating session for username: lazy' /var/log/regreet/log")
-        machine.wait_until_succeeds("grep -F 'Successfully logged in; starting session' /var/log/regreet/log")
+        try:
+          machine.wait_until_succeeds("grep -F 'Creating session for username: lazy' /var/log/regreet/log", timeout=timedelta(seconds=30))
+          machine.wait_until_succeeds("grep -F 'Successfully logged in; starting session' /var/log/regreet/log", timeout=timedelta(seconds=30))
+        except Exception:
+          machine.screenshot("regreet-submit-timeout")
+          print(machine.succeed("ps -eo pid,comm,args"))
+          print(machine.succeed("journalctl -b -u greetd --no-pager || true"))
+          print(machine.succeed("test ! -f /var/log/regreet/log || cat /var/log/regreet/log"))
+          raise
 
         uid = machine.succeed("id -u lazy").strip()
         user_env = f"sudo -u lazy HOME=/home/lazy XDG_RUNTIME_DIR=/run/user/{uid} DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/{uid}/bus"
-        machine.wait_until_succeeds("pgrep -u lazy -x Hyprland >/dev/null")
-        machine.wait_until_succeeds(f"{user_env} systemctl --user is-active wayland-wm@Hyprland.desktop.target")
-        machine.wait_until_succeeds(f"{user_env} systemctl --user is-active graphical-session.target")
+        hyprland_ready = "pgrep -u lazy -f -x '${hyprlandPackage}/bin/Hyprland --watchdog-fd [0-9]+' >/dev/null"
+        niri_absent = "! pgrep -u lazy -f -x '${pkgs.niri}/bin/niri([[:space:]].*)?' >/dev/null"
+        machine.wait_until_succeeds(hyprland_ready, timeout=timedelta(seconds=30))
+        machine.wait_until_succeeds(f"{user_env} systemctl --user is-active wayland-wm@hyprland.desktop.service", timeout=timedelta(seconds=30))
+        machine.wait_until_succeeds(f"{user_env} systemctl --user is-active graphical-session.target", timeout=timedelta(seconds=30))
         machine.succeed("grep -F '/bin/uwsm' /var/log/regreet/log | grep -F 'hyprland.desktop'")
 
         for unit in ["sleepy-locker.service", "sleepy-session.service", "sleepy-shell.service"]:
-          machine.wait_until_succeeds(f"{user_env} systemctl --user is-active {unit}")
+          machine.wait_until_succeeds(f"{user_env} systemctl --user is-active {unit}", timeout=timedelta(seconds=30))
         machine.succeed(f"{user_env} systemctl --user show sleepy-session.service -P Type | grep -Fx notify")
         machine.succeed(f"{user_env} systemctl --user show sleepy-shell.service -P After | tr ' ' '\\n' | grep -Fx sleepy-session.service")
         machine.succeed(f"! {user_env} systemctl --user show sleepy-shell.service -P Requires | tr ' ' '\\n' | grep -Fx sleepy-session.service")
@@ -188,7 +257,8 @@ in
         def wait_for_shell_stream(shell_main_pid):
           socket_path = f"/run/user/{uid}/sleepy/desktop.sock"
           machine.wait_until_succeeds(
-            f"ss -xnp | grep -F {shlex.quote(socket_path)} | grep -F {shlex.quote('pid=' + shell_main_pid + ',')}"
+            f"ss -xnp | grep -F {shlex.quote(socket_path)} | grep -F {shlex.quote('pid=' + shell_main_pid + ',')}",
+            timeout=timedelta(seconds=30),
           )
 
         initial_snapshot = read_snapshot("/tmp/desktop-initial.json")
@@ -205,15 +275,15 @@ in
         ]:
           machine.succeed(f"test -f ${shellPackage}/share/sleepy-desktop/{surface}")
 
-        machine.succeed("! pgrep -x niri")
+        machine.succeed(niri_absent)
         daemon_pid = machine.succeed(f"{user_env} systemctl --user show sleepy-session.service -P MainPID").strip()
         shell_pid = machine.succeed(f"{user_env} systemctl --user show sleepy-shell.service -P MainPID").strip()
 
         # DAEMON_RESTART_RECOVERY_GATE: reconnect to the replacement
         # daemon socket and validate a fresh full snapshot.
         machine.succeed(f"{user_env} systemctl --user restart sleepy-session.service")
-        machine.wait_until_succeeds(f"test $({user_env} systemctl --user show sleepy-session.service -P MainPID) != {shlex.quote(daemon_pid)}")
-        machine.wait_until_succeeds(f"{user_env} systemctl --user is-active sleepy-shell.service")
+        machine.wait_until_succeeds(f"test $({user_env} systemctl --user show sleepy-session.service -P MainPID) != {shlex.quote(daemon_pid)}", timeout=timedelta(seconds=30))
+        machine.wait_until_succeeds(f"{user_env} systemctl --user is-active sleepy-shell.service", timeout=timedelta(seconds=30))
         wait_for_shell_stream(shell_pid)
         post_daemon = read_snapshot("/tmp/desktop-post-daemon.json")
         assert post_daemon["eventId"] != initial_snapshot["eventId"]
@@ -221,8 +291,8 @@ in
         # SHELL_RESTART_RECOVERY_GATE: require a replacement shell
         # process and a new authoritative socket read after recovery.
         machine.succeed(f"{user_env} systemctl --user restart sleepy-shell.service")
-        machine.wait_until_succeeds(f"test $({user_env} systemctl --user show sleepy-shell.service -P MainPID) != {shlex.quote(shell_pid)}")
-        machine.wait_until_succeeds(f"{user_env} systemctl --user is-active sleepy-shell.service")
+        machine.wait_until_succeeds(f"test $({user_env} systemctl --user show sleepy-shell.service -P MainPID) != {shlex.quote(shell_pid)}", timeout=timedelta(seconds=30))
+        machine.wait_until_succeeds(f"{user_env} systemctl --user is-active sleepy-shell.service", timeout=timedelta(seconds=30))
         shell_pid = machine.succeed(f"{user_env} systemctl --user show sleepy-shell.service -P MainPID").strip()
         wait_for_shell_stream(shell_pid)
         post_shell = read_snapshot("/tmp/desktop-post-shell.json")
@@ -230,9 +300,12 @@ in
 
         machine.succeed(f"{user_env} /run/current-system/sw/bin/uwsm stop")
         for unit in ["sleepy-locker.service", "sleepy-session.service", "sleepy-shell.service"]:
-          machine.wait_until_fails(f"{user_env} systemctl --user is-active {unit}")
-        machine.wait_until_succeeds("systemctl is-active greetd.service")
-        machine.wait_until_succeeds("pgrep -x regreet >/dev/null")
+          machine.wait_until_fails(f"{user_env} systemctl --user is-active {unit}", timeout=timedelta(seconds=30))
+        machine.wait_until_succeeds("systemctl is-active greetd.service", timeout=timedelta(seconds=30))
+        machine.wait_until_succeeds(regreet_ready, timeout=timedelta(seconds=30))
+        machine.wait_until_succeeds("test $(grep -Fc 'Loaded TOML file' /var/log/regreet/log) -ge 2", timeout=timedelta(seconds=30))
+        machine.wait_until_succeeds(f"test $(pgrep -f -x '${pkgs.regreet}/bin/regreet') != {shlex.quote(regreet_pid)}", timeout=timedelta(seconds=30))
+        machine.wait_for_text("Welcome back!", timeout=timedelta(seconds=30))
 
         machine.succeed("sudo -u lazy HOME=/home/lazy ${baselineActivationPackage}/activate")
         assert machine.succeed(legacy_manifest) == prior_hashes

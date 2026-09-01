@@ -15,10 +15,27 @@ validate_production_contract() {
   for required_literal in \
     'sdkSource}/schemas/desktop-event-v3.schema.json' \
     'Draft202012Validator(schema, format_checker=FormatChecker()).validate(document)' \
-    'machine.send_chars("lazy")' \
+    "grep -F 'Loaded TOML file:' /var/log/regreet/log" \
+    'enableOCR = true;' \
+    'machine.wait_for_text("Welcome back!", timeout=timedelta(seconds=30))' \
+    'regreetTestState = pkgs.writeText "regreet-test-state.toml"' \
+    'selectedSessionName = "Hyprland (uwsm-managed)";' \
+    'lazy = "${selectedSessionName}"' \
+    'assert session_name == "${selectedSessionName}"' \
+    'machine.wait_for_text(re.escape("${selectedSessionName}"), timeout=timedelta(seconds=30))' \
     'machine.send_key("ret")' \
+    'regreet_ready = "pgrep -f' \
+    '${pkgs.cage}/bin/cage -s -d -- ${pkgs.regreet}/bin/regreet' \
+    'hyprland_ready = "pgrep -u lazy -f -x' \
+    '${hyprlandPackage}/bin/Hyprland --watchdog-fd [0-9]+' \
+    'niri_absent = "! pgrep -u lazy -f -x' \
+    '${pkgs.niri}/bin/niri([[:space:]].*)?' \
+    'useDefaultRules = false;' \
+    'rules = lib.mkForce {' \
+    'modulePath = "${config.security.pam.package}/lib/security/pam_permit.so";' \
+    'modulePath = "${config.systemd.package}/lib/security/pam_systemd.so";' \
     "grep -F 'Creating session for username: lazy' /var/log/regreet/log" \
-    'systemctl --user is-active wayland-wm@Hyprland.desktop.target' \
+    'systemctl --user is-active wayland-wm@hyprland.desktop.service", timeout=timedelta(seconds=30))' \
     'DAEMON_RESTART_RECOVERY_GATE' \
     'post_daemon = read_snapshot("/tmp/desktop-post-daemon.json")' \
     'SHELL_RESTART_RECOVERY_GATE' \
@@ -115,9 +132,69 @@ if validate_production_contract "$mutated_production"; then
   exit 1
 fi
 install -m 0600 -- "$repo_root/checks/hyprland-production-vm.nix" "$mutated_production"
+sed -i 's/regreet_ready = .*/regreet_ready = "true"/' "$mutated_production"
+if validate_production_contract "$mutated_production"; then
+  printf 'VM acceptance assets: neutralized ReGreet readiness mutation passed\n' >&2
+  exit 1
+fi
+install -m 0600 -- "$repo_root/checks/hyprland-production-vm.nix" "$mutated_production"
+sed -i 's/machine.wait_for_text("Welcome back!", timeout=timedelta(seconds=30))/pass # neutralized visible ReGreet readiness/' "$mutated_production"
+if validate_production_contract "$mutated_production"; then
+  printf 'VM acceptance assets: neutralized visible ReGreet readiness mutation passed\n' >&2
+  exit 1
+fi
+install -m 0600 -- "$repo_root/checks/hyprland-production-vm.nix" "$mutated_production"
+sed -i 's/enableOCR = true;/enableOCR = false;/' "$mutated_production"
+if validate_production_contract "$mutated_production"; then
+  printf 'VM acceptance assets: disabled ReGreet OCR dependency mutation passed\n' >&2
+  exit 1
+fi
+install -m 0600 -- "$repo_root/checks/hyprland-production-vm.nix" "$mutated_production"
+sed -i 's/selectedSessionName = "Hyprland (uwsm-managed)"/selectedSessionName = "Hyprland"/' "$mutated_production"
+if validate_production_contract "$mutated_production"; then
+  printf 'VM acceptance assets: direct-session ReGreet state mutation passed\n' >&2
+  exit 1
+fi
+install -m 0600 -- "$repo_root/checks/hyprland-production-vm.nix" "$mutated_production"
+sed -i 's/machine.wait_for_text(re.escape("${selectedSessionName}"), timeout=timedelta(seconds=30))/pass # neutralized visible UWSM selection/' "$mutated_production"
+if validate_production_contract "$mutated_production"; then
+  printf 'VM acceptance assets: neutralized visible UWSM selection mutation passed\n' >&2
+  exit 1
+fi
+install -m 0600 -- "$repo_root/checks/hyprland-production-vm.nix" "$mutated_production"
+sed -i 's/hyprland_ready = .*/hyprland_ready = "true"/' "$mutated_production"
+if validate_production_contract "$mutated_production"; then
+  printf 'VM acceptance assets: neutralized Hyprland readiness mutation passed\n' >&2
+  exit 1
+fi
+install -m 0600 -- "$repo_root/checks/hyprland-production-vm.nix" "$mutated_production"
+sed -i 's/wayland-wm@hyprland.desktop.service/wayland-wm@Hyprland.desktop.target/' "$mutated_production"
+if validate_production_contract "$mutated_production"; then
+  printf 'VM acceptance assets: case-wrong UWSM target mutation passed\n' >&2
+  exit 1
+fi
+install -m 0600 -- "$repo_root/checks/hyprland-production-vm.nix" "$mutated_production"
+sed -i 's/niri_absent = .*/niri_absent = "true"/' "$mutated_production"
+if validate_production_contract "$mutated_production"; then
+  printf 'VM acceptance assets: neutralized wrapped Niri exclusion mutation passed\n' >&2
+  exit 1
+fi
+install -m 0600 -- "$repo_root/checks/hyprland-production-vm.nix" "$mutated_production"
 sed -i '/post_daemon = read_snapshot("\/tmp\/desktop-post-daemon.json")/d; /post_shell = read_snapshot("\/tmp\/desktop-post-shell.json")/d' "$mutated_production"
 if validate_production_contract "$mutated_production"; then
   printf 'VM acceptance assets: removed restart snapshot mutation passed\n' >&2
+  exit 1
+fi
+install -m 0600 -- "$repo_root/checks/hyprland-production-vm.nix" "$mutated_production"
+sed -i 's#${config.systemd.package}/lib/security/pam_systemd.so#${config.security.pam.package}/lib/security/pam_systemd.so#' "$mutated_production"
+if validate_production_contract "$mutated_production"; then
+  printf 'VM acceptance assets: PAM systemd provider mutation passed\n' >&2
+  exit 1
+fi
+install -m 0600 -- "$repo_root/checks/hyprland-production-vm.nix" "$mutated_production"
+sed -i 's/rules = lib.mkForce {/rules = {/' "$mutated_production"
+if validate_production_contract "$mutated_production"; then
+  printf 'VM acceptance assets: unforced test PAM rules mutation passed\n' >&2
   exit 1
 fi
 mutated_runbook="$fixture/source/sleepy-vm-hyprland.md"
