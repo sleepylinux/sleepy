@@ -69,7 +69,10 @@ require_literal "$update_vm" '${baselineSessionPackage}/bin/sleepyctl presets du
 require_literal "$update_vm" 'VM preserved theme'
 require_literal "$update_vm" 'Message 11'
 require_literal "$update_vm" 'assert_state_unchanged("M3 daemon startup", preserved_before, preserved_state_manifest)'
-require_literal "$update_vm" 'systemctl --user stop sleepy-test-session.target graphical-session.target'
+require_literal "$update_vm" "'StopWhenUnneeded=no'"
+require_literal "$update_vm" 'systemctl --user start --job-mode=ignore-dependencies graphical-session.target'
+require_literal "$update_vm" 'systemctl --user stop graphical-session.target'
+reject_literal "$update_vm" 'sleepy-test-session.target'
 require_literal "$update_vm" 'systemctl stop user@$uid.service'
 require_literal "$update_vm" 'loginctl disable-linger lazy'
 reject_literal flake.nix 'sleepy-m1-baseline'
