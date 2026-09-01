@@ -175,7 +175,7 @@
       "locked": {
         "lastModified": 1787440121,
         "narHash": "sha256-OZdLL1rMR9kjTFZroOODeyQ0u6nrSxcFHlK6JUi+R/c=",
-        "ref": "refs/heads/master",
+        "ref": "master",
         "rev": "0fed22a2c47d9568ddf13cf61586b3f2ac4378a2",
         "revCount": 847,
         "type": "git",
@@ -318,17 +318,17 @@
         ]
       },
       "locked": {
-        "lastModified": 1788247398,
-        "narHash": "sha256-hmCertXU8B1cJjrCgDBycdwBtpgo8As1+bGHMYOMZvE=",
+        "lastModified": 1788253570,
+        "narHash": "sha256-htEBshnpIEwoycauS5rsD4Jo5dnNnP4R4ZqzukY8L0M=",
         "owner": "sleepylinux",
         "repo": "sleepy-desktop",
-        "rev": "13b36b3b74dd9cf3ea345c17fc172cd5e8151b87",
+        "rev": "3007f4068056aef36bbd6e25199d345ff1db19be",
         "type": "github"
       },
       "original": {
         "owner": "sleepylinux",
         "repo": "sleepy-desktop",
-        "rev": "13b36b3b74dd9cf3ea345c17fc172cd5e8151b87",
+        "rev": "3007f4068056aef36bbd6e25199d345ff1db19be",
         "type": "github"
       }
     },
