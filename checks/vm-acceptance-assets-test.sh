@@ -483,6 +483,7 @@ PY
     ;;
 esac
 EOF
+sed -i "1c#!$BASH" "$fake_bin/virsh"
 chmod +x "$fake_bin/virsh"
 
 cat >"$fake_bin/setfacl" <<'EOF'
@@ -492,6 +493,7 @@ printf 'setfacl\t' >>"$FAKE_VM_LOG"
 printf '%s\t' "$@" >>"$FAKE_VM_LOG"
 printf '\n' >>"$FAKE_VM_LOG"
 EOF
+sed -i "1c#!$BASH" "$fake_bin/setfacl"
 chmod +x "$fake_bin/setfacl"
 
 cat >"$fake_bin/qemu-img" <<'EOF'
@@ -517,6 +519,7 @@ case "${1:-}" in
   *) exit 2 ;;
 esac
 EOF
+sed -i "1c#!$BASH" "$fake_bin/qemu-img"
 chmod +x "$fake_bin/qemu-img"
 
 assert_rejected() {
