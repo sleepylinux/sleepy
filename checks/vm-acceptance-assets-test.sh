@@ -3,16 +3,42 @@ set -euo pipefail
 
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
 
-for command_name in base64 cmp jq mktemp sha256sum stat; do
+for command_name in base64 cmp install jq mktemp python3 sha256sum stat; do
   command -v "$command_name" >/dev/null || {
     printf 'VM acceptance assets: missing test dependency %s\n' "$command_name" >&2
     exit 127
   }
 done
 
-grep -F 'hyprlandPackage = nixosConfig.programs.hyprland.package;' \
-  "$repo_root/checks/hyprland-production-vm.nix" >/dev/null || {
-  printf 'VM acceptance assets: production test must use the non-null NixOS Hyprland package\n' >&2
+validate_production_contract() {
+  local production_check=$1
+  for required_literal in \
+    'sdkSource}/schemas/desktop-event-v3.schema.json' \
+    'Draft202012Validator(schema, format_checker=FormatChecker()).validate(document)' \
+    'machine.send_chars("lazy")' \
+    'machine.send_key("ret")' \
+    "grep -F 'Creating session for username: lazy' /var/log/regreet/log" \
+    'systemctl --user is-active wayland-wm@Hyprland.desktop.target' \
+    'DAEMON_RESTART_RECOVERY_GATE' \
+    'post_daemon = read_snapshot("/tmp/desktop-post-daemon.json")' \
+    'SHELL_RESTART_RECOVERY_GATE' \
+    'post_shell = read_snapshot("/tmp/desktop-post-shell.json")' \
+    'wait_for_shell_stream(shell_pid)' \
+    'legacy_manifest = ' \
+    'assert machine.succeed(legacy_manifest) == prior_hashes'; do
+    grep -F "$required_literal" "$production_check" >/dev/null || return 1
+  done
+  for forbidden_literal in \
+    'loginctl enable-linger' \
+    'sleepy-test-weston.service' \
+    'sleepy-test-hyprland.service' \
+    'production-vm-sentinel'; do
+    ! grep -F "$forbidden_literal" "$production_check" >/dev/null || return 1
+  done
+}
+
+validate_production_contract "$repo_root/checks/hyprland-production-vm.nix" || {
+  printf 'VM acceptance assets: production VM contract is incomplete or bypasses ReGreet/UWSM\n' >&2
   exit 1
 }
 for rollback_guard in \
@@ -23,6 +49,27 @@ for rollback_guard in \
     exit 1
   }
 done
+
+python3 - "$repo_root/docs/runbooks/sleepy-vm-hyprland.md" <<'PY'
+import sys
+
+text = open(sys.argv[1], encoding="utf-8").read()
+conversion = text.index("sudo qemu-img convert -p -O qcow2")
+first_move = text.index('sudo mv -- "$original_disk" "$failed_disk"')
+required = [
+    'final_state=$(virsh --connect qemu:///system domstate Sleepy | xargs)',
+    'final_uuid=$(virsh --connect qemu:///system domuuid Sleepy)',
+    'final_disk=$(virsh --connect qemu:///system domblklist --inactive --details Sleepy |',
+    'final_nvram=$(virsh --connect qemu:///system dumpxml Sleepy --inactive |',
+    'test "$final_state" = "shut off"',
+    'test "$final_disk" = "$original_disk"',
+    'test "$final_nvram" = "$original_nvram"',
+]
+for literal in required:
+    position = text.index(literal)
+    if not conversion < position < first_move:
+        raise SystemExit(f"final rollback guard is not immediately pre-move: {literal}")
+PY
 
 for required in \
   checks/hyprland-production-vm.nix \
@@ -37,10 +84,29 @@ for required in \
   fi
 done
 
-fixture=$(mktemp -d /tmp/sleepy-vm-acceptance.XXXXXX)
+fixture=$(mktemp -d "${TMPDIR:-/tmp}/sleepy-vm-acceptance.XXXXXX")
 trap 'rm -rf -- "$fixture"' EXIT
 fake_bin="$fixture/bin"
 mkdir -m 0700 "$fake_bin" "$fixture/source"
+test -w "$fixture/source" || {
+  printf 'VM acceptance assets: fixture source directory is not writable: ' >&2
+  stat -c '%A %a %u:%g %n' "$fixture" "$fixture/source" >&2
+  exit 1
+}
+
+mutated_production="$fixture/source/hyprland-production-vm.nix"
+install -m 0600 -- "$repo_root/checks/hyprland-production-vm.nix" "$mutated_production"
+sed -i 's/machine.send_key("ret")/pass # neutralized ReGreet submit/' "$mutated_production"
+if validate_production_contract "$mutated_production"; then
+  printf 'VM acceptance assets: neutralized ReGreet gate mutation passed\n' >&2
+  exit 1
+fi
+install -m 0600 -- "$repo_root/checks/hyprland-production-vm.nix" "$mutated_production"
+sed -i '/post_daemon = read_snapshot("\/tmp\/desktop-post-daemon.json")/d; /post_shell = read_snapshot("\/tmp\/desktop-post-shell.json")/d' "$mutated_production"
+if validate_production_contract "$mutated_production"; then
+  printf 'VM acceptance assets: removed restart snapshot mutation passed\n' >&2
+  exit 1
+fi
 disk="$fixture/source/sleepy.qcow2"
 nvram="$fixture/source/sleepy_VARS.fd"
 printf 'sleepy-disk-baseline\n' >"$disk"
@@ -78,7 +144,11 @@ case "$command_name" in
   domstate)
     domain=${1:-}
     if test "$domain" = Sleepy; then
-      printf '%s\n' "${FAKE_DOMAIN_STATE:-shut off}"
+      if test -e "$FAKE_VM_STATE_DIR/protected-started"; then
+        printf '%s\n' running
+      else
+        printf '%s\n' "${FAKE_DOMAIN_STATE:-shut off}"
+      fi
     elif test "$domain" = Sleepy-restore-verification && test -e "$FAKE_VM_STATE_DIR/running"; then
       printf '%s\n' running
     elif test "$domain" = Sleepy-restore-verification && test -e "$FAKE_VM_STATE_DIR/defined"; then
@@ -94,15 +164,30 @@ case "$command_name" in
       if test "${FAKE_XML_SECRET:-0}" = 1; then
         secret_attribute=" passwd='do-not-persist'"
       fi
+      metadata=
+      qemu_extension=
+      if test "${FAKE_XML_TOKEN_METADATA:-0}" = 1; then
+        metadata="<metadata><vendor:record xmlns:vendor='https://example.invalid/vendor' token='do-not-persist'/></metadata>"
+      fi
+      if test "${FAKE_XML_QEMU_ENV:-0}" = 1; then
+        qemu_extension="<qemu:commandline><qemu:env name='API_TOKEN' value='do-not-persist'/></qemu:commandline>"
+      fi
+      description=
+      if test "${FAKE_XML_CREDENTIAL_TEXT:-0}" = 1; then
+        description="<description>api_token=do-not-persist</description>"
+      fi
       cat <<XML
-<domain type='kvm'>
+<domain type='kvm' xmlns:qemu='http://libvirt.org/schemas/domain/qemu/1.0'>
   <name>Sleepy</name>
   <uuid>11111111-2222-4333-8444-555555555555</uuid>
+  $description
+  $metadata
   <os><nvram>$FAKE_NVRAM</nvram></os>
   <devices>
     <disk type='file' device='disk'><driver name='qemu' type='qcow2'/><source file='$FAKE_DISK'/><target dev='vda' bus='virtio'/></disk>
     <graphics type='spice' autoport='yes'$secret_attribute/>
   </devices>
+  $qemu_extension
 </domain>
 XML
     elif test "$domain" = Sleepy-restore-verification && test -e "$FAKE_VM_STATE_DIR/defined.xml"; then
@@ -126,6 +211,18 @@ ROWS
       exit 1
     fi
     ;;
+  event)
+    test "${1:-}" = Sleepy
+    trap 'exit 0' TERM INT
+    reported=0
+    while true; do
+      if test -e "$FAKE_VM_STATE_DIR/protected-started" && test "$reported" = 0; then
+        printf '%s\n' 'event lifecycle: Started Booted'
+        reported=1
+      fi
+      sleep 1
+    done
+    ;;
   define)
     cp "$1" "$FAKE_VM_STATE_DIR/defined.xml"
     touch "$FAKE_VM_STATE_DIR/defined"
@@ -139,6 +236,9 @@ ROWS
     domain=$1
     payload=$2
     test "$domain" = Sleepy-restore-verification || test "$domain" = Sleepy
+    if test "${FAKE_START_PROTECTED_DURING_DRILL:-0}" = 1; then
+      touch "$FAKE_VM_STATE_DIR/protected-started"
+    fi
     if test "${FAKE_QGA_DELAY_CALLS:-0}" -gt 0; then
       qga_calls=0
       if test -f "$FAKE_VM_STATE_DIR/qga-calls"; then
@@ -154,6 +254,10 @@ ROWS
         request=$(cat "$FAKE_VM_STATE_DIR/qga-request")
         if test "$request" = current-system; then
           encoded=$(printf '%s\n' '/nix/store/accepted-nixos-system-sleepy' | base64 -w0)
+        elif test "$request" = regreet; then
+          encoded=$(printf '%s\n' 1701 | base64 -w0)
+        elif test "$request" = cage; then
+          encoded=$(printf '%s\n' 1700 | base64 -w0)
         else
           encoded=$(printf '%s\n' active | base64 -w0)
         fi
@@ -170,6 +274,14 @@ ROWS
       *systemctl*)
         printf '%s\n' greetd >"$FAKE_VM_STATE_DIR/qga-request"
         printf '{"return":{"pid":42}}\n'
+        ;;
+      *pgrep*regreet*)
+        printf '%s\n' regreet >"$FAKE_VM_STATE_DIR/qga-request"
+        printf '{"return":{"pid":43}}\n'
+        ;;
+      *pgrep*cage*)
+        printf '%s\n' cage >"$FAKE_VM_STATE_DIR/qga-request"
+        printf '{"return":{"pid":44}}\n'
         ;;
       *) exit 2 ;;
     esac
@@ -269,6 +381,24 @@ assert_rejected credential-xml env PATH="$fake_bin:$PATH" FAKE_XML_SECRET=1 \
   --expected-system /nix/store/accepted-nixos-system-sleepy
 test ! -e "$secret_bundle"
 
+metadata_bundle="$fixture/metadata-baseline"
+assert_rejected credential-metadata env PATH="$fake_bin:$PATH" FAKE_XML_TOKEN_METADATA=1 \
+  "$repo_root/scripts/vm/capture-baseline.sh" --domain Sleepy --run-dir "$metadata_bundle" \
+  --expected-system /nix/store/accepted-nixos-system-sleepy
+test ! -e "$metadata_bundle"
+
+qemu_env_bundle="$fixture/qemu-env-baseline"
+assert_rejected credential-qemu-env env PATH="$fake_bin:$PATH" FAKE_XML_QEMU_ENV=1 \
+  "$repo_root/scripts/vm/capture-baseline.sh" --domain Sleepy --run-dir "$qemu_env_bundle" \
+  --expected-system /nix/store/accepted-nixos-system-sleepy
+test ! -e "$qemu_env_bundle"
+
+credential_text_bundle="$fixture/credential-text-baseline"
+assert_rejected credential-text env PATH="$fake_bin:$PATH" FAKE_XML_CREDENTIAL_TEXT=1 \
+  "$repo_root/scripts/vm/capture-baseline.sh" --domain Sleepy --run-dir "$credential_text_bundle" \
+  --expected-system /nix/store/accepted-nixos-system-sleepy
+test ! -e "$credential_text_bundle"
+
 backed_copy_bundle="$fixture/backed-copy-baseline"
 assert_rejected non-flattened-copy env PATH="$fake_bin:$PATH" FAKE_COPY_HAS_BACKING=1 \
   "$repo_root/scripts/vm/capture-baseline.sh" --domain Sleepy --run-dir "$backed_copy_bundle" \
@@ -291,6 +421,24 @@ if grep -E $'^(start|undefine|destroy)\tSleepy\t' "$FAKE_VM_LOG" >/dev/null; the
   printf 'VM acceptance assets: restore drill mutated the protected domain\n' >&2
   exit 1
 fi
+jq -e '
+  .verificationUuid == "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee" and
+  .greetd == "active" and .regreet == "running" and
+  .greeterCompositor == "cage-running" and
+  .temporaryDomainRemoved == true and .protectedDomainStarted == false
+' "$bundle/restore-verification.json" >/dev/null
+
+guard_bundle="$fixture/protected-guard"
+cp -a -- "$bundle" "$guard_bundle"
+rm -f -- "$guard_bundle/restore-verification.json"
+: >"$FAKE_VM_LOG"
+assert_rejected protected-start-during-drill env PATH="$fake_bin:$PATH" \
+  FAKE_START_PROTECTED_DURING_DRILL=1 \
+  "$repo_root/scripts/vm/verify-restore.sh" --bundle "$guard_bundle" --domain Sleepy \
+  --verification-domain Sleepy-restore-verification
+test ! -e "$guard_bundle/restore-verification.json"
+test ! -e "$FAKE_VM_STATE_DIR/defined"
+rm -f -- "$FAKE_VM_STATE_DIR/protected-started" "$FAKE_VM_STATE_DIR/qga-request"
 
 tampered="$fixture/tampered"
 cp -a -- "$bundle" "$tampered"
@@ -316,7 +464,7 @@ rm -f -- "$FAKE_VM_STATE_DIR/defined" "$FAKE_VM_STATE_DIR/defined.xml" \
   "$FAKE_VM_STATE_DIR/running" "$FAKE_VM_STATE_DIR/qga-calls" "$FAKE_VM_STATE_DIR/qga-request"
 
 redacted="$fixture/redacted-desktop.png"
-printf '\211PNG\r\n\032\nredacted-framebuffer\n' >"$redacted"
+printf '%s' 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=' | base64 --decode >"$redacted"
 chmod 0600 "$redacted"
 runtime="$fixture/redacted-runtime.json"
 jq -n '{
@@ -401,6 +549,15 @@ assert_rejected invalid-png env PATH="$fake_bin:$PATH" FAKE_DOMAIN_STATE=running
   "$repo_root/scripts/vm/collect-evidence.sh" --domain Sleepy \
   --run-dir "$fixture/invalid-png-evidence" --label desktop \
   --redacted-framebuffer "$not_png" --redacted-runtime "$runtime" --confirm-redacted \
+  --reviewer local-owner --delete-after 2099-10-01
+
+signature_only="$fixture/signature-only.png"
+printf '\211PNG\r\n\032\nnot-structurally-decodable\n' >"$signature_only"
+chmod 0600 "$signature_only"
+assert_rejected signature-only-png env PATH="$fake_bin:$PATH" FAKE_DOMAIN_STATE=running \
+  "$repo_root/scripts/vm/collect-evidence.sh" --domain Sleepy \
+  --run-dir "$fixture/signature-only-evidence" --label desktop \
+  --redacted-framebuffer "$signature_only" --redacted-runtime "$runtime" --confirm-redacted \
   --reviewer local-owner --delete-after 2099-10-01
 
 assert_rejected unsafe-label env PATH="$fake_bin:$PATH" FAKE_DOMAIN_STATE=running \

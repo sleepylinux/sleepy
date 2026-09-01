@@ -41,6 +41,13 @@ All commands must pass and both Git status checks must be empty. Record the
 root commit, `flake.lock` SHA-256, all four component revisions, and resulting
 NixOS toplevel. Do not continue from a locally overridden graph.
 
+The automated production check drives the real ReGreet UI, submits the `lazy`
+account, and requires ReGreet to launch the generated UWSM Hyprland desktop
+entry. Its isolated test node deliberately uses `pam_permit` and contains no
+credential. It therefore proves greeter selection/session plumbing, not real
+password acceptance or rejection; those PAM cases remain mandatory interactive
+gates in sections 5 and 6.
+
 ## 2. Record the current guest generation and shut down
 
 Before shutdown, record only the resolved system path and generation number;
@@ -93,9 +100,10 @@ private directory; never treat it as rollback media.
 The protected `Sleepy` domain remains off. The verification script checks all
 hashes before its first libvirt query, creates only the exact temporary domain
 `Sleepy-restore-verification`, boots private disk/NVRAM copies, waits boundedly
-for QEMU Guest Agent, verifies the recorded system path and active greetd
-lifecycle, powers down, identity-checks cleanup, and undefines only that
-temporary domain.
+for QEMU Guest Agent, verifies the recorded system path plus live ReGreet and
+Cage processes, monitors the protected domain's UUID/offline state throughout,
+powers down, identity-checks cleanup, records the temporary UUID, and undefines
+only that temporary domain.
 
 ```bash
 sudo scripts/vm/verify-restore.sh \
@@ -104,7 +112,9 @@ sudo scripts/vm/verify-restore.sh \
   --verification-domain Sleepy-restore-verification
 
 sudo jq -e \
-  '.temporaryDomainRemoved == true and .protectedDomainStarted == false' \
+  '.temporaryDomainRemoved == true and .protectedDomainStarted == false and
+   (.verificationUuid | type == "string") and .regreet == "running" and
+   .greeterCompositor == "cage-running"' \
   "$baseline_dir/restore-verification.json" >/dev/null
 ! virsh --connect qemu:///system dominfo Sleepy-restore-verification
 test "$(virsh --connect qemu:///system domstate Sleepy | xargs)" = "shut off"
@@ -244,6 +254,24 @@ sudo chown \
   "$nvram_candidate"
 sudo chmod "$(sudo jq -r .nvram.originalMode "$baseline_dir/manifest.json")" \
   "$nvram_candidate"
+
+# The image conversion can be long. Treat every identity and path fact above
+# as stale and resolve it again immediately before the first destructive move.
+# Abort if the protected domain started, was redefined, or changed storage.
+final_state=$(virsh --connect qemu:///system domstate Sleepy | xargs)
+final_uuid=$(virsh --connect qemu:///system domuuid Sleepy)
+final_disk=$(virsh --connect qemu:///system domblklist --inactive --details Sleepy |
+  awk -v target="$original_target" '$2 == "disk" && $3 == target { print $4 }')
+final_nvram=$(virsh --connect qemu:///system dumpxml Sleepy --inactive |
+  python3 -c 'import sys; import xml.etree.ElementTree as ET; nodes=ET.parse(sys.stdin).getroot().findall("./os/nvram"); sys.exit("expected one NVRAM path") if len(nodes) != 1 or not nodes[0].text else print(nodes[0].text)')
+test "$final_state" = "shut off"
+test "$final_uuid" = "$(sudo jq -r .domain.uuid "$baseline_dir/manifest.json")"
+test "$final_disk" = "$original_disk"
+test "$final_nvram" = "$original_nvram"
+test -f "$original_disk" && test ! -L "$original_disk"
+test -f "$original_nvram" && test ! -L "$original_nvram"
+test -f "$disk_candidate" && test ! -L "$disk_candidate"
+test -f "$nvram_candidate" && test ! -L "$nvram_candidate"
 
 sudo mv -- "$original_disk" "$failed_disk"
 sudo mv -- "$original_nvram" "$failed_nvram"

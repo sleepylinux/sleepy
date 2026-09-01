@@ -41,6 +41,7 @@
     homeConfig = integratedHomeConfig;
     lockerPackage = componentPackages.sleepy-locker;
     nixosConfig = nixosConfiguration.config;
+    sdkSource = inputs.sleepy-sdk;
     sessionPackage = componentPackages.sleepy-session;
     shellPackage = componentPackages.sleepy-shell;
   };

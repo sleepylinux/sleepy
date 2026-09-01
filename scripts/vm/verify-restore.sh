@@ -51,7 +51,7 @@ case "$bundle" in
     ;;
 esac
 
-for command_name in base64 cp jq mktemp python3 qemu-img realpath sed seq sha256sum sleep stat tr virsh; do
+for command_name in base64 cp grep jq mktemp python3 qemu-img realpath sed seq sha256sum sleep stat tr virsh; do
   command -v "$command_name" >/dev/null 2>&1 || {
     printf 'verify restore: required command not found: %s\n' "$command_name" >&2
     exit 127
@@ -129,9 +129,56 @@ work_dir=$(mktemp -d "$work_parent/.sleepy-restore-verification.XXXXXX")
 chmod 0700 "$work_dir"
 defined=0
 verification_uuid=
+protected_guard_pid=
+protected_event_pid=
+protected_guard_stop="$work_dir/protected-guard.stop"
+protected_guard_failure="$work_dir/protected-guard.failed"
+protected_event_log="$work_dir/protected-events.log"
+
+assert_protected_identity_offline() {
+  local observed_uuid observed_state
+  observed_uuid=$(virsh_system domuuid "$domain" 2>/dev/null || true)
+  observed_state=$(virsh_system domstate "$domain" 2>/dev/null | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' || true)
+  test "$observed_uuid" = "$expected_uuid" && test "$observed_state" = 'shut off'
+}
+
+protected_guard() {
+  while test ! -e "$protected_guard_stop"; do
+    if ! assert_protected_identity_offline; then
+      printf 'protected domain identity or offline state changed\n' >"$protected_guard_failure"
+      return 1
+    fi
+    sleep 1
+  done
+}
+
+check_protected_guard() {
+  if ! test -n "$protected_event_pid" ||
+    ! kill -0 "$protected_event_pid" 2>/dev/null ||
+    test -e "$protected_guard_failure" ||
+    grep -Eiq 'started|resumed' "$protected_event_log" 2>/dev/null ||
+    ! assert_protected_identity_offline; then
+    printf 'verify restore: protected domain identity changed or it started during the drill\n' >&2
+    return 1
+  fi
+}
+
+stop_protected_guard() {
+  if test -n "$protected_guard_pid"; then
+    : >"$protected_guard_stop"
+    wait "$protected_guard_pid" || true
+    protected_guard_pid=
+  fi
+  if test -n "$protected_event_pid"; then
+    kill "$protected_event_pid" 2>/dev/null || true
+    wait "$protected_event_pid" 2>/dev/null || true
+    protected_event_pid=
+  fi
+}
 
 cleanup() {
   local cleanup_status=0
+  stop_protected_guard
   if test "$defined" = 1; then
     current_uuid=$(virsh_system domuuid "$verification_domain" 2>/dev/null || true)
     if test -n "$verification_uuid" && test "$current_uuid" = "$verification_uuid"; then
@@ -145,7 +192,9 @@ cleanup() {
       cleanup_status=1
     fi
   fi
-  rm -f -- "$work_dir/domain.xml" "$work_dir/disk.qcow2" "$work_dir/nvram.fd"
+  rm -f -- "$work_dir/domain.xml" "$work_dir/disk.qcow2" "$work_dir/nvram.fd" \
+    "$protected_guard_stop" "$protected_guard_failure"
+  rm -f -- "$protected_event_log"
   rmdir -- "$work_dir" 2>/dev/null || cleanup_status=1
   return "$cleanup_status"
 }
@@ -162,6 +211,13 @@ trap on_exit EXIT
 trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
+
+protected_guard &
+protected_guard_pid=$!
+virsh_system event "$domain" --event lifecycle --loop --timestamp >"$protected_event_log" 2>&1 &
+protected_event_pid=$!
+sleep 1
+check_protected_guard
 
 cp --reflink=auto --sparse=always -- "$bundle/disk.qcow2" "$work_dir/disk.qcow2"
 cp --reflink=auto --sparse=always -- "$bundle/nvram.fd" "$work_dir/nvram.fd"
@@ -204,7 +260,9 @@ test "$verification_uuid" != "$expected_uuid" || {
   printf 'verify restore: verification domain reused the protected UUID\n' >&2
   exit 1
 }
+check_protected_guard
 virsh_system start "$verification_domain" >/dev/null
+check_protected_guard
 
 qga_exec() {
   local executable=$1
@@ -215,6 +273,7 @@ qga_exec() {
     '{execute:"guest-exec",arguments:{path:$path,arg:$arg,"capture-output":true}}')
   response=
   for _attempt in $(seq 1 90); do
+    check_protected_guard
     if response=$(virsh_system qemu-agent-command "$verification_domain" "$payload" 2>/dev/null); then
       break
     fi
@@ -226,6 +285,7 @@ qga_exec() {
   }
   pid=$(jq -er '.return.pid | numbers' <<<"$response")
   for _attempt in $(seq 1 90); do
+    check_protected_guard
     if ! status=$(virsh_system qemu-agent-command "$verification_domain" \
       "$(jq -nc --argjson pid "$pid" '{execute:"guest-exec-status",arguments:{pid:$pid}}')" 2>/dev/null); then
       sleep 1
@@ -256,11 +316,23 @@ test "$greetd_state" = active || {
   printf 'verify restore: restored guest did not reach active greetd/ReGreet lifecycle\n' >&2
   exit 1
 }
+regreet_state=$(qga_exec /run/current-system/sw/bin/pgrep -x regreet)
+test -n "${regreet_state%$'\n'}" || {
+  printf 'verify restore: restored guest has no live ReGreet process\n' >&2
+  exit 1
+}
+cage_state=$(qga_exec /run/current-system/sw/bin/pgrep -x cage)
+test -n "${cage_state%$'\n'}" || {
+  printf 'verify restore: restored guest has no live ReGreet compositor process\n' >&2
+  exit 1
+}
+check_protected_guard
 
 virsh_system qemu-agent-command "$verification_domain" \
   '{"execute":"guest-shutdown","arguments":{"mode":"powerdown"}}' >/dev/null
 state=
 for _attempt in $(seq 1 60); do
+  check_protected_guard
   state=$(virsh_system domstate "$verification_domain" | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
   test "$state" = 'shut off' && break
   sleep 1
@@ -270,21 +342,37 @@ test "$state" = 'shut off' || {
   exit 1
 }
 
+check_protected_guard
+stop_protected_guard
+if test -e "$protected_guard_failure" ||
+  grep -Eiq 'started|resumed' "$protected_event_log" 2>/dev/null ||
+  ! assert_protected_identity_offline; then
+  printf 'verify restore: protected-domain lifecycle evidence failed before report\n' >&2
+  exit 1
+fi
 cleanup
 defined=0
 trap - EXIT HUP INT TERM
+assert_protected_identity_offline || {
+  printf 'verify restore: protected domain was not safely offline at final report time\n' >&2
+  exit 1
+}
 jq -n \
   --arg domain "$domain" \
   --arg verificationDomain "$verification_domain" \
+  --arg verificationUuid "$verification_uuid" \
   --arg expectedSystem "$expected_system" \
   --arg actualSystem "$actual_system" \
   '{
     schemaVersion: 1,
     domain: $domain,
     verificationDomain: $verificationDomain,
+    verificationUuid: $verificationUuid,
     expectedSystem: $expectedSystem,
     actualSystem: $actualSystem,
     greetd: "active",
+    regreet: "running",
+    greeterCompositor: "cage-running",
     temporaryDomainRemoved: true,
     protectedDomainStarted: false
   }' >"$report"

@@ -30,6 +30,11 @@ Local candidate commits are not production pins. Record a revision here only
 after the public input and generated lock node resolve to the same reviewed
 commit.
 
+The derivation's automated ReGreet gate uses a credential-free test-only PAM
+stack. It may support the greeter/UWSM plumbing row, but it is not evidence for
+real-password success, empty/incorrect-password rejection, or the manual
+bootloader downgrade rows below.
+
 ## Rollback bundle and drill
 
 | Field | Evidence |

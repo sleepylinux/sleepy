@@ -71,7 +71,7 @@ test "$redaction_confirmed" = 1 || {
   exit 2
 }
 
-for command_name in date grep install jq mkdir od realpath sed sha256sum stat tr virsh; do
+for command_name in date grep install jq mkdir python3 realpath sed sha256sum stat tr virsh; do
   command -v "$command_name" >/dev/null 2>&1 || {
     printf 'collect evidence: required command not found: %s\n' "$command_name" >&2
     exit 127
@@ -107,11 +107,62 @@ for input_path in "$redacted_framebuffer" "$redacted_runtime"; do
 done
 redacted_framebuffer=$(realpath -e -- "$redacted_framebuffer")
 redacted_runtime=$(realpath -e -- "$redacted_runtime")
-png_signature=$(od -An -tx1 -N8 "$redacted_framebuffer" | tr -d ' \n')
-test "$png_signature" = 89504e470d0a1a0a || {
+if ! python3 - "$redacted_framebuffer" <<'PY'
+import struct
+import sys
+import zlib
+
+data = open(sys.argv[1], "rb").read()
+if not data.startswith(b"\x89PNG\r\n\x1a\n"):
+    raise SystemExit(1)
+offset = 8
+chunks = []
+idat = bytearray()
+ihdr = None
+while offset < len(data):
+    if offset + 12 > len(data):
+        raise SystemExit(1)
+    length = struct.unpack(">I", data[offset:offset + 4])[0]
+    kind = data[offset + 4:offset + 8]
+    end = offset + 12 + length
+    if end > len(data):
+        raise SystemExit(1)
+    payload = data[offset + 8:offset + 8 + length]
+    expected_crc = struct.unpack(">I", data[offset + 8 + length:end])[0]
+    if zlib.crc32(kind + payload) & 0xFFFFFFFF != expected_crc:
+        raise SystemExit(1)
+    chunks.append(kind)
+    if kind == b"IHDR":
+        if ihdr is not None or length != 13:
+            raise SystemExit(1)
+        ihdr = struct.unpack(">IIBBBBB", payload)
+    elif kind == b"IDAT":
+        idat.extend(payload)
+    offset = end
+    if kind == b"IEND":
+        break
+if offset != len(data) or not chunks or chunks[0] != b"IHDR" or chunks[-1] != b"IEND" or ihdr is None or not idat:
+    raise SystemExit(1)
+width, height, bit_depth, color_type, compression, filtering, interlace = ihdr
+channels = {0: 1, 2: 3, 3: 1, 4: 2, 6: 4}.get(color_type)
+if not width or not height or channels is None or bit_depth not in {1, 2, 4, 8, 16}:
+    raise SystemExit(1)
+if compression != 0 or filtering != 0 or interlace != 0:
+    raise SystemExit(1)
+if color_type in {2, 4, 6} and bit_depth not in {8, 16}:
+    raise SystemExit(1)
+scanline_bytes = (width * channels * bit_depth + 7) // 8
+decoded = zlib.decompress(bytes(idat))
+if len(decoded) != height * (scanline_bytes + 1):
+    raise SystemExit(1)
+for row in range(height):
+    if decoded[row * (scanline_bytes + 1)] > 4:
+        raise SystemExit(1)
+PY
+then
   printf 'collect evidence: framebuffer input is not a PNG image\n' >&2
   exit 1
-}
+fi
 
 hex40='^[0-9a-f]{40}$'
 jq -e --arg hex40 "$hex40" '
@@ -130,7 +181,7 @@ jq -e --arg hex40 "$hex40" '
   } and
   .compositor == {hyprlandSocket: true, niriProcess: false} and
   .snapshot.schemaVersion == 3 and .snapshot.type == "fullSnapshot" and
-  (.snapshot.generation | type == "number" and . >= 0 and floor == .) and
+  (.snapshot.generation | type == "number" and . >= 1 and floor == .) and
   .functional == {
     launcher: true,
     workspaces: true,

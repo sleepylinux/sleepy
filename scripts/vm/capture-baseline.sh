@@ -126,7 +126,45 @@ chmod 0600 "$status_file"
 xml_tmp="$run_dir/domain.xml.tmp"
 virsh_system dumpxml --inactive "$domain" >"$xml_tmp"
 chmod 0600 "$xml_tmp"
-if grep -Eiq 'passwd[[:space:]]*=|<secret([[:space:]>])|<auth([[:space:]>])' "$xml_tmp"; then
+if ! python3 - "$xml_tmp" <<'PY'
+import re
+import sys
+import xml.etree.ElementTree as ET
+
+credential_name = re.compile(
+    r"(?:pass(?:word|wd)?|token|secret|credential|api[-_]?key|access[-_]?key|private[-_]?key)",
+    re.IGNORECASE,
+)
+credential_value = re.compile(
+    r"(?:bearer[ ]+[A-Za-z0-9._~+/-]+|(?:pass(?:word|wd)?|token|secret|credential|api[-_]?key|access[-_]?key|private[-_]?key)[ ]*[:=]|BEGIN [A-Z ]*PRIVATE KEY)",
+    re.IGNORECASE,
+)
+
+root = ET.parse(sys.argv[1]).getroot()
+for element in root.iter():
+    local_tag = element.tag.rsplit("}", 1)[-1]
+    if credential_name.search(local_tag) or local_tag in {"auth", "secret"}:
+        raise SystemExit(1)
+    for attribute in element.attrib:
+        local_attribute = attribute.rsplit("}", 1)[-1]
+        if credential_name.search(local_attribute):
+            raise SystemExit(1)
+    for value in [element.text, element.tail, *element.attrib.values()]:
+        if value and credential_value.search(value):
+            raise SystemExit(1)
+
+# Custom metadata and QEMU command/environment extensions are opaque to this
+# tool. Refuse them instead of guessing whether their contents are safe.
+metadata = root.find("metadata")
+if metadata is not None and (list(metadata) or (metadata.text or "").strip()):
+    raise SystemExit(1)
+for element in root.iter():
+    namespace = element.tag[1:].split("}", 1)[0] if element.tag.startswith("{") else ""
+    local_tag = element.tag.rsplit("}", 1)[-1]
+    if "libvirt.org/schemas/domain/qemu" in namespace or local_tag in {"commandline", "env"}:
+        raise SystemExit(1)
+PY
+then
   printf 'capture baseline: inactive XML contains credential-bearing fields; refusing to persist it\n' >&2
   exit 1
 fi
