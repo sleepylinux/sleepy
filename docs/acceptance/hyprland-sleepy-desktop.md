@@ -20,7 +20,7 @@ or other user data.
 | `sleepy-sdk` revision | `63b2370a39f47f2b361310c12c0333da0faaee9d` |
 | `sleepy-session` revision | `4fee02d6fa221df33b7df03fb1bdadcbb3f8f714` |
 | `sleepy-artwork` revision | `175314b9c236c1b412e8e1ebc54bbe3937b0c90d` |
-| `sleepy-desktop` revision | `fe872c2ea81345a367f50ac84f2022caef6dcecc` |
+| `sleepy-desktop` revision | `4e0b621262391ff506ce28652b5ec2529e8d10ed` |
 | NixOS toplevel | PASS: `/nix/store/mkpbp3qvc0aa105ynmg7ajnd5q10dcfz-nixos-system-sleepy-vm-26.11.20260822.2c423e0` |
 | `nix flake check --print-build-logs` | PASS in isolated Docker with KVM; log SHA-256 `2e24200bda9dc7996fe0b2059ca8a3b73ea45f6fc65532aadd2ed5c68dd78274` |
 | production VM check result | PASS: `/nix/store/5il94dzrwd62bnkh9bf360q8qmj6j6hp-vm-test-run-sleepy-hyprland-production`; daemon restart and shell reconnect passed in the full log above |

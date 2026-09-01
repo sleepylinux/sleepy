@@ -9,11 +9,11 @@ fetchable component commits:
 sleepy-sdk      63b2370a39f47f2b361310c12c0333da0faaee9d
 sleepy-session  4fee02d6fa221df33b7df03fb1bdadcbb3f8f714
 sleepy-artwork  175314b9c236c1b412e8e1ebc54bbe3937b0c90d
-sleepy-desktop  fe872c2ea81345a367f50ac84f2022caef6dcecc
+sleepy-desktop  4e0b621262391ff506ce28652b5ec2529e8d10ed
 ```
 
 The generated candidate lock SHA-256 is
-`2cd0eddf7806dbbb043e766f1b4f679d50c12033a351e81f0fe861a61243052f`.
+`36ea9aeae3215f6be142a51b9921a6529e7990405e61fc38d76736fb96a9bd23`.
 Regenerate it only with Nix and validate both the current graph and immutable
 historical M2/M1 graphs. A derivation build is not real-VM acceptance; the
 protected `Sleepy` domain stays off until rollback capture and restore drill.
