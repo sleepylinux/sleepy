@@ -27,11 +27,11 @@ in
   (locker.Service.Restart == "no")
   "a crashed secure locker must fail once instead of trying to reclaim an orphaned lock";
   assert pkgs.lib.assertMsg
-  (locker.Service.ExecStop == "${homeConfig.sleepy.lockerPackage}/bin/sleepy-locker-control --pid $MAINPID")
-  "orderly target shutdown must ask the exact Quickshell locker instance to quit";
+  (locker.Service.KillMode == "control-group")
+  "orderly target shutdown must signal both the supervisor and pinned Quickshell child";
   assert pkgs.lib.assertMsg
-  (locker.Service.TimeoutStopSec == 5)
-  "orderly locker shutdown must be bounded before systemd sends SIGTERM";
+  (!(locker.Service ? ExecStop))
+  "systemd must stop the supervised locker cgroup with its expected signal";
   assert pkgs.lib.assertMsg
   (failsafe.Service.ExecStart == "${pkgs.uwsm}/bin/uwsm stop")
   "the locker fail-safe must terminate the UWSM session with a fixed command";
@@ -50,6 +50,5 @@ in
     pkgs.runCommand "sleepy-locker-lifecycle" {} ''
       test -f ${pamFile}
       test -x ${homeConfig.sleepy.lockerPackage}/bin/sleepy-locker
-      test -x ${homeConfig.sleepy.lockerPackage}/bin/sleepy-locker-control
       touch "$out"
     ''

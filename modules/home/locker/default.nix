@@ -22,9 +22,8 @@
             "SLEEPY_LOCKER_PAM_SERVICE=sleepy-locker"
             "SLEEPY_LOCKER_SOCKET=%t/sleepy/locker.sock"
           ];
-          ExecStop = "${config.sleepy.lockerPackage}/bin/sleepy-locker-control --pid $MAINPID";
+          KillMode = "control-group";
           Restart = "no";
-          TimeoutStopSec = 5;
           RuntimeDirectory = "sleepy";
           RuntimeDirectoryMode = "0700";
           UMask = "0077";
