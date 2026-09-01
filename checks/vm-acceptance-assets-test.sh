@@ -529,7 +529,7 @@ assert_rejected() {
 }
 
 bundle="$fixture/baseline"
-PATH="$fake_bin:$PATH" "$repo_root/scripts/vm/capture-baseline.sh" \
+PATH="$fake_bin:$PATH" "$BASH" "$repo_root/scripts/vm/capture-baseline.sh" \
   --domain Sleepy \
   --run-dir "$bundle" \
   --expected-system /nix/store/accepted-nixos-system-sleepy
@@ -559,7 +559,7 @@ cmp "$disk" "$bundle/disk.qcow2"
 cmp "$nvram" "$bundle/nvram.fd"
 
 libosinfo_bundle="$fixture/libosinfo-baseline"
-PATH="$fake_bin:$PATH" FAKE_XML_LIBOSINFO=1 "$repo_root/scripts/vm/capture-baseline.sh" \
+PATH="$fake_bin:$PATH" FAKE_XML_LIBOSINFO=1 "$BASH" "$repo_root/scripts/vm/capture-baseline.sh" \
   --domain Sleepy \
   --run-dir "$libosinfo_bundle" \
   --expected-system /nix/store/accepted-nixos-system-sleepy
@@ -568,64 +568,64 @@ test -f "$libosinfo_bundle/bundle.complete"
 
 existing_hash=$(sha256sum "$bundle/manifest.json")
 assert_rejected existing-run-dir env PATH="$fake_bin:$PATH" \
-  "$repo_root/scripts/vm/capture-baseline.sh" --domain Sleepy --run-dir "$bundle" \
+  "$BASH" "$repo_root/scripts/vm/capture-baseline.sh" --domain Sleepy --run-dir "$bundle" \
   --expected-system /nix/store/accepted-nixos-system-sleepy
 test "$(sha256sum "$bundle/manifest.json")" = "$existing_hash"
 
 active_bundle="$fixture/active-baseline"
 assert_rejected active-domain env PATH="$fake_bin:$PATH" FAKE_DOMAIN_STATE=running \
-  "$repo_root/scripts/vm/capture-baseline.sh" --domain Sleepy --run-dir "$active_bundle" \
+  "$BASH" "$repo_root/scripts/vm/capture-baseline.sh" --domain Sleepy --run-dir "$active_bundle" \
   --expected-system /nix/store/accepted-nixos-system-sleepy
 test ! -e "$active_bundle"
 
 secret_bundle="$fixture/secret-baseline"
 assert_rejected credential-xml env PATH="$fake_bin:$PATH" FAKE_XML_SECRET=1 \
-  "$repo_root/scripts/vm/capture-baseline.sh" --domain Sleepy --run-dir "$secret_bundle" \
+  "$BASH" "$repo_root/scripts/vm/capture-baseline.sh" --domain Sleepy --run-dir "$secret_bundle" \
   --expected-system /nix/store/accepted-nixos-system-sleepy
 test ! -e "$secret_bundle"
 
 metadata_bundle="$fixture/metadata-baseline"
 assert_rejected credential-metadata env PATH="$fake_bin:$PATH" FAKE_XML_TOKEN_METADATA=1 \
-  "$repo_root/scripts/vm/capture-baseline.sh" --domain Sleepy --run-dir "$metadata_bundle" \
+  "$BASH" "$repo_root/scripts/vm/capture-baseline.sh" --domain Sleepy --run-dir "$metadata_bundle" \
   --expected-system /nix/store/accepted-nixos-system-sleepy
 test ! -e "$metadata_bundle"
 
 opaque_metadata_bundle="$fixture/opaque-metadata-baseline"
 assert_rejected opaque-metadata env PATH="$fake_bin:$PATH" FAKE_XML_OPAQUE_METADATA=1 \
-  "$repo_root/scripts/vm/capture-baseline.sh" --domain Sleepy --run-dir "$opaque_metadata_bundle" \
+  "$BASH" "$repo_root/scripts/vm/capture-baseline.sh" --domain Sleepy --run-dir "$opaque_metadata_bundle" \
   --expected-system /nix/store/accepted-nixos-system-sleepy
 test ! -e "$opaque_metadata_bundle"
 
 qemu_env_bundle="$fixture/qemu-env-baseline"
 assert_rejected credential-qemu-env env PATH="$fake_bin:$PATH" FAKE_XML_QEMU_ENV=1 \
-  "$repo_root/scripts/vm/capture-baseline.sh" --domain Sleepy --run-dir "$qemu_env_bundle" \
+  "$BASH" "$repo_root/scripts/vm/capture-baseline.sh" --domain Sleepy --run-dir "$qemu_env_bundle" \
   --expected-system /nix/store/accepted-nixos-system-sleepy
 test ! -e "$qemu_env_bundle"
 
 credential_text_bundle="$fixture/credential-text-baseline"
 assert_rejected credential-text env PATH="$fake_bin:$PATH" FAKE_XML_CREDENTIAL_TEXT=1 \
-  "$repo_root/scripts/vm/capture-baseline.sh" --domain Sleepy --run-dir "$credential_text_bundle" \
+  "$BASH" "$repo_root/scripts/vm/capture-baseline.sh" --domain Sleepy --run-dir "$credential_text_bundle" \
   --expected-system /nix/store/accepted-nixos-system-sleepy
 test ! -e "$credential_text_bundle"
 
 credential_prose_bundle="$fixture/credential-prose-baseline"
 assert_rejected credential-prose env PATH="$fake_bin:$PATH" FAKE_XML_CREDENTIAL_PROSE=1 \
-  "$repo_root/scripts/vm/capture-baseline.sh" --domain Sleepy --run-dir "$credential_prose_bundle" \
+  "$BASH" "$repo_root/scripts/vm/capture-baseline.sh" --domain Sleepy --run-dir "$credential_prose_bundle" \
   --expected-system /nix/store/accepted-nixos-system-sleepy
 test ! -e "$credential_prose_bundle"
 
 backed_copy_bundle="$fixture/backed-copy-baseline"
 assert_rejected non-flattened-copy env PATH="$fake_bin:$PATH" FAKE_COPY_HAS_BACKING=1 \
-  "$repo_root/scripts/vm/capture-baseline.sh" --domain Sleepy --run-dir "$backed_copy_bundle" \
+  "$BASH" "$repo_root/scripts/vm/capture-baseline.sh" --domain Sleepy --run-dir "$backed_copy_bundle" \
   --expected-system /nix/store/accepted-nixos-system-sleepy
 test ! -e "$backed_copy_bundle"
 
 assert_rejected ambiguous-domain env PATH="$fake_bin:$PATH" \
-  "$repo_root/scripts/vm/capture-baseline.sh" --domain sleepy --run-dir "$fixture/wrong-domain" \
+  "$BASH" "$repo_root/scripts/vm/capture-baseline.sh" --domain sleepy --run-dir "$fixture/wrong-domain" \
   --expected-system /nix/store/accepted-nixos-system-sleepy
 
 PATH="$fake_bin:$PATH" FAKE_QGA_DELAY_CALLS=2 FAKE_REQUIRE_STORAGE_ACL=1 \
-  FAKE_QEMU_UID="$(stat -c %u "$nvram")" "$repo_root/scripts/vm/verify-restore.sh" \
+  FAKE_QEMU_UID="$(stat -c %u "$nvram")" "$BASH" "$repo_root/scripts/vm/verify-restore.sh" \
   --bundle "$bundle" \
   --domain Sleepy \
   --verification-domain Sleepy-restore-verification
@@ -650,7 +650,7 @@ rm -f -- "$guard_bundle/restore-verification.json"
 : >"$FAKE_VM_LOG"
 assert_rejected protected-start-during-drill env PATH="$fake_bin:$PATH" \
   FAKE_START_PROTECTED_DURING_DRILL=1 \
-  "$repo_root/scripts/vm/verify-restore.sh" --bundle "$guard_bundle" --domain Sleepy \
+  "$BASH" "$repo_root/scripts/vm/verify-restore.sh" --bundle "$guard_bundle" --domain Sleepy \
   --verification-domain Sleepy-restore-verification
 test ! -e "$guard_bundle/restore-verification.json"
 test ! -e "$FAKE_VM_STATE_DIR/defined"
@@ -662,7 +662,7 @@ chmod 0700 "$tampered"
 printf 'tamper\n' >>"$tampered/disk.qcow2"
 : >"$FAKE_VM_LOG"
 assert_rejected tampered-bundle env PATH="$fake_bin:$PATH" \
-  "$repo_root/scripts/vm/verify-restore.sh" --bundle "$tampered" --domain Sleepy \
+  "$BASH" "$repo_root/scripts/vm/verify-restore.sh" --bundle "$tampered" --domain Sleepy \
   --verification-domain Sleepy-restore-verification
 test ! -s "$FAKE_VM_LOG"
 
@@ -671,7 +671,7 @@ cp -a -- "$bundle" "$cleanup_bundle"
 rm -f -- "$cleanup_bundle/restore-verification.json"
 : >"$FAKE_VM_LOG"
 assert_rejected cleanup-failure env PATH="$fake_bin:$PATH" FAKE_UNDEFINE_FAIL=1 \
-  "$repo_root/scripts/vm/verify-restore.sh" --bundle "$cleanup_bundle" --domain Sleepy \
+  "$BASH" "$repo_root/scripts/vm/verify-restore.sh" --bundle "$cleanup_bundle" --domain Sleepy \
   --verification-domain Sleepy-restore-verification
 grep -F 'FAILED to remove the identity-checked temporary domain' \
   "$fixture/cleanup-failure.stderr" >/dev/null
@@ -727,7 +727,7 @@ jq -n '{
 chmod 0600 "$runtime"
 evidence="$fixture/evidence"
 PATH="$fake_bin:$PATH" FAKE_DOMAIN_STATE=running \
-  "$repo_root/scripts/vm/collect-evidence.sh" \
+  "$BASH" "$repo_root/scripts/vm/collect-evidence.sh" \
   --domain Sleepy \
   --run-dir "$evidence" \
   --label unlocked-desktop \
@@ -753,7 +753,7 @@ jq -e '
 cmp "$redacted" "$evidence/unlocked-desktop.png"
 
 assert_rejected missing-redaction-confirmation env PATH="$fake_bin:$PATH" FAKE_DOMAIN_STATE=running \
-  "$repo_root/scripts/vm/collect-evidence.sh" --domain Sleepy \
+  "$BASH" "$repo_root/scripts/vm/collect-evidence.sh" --domain Sleepy \
   --run-dir "$fixture/unconfirmed-evidence" --label desktop \
   --redacted-framebuffer "$redacted" --redacted-runtime "$runtime" \
   --reviewer local-owner --delete-after 2099-10-01
@@ -762,7 +762,7 @@ not_png="$fixture/not-redacted-image.png"
 printf 'not a PNG\n' >"$not_png"
 chmod 0600 "$not_png"
 assert_rejected invalid-png env PATH="$fake_bin:$PATH" FAKE_DOMAIN_STATE=running \
-  "$repo_root/scripts/vm/collect-evidence.sh" --domain Sleepy \
+  "$BASH" "$repo_root/scripts/vm/collect-evidence.sh" --domain Sleepy \
   --run-dir "$fixture/invalid-png-evidence" --label desktop \
   --redacted-framebuffer "$not_png" --redacted-runtime "$runtime" --confirm-redacted \
   --reviewer local-owner --delete-after 2099-10-01
@@ -771,7 +771,7 @@ signature_only="$fixture/signature-only.png"
 printf '\211PNG\r\n\032\nnot-structurally-decodable\n' >"$signature_only"
 chmod 0600 "$signature_only"
 assert_rejected signature-only-png env PATH="$fake_bin:$PATH" FAKE_DOMAIN_STATE=running \
-  "$repo_root/scripts/vm/collect-evidence.sh" --domain Sleepy \
+  "$BASH" "$repo_root/scripts/vm/collect-evidence.sh" --domain Sleepy \
   --run-dir "$fixture/signature-only-evidence" --label desktop \
   --redacted-framebuffer "$signature_only" --redacted-runtime "$runtime" --confirm-redacted \
   --reviewer local-owner --delete-after 2099-10-01
@@ -801,25 +801,25 @@ write(sys.argv[2], 8, False, b"\0\0")
 PY
 chmod 0600 "$invalid_indexed_depth" "$indexed_without_palette"
 assert_rejected invalid-indexed-depth env PATH="$fake_bin:$PATH" FAKE_DOMAIN_STATE=running \
-  "$repo_root/scripts/vm/collect-evidence.sh" --domain Sleepy \
+  "$BASH" "$repo_root/scripts/vm/collect-evidence.sh" --domain Sleepy \
   --run-dir "$fixture/invalid-indexed-depth-evidence" --label desktop \
   --redacted-framebuffer "$invalid_indexed_depth" --redacted-runtime "$runtime" --confirm-redacted \
   --reviewer local-owner --delete-after 2099-10-01
 assert_rejected indexed-without-palette env PATH="$fake_bin:$PATH" FAKE_DOMAIN_STATE=running \
-  "$repo_root/scripts/vm/collect-evidence.sh" --domain Sleepy \
+  "$BASH" "$repo_root/scripts/vm/collect-evidence.sh" --domain Sleepy \
   --run-dir "$fixture/indexed-without-palette-evidence" --label desktop \
   --redacted-framebuffer "$indexed_without_palette" --redacted-runtime "$runtime" --confirm-redacted \
   --reviewer local-owner --delete-after 2099-10-01
 
 assert_rejected unsafe-label env PATH="$fake_bin:$PATH" FAKE_DOMAIN_STATE=running \
-  "$repo_root/scripts/vm/collect-evidence.sh" --domain Sleepy \
+  "$BASH" "$repo_root/scripts/vm/collect-evidence.sh" --domain Sleepy \
   --run-dir "$fixture/unsafe-evidence" --label ../escape \
   --redacted-framebuffer "$redacted" --redacted-runtime "$runtime" \
   --confirm-redacted \
   --reviewer local-owner --delete-after 2099-10-01
 
 assert_rejected evidence-offline env PATH="$fake_bin:$PATH" FAKE_DOMAIN_STATE='shut off' \
-  "$repo_root/scripts/vm/collect-evidence.sh" --domain Sleepy \
+  "$BASH" "$repo_root/scripts/vm/collect-evidence.sh" --domain Sleepy \
   --run-dir "$fixture/offline-evidence" --label desktop \
   --redacted-framebuffer "$redacted" --redacted-runtime "$runtime" \
   --confirm-redacted \
