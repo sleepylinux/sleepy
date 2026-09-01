@@ -157,7 +157,7 @@ in
         machine.succeed("install -d -o lazy -g users -m 700 /home/lazy/.local /home/lazy/.local/state /home/lazy/.local/share /home/lazy/.local/state/home-manager /home/lazy/.local/state/nix")
         machine.succeed("install -d -o lazy -g users -m 700 /home/lazy/.local/state/home-manager/gcroots /home/lazy/.local/state/nix/profiles")
         legacy_env = "HOME=/home/lazy XDG_CONFIG_HOME=/home/lazy/.config XDG_STATE_HOME=/home/lazy/.local/state SLEEPY_NIRI_VALIDATOR=${pkgs.niri}/bin/niri"
-        legacy_manifest = "(find /home/lazy/.config/sleepy /home/lazy/.local/state/sleepy -xdev -type f -print0 2>/dev/null; find /home/lazy/.config/niri -maxdepth 1 -type f -name 'sleepy-user-bindings.kdl' -print0 2>/dev/null) | sort -z | xargs -0 -r sha256sum"
+        legacy_manifest = "sha256sum /home/lazy/.config/sleepy/settings.json /home/lazy/.local/state/sleepy/presets.json /home/lazy/.config/niri/sleepy-user-bindings.kdl"
         machine.succeed("sudo -u lazy HOME=/home/lazy ${baselineActivationPackage}/activate")
         machine.succeed(f"sudo -u lazy {legacy_env} ${baselineSessionPackage}/bin/sleepyctl presets duplicate builtin.sleepy 'Production VM preserved preset' >/dev/null")
         machine.succeed(f"sudo -u lazy {legacy_env} ${baselineSessionPackage}/bin/sleepyctl bindings reconcile >/dev/null")

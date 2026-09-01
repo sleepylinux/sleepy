@@ -50,7 +50,7 @@ validate_production_contract() {
     'shell_peer_pid = wait_for_shell_stream(shell_pid, shell_control_group, daemon_pid)' \
     'assert reconnected_shell_peer_pid == shell_peer_pid' \
     'assert shell_peer_pid != previous_shell_peer_pid' \
-    'legacy_manifest = ' \
+    'legacy_manifest = "sha256sum /home/lazy/.config/sleepy/settings.json /home/lazy/.local/state/sleepy/presets.json /home/lazy/.config/niri/sleepy-user-bindings.kdl"' \
     'assert machine.succeed(legacy_manifest) == prior_hashes'; do
     grep -F "$required_literal" "$production_check" >/dev/null || return 1
   done
@@ -59,6 +59,7 @@ validate_production_contract() {
     'sleepy-test-weston.service' \
     'sleepy-test-hyprland.service' \
     'production-vm-sentinel' \
+    'legacy_manifest = "(find ' \
     "grep -F {shlex.quote('pid=' + shell_main_pid + ',')}"; do
     ! grep -F "$forbidden_literal" "$production_check" >/dev/null || return 1
   done
@@ -137,6 +138,12 @@ test -w "$fixture/source" || {
 }
 
 mutated_production="$fixture/source/hyprland-production-vm.nix"
+install -m 0600 -- "$repo_root/checks/hyprland-production-vm.nix" "$mutated_production"
+sed -i '/legacy_manifest = /c\\        legacy_manifest = "sha256sum /home/lazy/.config/sleepy/settings.json /home/lazy/.local/state/sleepy/presets.json"' "$mutated_production"
+if validate_production_contract "$mutated_production"; then
+  printf 'VM acceptance assets: incomplete legacy artifact manifest mutation passed\n' >&2
+  exit 1
+fi
 install -m 0600 -- "$repo_root/checks/hyprland-production-vm.nix" "$mutated_production"
 sed -i "/frame, separator, _ = data.partition/c\\        frame, separator, _ = data, b'', b''" "$mutated_production"
 if validate_production_contract "$mutated_production"; then
