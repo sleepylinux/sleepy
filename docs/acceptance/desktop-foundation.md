@@ -9,10 +9,10 @@ The root integration pins this exact reviewed public component graph:
 | `sleepy-sdk` | `d935d3d83ef3c01627cd315230607c4b04554d42` |
 | `sleepy-session` | `dc30d54159c19ccd5f218ba3bb29e537136790d3` |
 | `sleepy-artwork` | `175314b9c236c1b412e8e1ebc54bbe3937b0c90d` |
-| `sleepy-desktop` | `d9f04e42e4cd1ff53802d242ea20fb8eef866f06` |
+| `sleepy-desktop` | `8cc8cd6ad9dbad8b8dc856740f981f7101b9a7b1` |
 
 The generated `flake.lock` SHA-256 is
-`22aa951d602add6da84bd0713bff731b2879840d99b6b609278f035f9f169f4d`. This section records
+`c05b7fb17d05badf9b698ecca313b3d5104cc4e5b0e6ce8d09019561a98ba042`. This section records
 only the immutable source graph and automated build gate. Real ReGreet/PAM,
 rollback, downgrade, framebuffer, and protected-VM results remain `PENDING` in
 `docs/acceptance/hyprland-sleepy-desktop.md` until fresh target evidence exists.
