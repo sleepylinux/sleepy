@@ -255,12 +255,75 @@ in
           machine.succeed(f"${schemaPython}/bin/python3 -c {shlex.quote(validator)} ${eventSchema} {shlex.quote(path)}")
           return json.loads(machine.succeed(f"cat {shlex.quote(path)}"))
 
-        def wait_for_shell_stream(shell_main_pid):
+        shell_stream_probe = r"""import re, subprocess, sys
+        socket_path, shell_main_pid, shell_control_group = sys.argv[1:]
+        if not shell_main_pid.isdigit() or int(shell_main_pid) < 2:
+            raise SystemExit('invalid sleepy-shell supervisor PID')
+        if not shell_control_group.startswith('/') or not shell_control_group.endswith('/sleepy-shell.service'):
+            raise SystemExit('unexpected sleepy-shell control group')
+
+        output = subprocess.check_output(
+            ['ss', '-xnpH', 'state', 'established'],
+            text=True,
+            stderr=subprocess.STDOUT,
+        )
+        candidates = set()
+        for line in output.splitlines():
+            if socket_path not in line:
+                continue
+            for peer_pid in re.findall(r'pid=(\d+),', line):
+                if peer_pid == shell_main_pid:
+                    continue
+                try:
+                    with open(f'/proc/{peer_pid}/cgroup', encoding='utf-8') as cgroups:
+                        in_shell_cgroup = any(
+                            cgroup_line == '0::' + shell_control_group
+                            for cgroup_line in map(str.strip, cgroups)
+                        )
+                except FileNotFoundError:
+                    continue
+                if not in_shell_cgroup:
+                    continue
+
+                ancestor_pid = peer_pid
+                while ancestor_pid not in ('0', '1', shell_main_pid):
+                    try:
+                        with open(f'/proc/{ancestor_pid}/status', encoding='utf-8') as status:
+                            match = re.search(r'^PPid:\s+(\d+)$', status.read(), re.MULTILINE)
+                    except FileNotFoundError:
+                        match = None
+                    if match is None:
+                        break
+                    ancestor_pid = match.group(1)
+                if ancestor_pid == shell_main_pid:
+                    candidates.add(peer_pid)
+
+        if len(candidates) != 1:
+            raise SystemExit(
+                f'expected one desktop.sock config child in {shell_control_group}, got {sorted(candidates)}'
+            )
+        print(candidates.pop())
+        """
+
+        def wait_for_shell_stream(shell_main_pid, shell_control_group):
           socket_path = f"/run/user/{uid}/sleepy/desktop.sock"
-          machine.wait_until_succeeds(
-            f"ss -xnp | grep -F {shlex.quote(socket_path)} | grep -F {shlex.quote('pid=' + shell_main_pid + ',')}",
-            timeout=timedelta(seconds=30),
+          peer_file = "/tmp/sleepy-shell-stream-peer.pid"
+          probe_command = (
+            f"${pkgs.python3}/bin/python3 -c {shlex.quote(shell_stream_probe)} "
+            f"{shlex.quote(socket_path)} {shlex.quote(shell_main_pid)} "
+            f"{shlex.quote(shell_control_group)} > {shlex.quote(peer_file)}"
           )
+          try:
+            machine.wait_until_succeeds(probe_command, timeout=timedelta(seconds=30))
+          except Exception:
+            print(machine.succeed("ss -xnpH state established || true"))
+            print(machine.succeed(f"{user_env} systemctl --user status sleepy-shell.service --no-pager || true"))
+            print(machine.succeed(f"{user_env} journalctl --user -u sleepy-shell.service --no-pager || true"))
+            raise
+          peer_pid = machine.succeed(f"cat {shlex.quote(peer_file)}").strip()
+          assert peer_pid.isdigit()
+          assert peer_pid != shell_main_pid
+          return peer_pid
 
         initial_snapshot = read_snapshot("/tmp/desktop-initial.json")
 
@@ -279,27 +342,35 @@ in
         machine.succeed(niri_absent)
         daemon_pid = machine.succeed(f"{user_env} systemctl --user show sleepy-session.service -P MainPID").strip()
         shell_pid = machine.succeed(f"{user_env} systemctl --user show sleepy-shell.service -P MainPID").strip()
+        shell_control_group = machine.succeed(f"{user_env} systemctl --user show sleepy-shell.service -P ControlGroup").strip()
         # INITIAL_SHELL_STREAM_GATE: prove the shell completed QML startup and
         # connected before interrupting its daemon.  An active systemd service
         # alone does not establish that recovery is being exercised.
-        wait_for_shell_stream(shell_pid)
+        shell_peer_pid = wait_for_shell_stream(shell_pid, shell_control_group)
+        machine.succeed("sleep 5")
+        assert wait_for_shell_stream(shell_pid, shell_control_group) == shell_peer_pid
 
         # DAEMON_RESTART_RECOVERY_GATE: reconnect to the replacement
         # daemon socket and validate a fresh full snapshot.
         machine.succeed(f"{user_env} systemctl --user restart sleepy-session.service")
         machine.wait_until_succeeds(f"test $({user_env} systemctl --user show sleepy-session.service -P MainPID) != {shlex.quote(daemon_pid)}", timeout=timedelta(seconds=30))
         machine.wait_until_succeeds(f"{user_env} systemctl --user is-active sleepy-shell.service", timeout=timedelta(seconds=30))
-        wait_for_shell_stream(shell_pid)
+        reconnected_shell_peer_pid = wait_for_shell_stream(shell_pid, shell_control_group)
+        assert reconnected_shell_peer_pid == shell_peer_pid
         post_daemon = read_snapshot("/tmp/desktop-post-daemon.json")
         assert post_daemon["eventId"] != initial_snapshot["eventId"]
+        assert wait_for_shell_stream(shell_pid, shell_control_group) == shell_peer_pid
 
         # SHELL_RESTART_RECOVERY_GATE: require a replacement shell
         # process and a new authoritative socket read after recovery.
+        previous_shell_peer_pid = shell_peer_pid
         machine.succeed(f"{user_env} systemctl --user restart sleepy-shell.service")
         machine.wait_until_succeeds(f"test $({user_env} systemctl --user show sleepy-shell.service -P MainPID) != {shlex.quote(shell_pid)}", timeout=timedelta(seconds=30))
         machine.wait_until_succeeds(f"{user_env} systemctl --user is-active sleepy-shell.service", timeout=timedelta(seconds=30))
         shell_pid = machine.succeed(f"{user_env} systemctl --user show sleepy-shell.service -P MainPID").strip()
-        wait_for_shell_stream(shell_pid)
+        shell_control_group = machine.succeed(f"{user_env} systemctl --user show sleepy-shell.service -P ControlGroup").strip()
+        shell_peer_pid = wait_for_shell_stream(shell_pid, shell_control_group)
+        assert shell_peer_pid != previous_shell_peer_pid
         post_shell = read_snapshot("/tmp/desktop-post-shell.json")
         assert post_shell["generation"] >= post_daemon["generation"]
 

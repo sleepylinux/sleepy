@@ -16,11 +16,11 @@ or other user data.
 | Field | Evidence |
 | --- | --- |
 | Root commit | this file's containing review commit; resolve with `git rev-parse HEAD` |
-| `flake.lock` SHA-256 | `65a6d8334fed2dde9b39354177146f73a26499db9be4506f35407d0262b80ba8` |
+| `flake.lock` SHA-256 | `99fac9dbaa4d9acc7d17c71851ef99e25714d532641edb42c4ba92cb8f5fb29b` |
 | `sleepy-sdk` revision | `d935d3d83ef3c01627cd315230607c4b04554d42` |
 | `sleepy-session` revision | `dc30d54159c19ccd5f218ba3bb29e537136790d3` |
 | `sleepy-artwork` revision | `175314b9c236c1b412e8e1ebc54bbe3937b0c90d` |
-| `sleepy-desktop` revision | `3007f4068056aef36bbd6e25199d345ff1db19be` |
+| `sleepy-desktop` revision | `c97ca11cae8f99a033069f3db0224a4ece446c90` |
 | NixOS toplevel | PENDING |
 | `nix flake check --no-write-lock-file -L` | PENDING |
 | production VM check derivation/result | PENDING |

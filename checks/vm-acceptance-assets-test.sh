@@ -41,7 +41,11 @@ validate_production_contract() {
     'post_daemon = read_snapshot("/tmp/desktop-post-daemon.json")' \
     'SHELL_RESTART_RECOVERY_GATE' \
     'post_shell = read_snapshot("/tmp/desktop-post-shell.json")' \
-    'wait_for_shell_stream(shell_pid)' \
+    'shell_control_group = machine.succeed(f"{user_env} systemctl --user show sleepy-shell.service -P ControlGroup").strip()' \
+    "cgroup_line == '0::' + shell_control_group" \
+    'shell_peer_pid = wait_for_shell_stream(shell_pid, shell_control_group)' \
+    'assert reconnected_shell_peer_pid == shell_peer_pid' \
+    'assert shell_peer_pid != previous_shell_peer_pid' \
     'legacy_manifest = ' \
     'assert machine.succeed(legacy_manifest) == prior_hashes'; do
     grep -F "$required_literal" "$production_check" >/dev/null || return 1
@@ -50,10 +54,11 @@ validate_production_contract() {
     'loginctl enable-linger' \
     'sleepy-test-weston.service' \
     'sleepy-test-hyprland.service' \
-    'production-vm-sentinel'; do
+    'production-vm-sentinel' \
+    "grep -F {shlex.quote('pid=' + shell_main_pid + ',')}"; do
     ! grep -F "$forbidden_literal" "$production_check" >/dev/null || return 1
   done
-  test "$(grep -Fc 'wait_for_shell_stream(shell_pid)' "$production_check")" -ge 3 \
+  test "$(grep -Fc 'wait_for_shell_stream(shell_pid, shell_control_group)' "$production_check")" -ge 3 \
     || return 1
 }
 
@@ -207,9 +212,27 @@ if validate_production_contract "$mutated_production"; then
   exit 1
 fi
 install -m 0600 -- "$repo_root/checks/hyprland-production-vm.nix" "$mutated_production"
-sed -i '/INITIAL_SHELL_STREAM_GATE/,/wait_for_shell_stream(shell_pid)/{/wait_for_shell_stream(shell_pid)/d;}' "$mutated_production"
+sed -i '/shell_peer_pid = wait_for_shell_stream(shell_pid, shell_control_group)/d' "$mutated_production"
 if validate_production_contract "$mutated_production"; then
   printf 'VM acceptance assets: removed initial shell stream mutation passed\n' >&2
+  exit 1
+fi
+install -m 0600 -- "$repo_root/checks/hyprland-production-vm.nix" "$mutated_production"
+sed -i "/cgroup_line == '0::' + shell_control_group/d" "$mutated_production"
+if validate_production_contract "$mutated_production"; then
+  printf 'VM acceptance assets: removed exact shell peer cgroup mutation passed\n' >&2
+  exit 1
+fi
+install -m 0600 -- "$repo_root/checks/hyprland-production-vm.nix" "$mutated_production"
+sed -i '/assert reconnected_shell_peer_pid == shell_peer_pid/d' "$mutated_production"
+if validate_production_contract "$mutated_production"; then
+  printf 'VM acceptance assets: removed daemon-reconnect child identity mutation passed\n' >&2
+  exit 1
+fi
+install -m 0600 -- "$repo_root/checks/hyprland-production-vm.nix" "$mutated_production"
+sed -i '/assert shell_peer_pid != previous_shell_peer_pid/d' "$mutated_production"
+if validate_production_contract "$mutated_production"; then
+  printf 'VM acceptance assets: removed shell replacement child identity mutation passed\n' >&2
   exit 1
 fi
 mutated_runbook="$fixture/source/sleepy-vm-hyprland.md"
