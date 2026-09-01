@@ -2,7 +2,7 @@
 # shellcheck disable=SC2016 # Dollar expressions below are literal source contracts.
 set -euo pipefail
 
-repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
 
 assert_contains() {
   local file=$1
@@ -16,60 +16,64 @@ assert_contains() {
 assert_not_contains() {
   local file=$1
   local pattern=$2
-  if grep -F -- "$pattern" "$repo_root/$file" >/dev/null; then
+  if grep -Fi -- "$pattern" "$repo_root/$file" >/dev/null; then
     printf 'root integration contract: %s unexpectedly contains %s\n' "$file" "$pattern" >&2
     exit 1
   fi
 }
 
-test -f "$repo_root/modules/home/niri/config/bindings-core.kdl"
-test ! -e "$repo_root/modules/home/niri/config/bindings.kdl"
-assert_contains modules/home/niri/config/bindings-core.kdl 'Mod+Shift+Escape'
-assert_contains modules/home/niri/config/config.kdl 'include "bindings-core.kdl"'
-assert_contains modules/home/niri/config/config.kdl 'include optional=true "sleepy-user-bindings.kdl"'
-assert_contains modules/home/niri/config/appearance.kdl 'hotkey-overlay'
-assert_contains modules/home/niri/config/appearance.kdl 'skip-at-startup'
-assert_not_contains modules/home/niri/default.nix 'sleepy-user-bindings.kdl'
+bash "$repo_root/checks/hyprland-session-contract-test.sh"
 
-assert_contains modules/home/session/default.nix 'bindings reconcile'
-assert_contains modules/home/session/online-reconcile.sh '--online-required'
-assert_contains modules/home/session/online-reconcile.sh 'bindings initialize'
-assert_contains modules/home/session/default.nix 'SLEEPY_JQ'
-assert_contains modules/home/session/default.nix 'unset NIRI_SOCKET'
-assert_contains modules/home/session/default.nix 'test -L "$generated_bindings"'
-assert_contains modules/home/session/default.nix 'test -f "$generated_bindings"'
-assert_contains modules/home/session/default.nix 'SLEEPY_NIRI_VALIDATOR'
+assert_contains modules/home/session/default.nix 'Type = "notify";'
+assert_contains modules/home/session/default.nix 'NotifyAccess = "main";'
 assert_contains modules/home/session/default.nix 'systemd.user.services = {'
+assert_contains modules/home/session/default.nix 'sleepy-clipboard = {'
 assert_contains modules/home/session/default.nix 'gammastep = {'
-assert_contains modules/home/session/default.nix 'entryAfter ["linkGeneration"]'
-assert_contains modules/home/session/default.nix 'SLEEPY_SOCKET_ATTEMPTS=150'
-assert_contains modules/home/session/online-reconcile.sh 'Niri socket did not become ready before the bounded deadline'
-assert_contains modules/home/session/online-reconcile.sh 'test -S'
 assert_not_contains modules/home/session/default.nix 'gammastep -m wayland -O'
-assert_contains modules/home/quickshell/default.nix 'Requires = ["sleepy-session.service" "sleepy-bindings-online.service"]'
-assert_contains modules/home/quickshell/default.nix 'After = ["sleepy-session.service" "sleepy-bindings-online.service"]'
+assert_not_contains modules/home/session/default.nix 'sleepy-bindings-online'
+assert_not_contains modules/home/session/default.nix 'NIRI_SOCKET'
+
+assert_contains modules/home/quickshell/default.nix 'Wants = ["sleepy-session.service"]'
+assert_contains modules/home/quickshell/default.nix 'After = ["sleepy-session.service"]'
+assert_contains modules/home/quickshell/default.nix 'systemd.user.services.sleepy-shell = {'
+assert_not_contains modules/home/quickshell/default.nix 'Requires = ["sleepy-session.service"'
+assert_not_contains modules/home/quickshell/default.nix 'systemd.user.services.quickshell'
+
+assert_contains modules/home/hyprland/default.nix 'systemd.enable = false;'
+assert_contains modules/home/hyprland/default.nix 'sleepy-user.conf'
+assert_contains modules/home/hyprland/binds.nix 'sleepy lock'
+assert_contains modules/home/hyprland/settings.nix 'gesture = ["3, horizontal, workspace"]'
+assert_contains modules/home/hyprland/rules.nix 'match:class'
+assert_contains modules/home/hyprland/rules.nix 'match:namespace'
 
 assert_contains modules/nixos/base/default.nix 'hardware.bluetooth.enable = true'
 assert_contains modules/nixos/base/default.nix 'power-profiles-daemon.enable = true'
-assert_contains modules/nixos/base/niri-version.nix 'versionAtLeast'
-assert_contains modules/nixos/base/niri-version.nix 'config.programs.niri.package.version'
+assert_not_contains modules/nixos/base/default.nix 'niri-version'
+assert_contains modules/nixos/session/default.nix 'programs.hyprland = {'
+assert_contains modules/nixos/session/default.nix 'programs.uwsm.enable = true;'
+
+assert_contains checks/default.nix 'hyprland-config = hyprlandConfig;'
 assert_contains checks/default.nix 'sleepy-artwork-assets'
 assert_contains checks/default.nix 'sleepy-desktop-qml'
 assert_contains checks/default.nix 'sleepy-desktop-package'
 assert_contains checks/default.nix 'sleepy-desktop-preview'
+assert_not_contains checks/default.nix 'niri-config ='
+assert_not_contains checks/default.nix 'niri-version-contract ='
+
 assert_contains .github/workflows/check.yml 'timeout-minutes:'
 assert_contains .github/workflows/check.yml 'nix flake check --all-systems --no-build --show-trace'
-assert_contains .github/workflows/check.yml 'nix build .#checks.x86_64-linux.sleepy-desktop-qml --no-link -L'
+assert_contains .github/workflows/check.yml 'nix build .#checks.x86_64-linux.hyprland-config --no-link -L'
+assert_contains .github/workflows/check.yml 'nix build .#checks.x86_64-linux.session-contract --no-link -L'
 assert_contains .github/workflows/check.yml 'test -c /dev/kvm'
 assert_contains .github/workflows/check.yml 'system-features = nixos-test benchmark big-parallel kvm'
-assert_contains checks/bindings-contract.nix "'focus-workspace-down;'"
-assert_contains checks/bindings-contract.nix "'focus-workspace-up;'"
-assert_not_contains checks/bindings-contract.nix "'focus-workspace-next;'"
-assert_not_contains checks/bindings-contract.nix "'focus-workspace-previous;'"
-assert_contains checks/control-center-contract.nix 'concatStringsSep " " (pkgs.lib.toList gammastepService.Service.ExecStart)'
+
+# Prior-generation validation remains the only active place where Niri paths
+# are expected. It must preserve legacy bytes and never delete them.
 assert_not_contains checks/update-safety-vm.nix 'rm -f /home/lazy/.config/niri/*.kdl'
-assert_contains checks/update-safety-vm.nix 'test -L /home/lazy/.config/niri/config.kdl'
-assert_contains checks/update-safety-vm.nix 'SLEEPY_NIRI_VALIDATOR=/bin/false'
+assert_contains checks/update-safety-vm.nix '/home/lazy/.config/niri/sleepy-user-bindings.kdl'
+assert_contains checks/update-safety-vm.nix 'test ! -e /home/lazy/.config/niri/{static_name}.kdl'
+assert_contains checks/update-safety-vm.nix 'machine.fail("sudo -u lazy HOME=/home/lazy ${activationPackage}/activate")'
+assert_contains checks/update-safety-vm.nix 'test $(cat /home/lazy/protected-override) = protected'
 assert_contains checks/update-safety-vm.nix 'install -d -o lazy -g users -m 700 /home/lazy/.local/state/home-manager/gcroots'
 assert_contains checks/update-safety-vm.nix '/home/lazy/.local/state/nix/profiles'
 assert_contains checks/update-safety-vm.nix '/home/lazy/.local/share'

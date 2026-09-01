@@ -4,7 +4,6 @@
   inputs,
   integratedHomeConfig,
   pkgs,
-  source,
   standaloneHomeConfig,
 }: let
   system = pkgs.stdenv.hostPlatform.system;
@@ -17,7 +16,10 @@
     inputs.${contract.input}.packages.${system}.${contract.output};
   sessionService = standaloneHomeConfig.systemd.user.services.sleepy-session;
   integratedSessionService = integratedHomeConfig.systemd.user.services.sleepy-session;
+  shellService = standaloneHomeConfig.systemd.user.services.sleepy-shell;
+  integratedShellService = integratedHomeConfig.systemd.user.services.sleepy-shell;
   expectedSessionExec = ["${componentPackages.sleepy-session}/bin/sleepy-sessiond"];
+  expectedShellExec = ["${componentPackages.sleepy-shell}/bin/sleepy-shell"];
   actualContract = pkgs.writeText "sleepy-component-contract.json" (builtins.toJSON {
     schemaVersion = 1;
     inherit system;
@@ -31,7 +33,8 @@
     defaultPackage = toString componentPackages.default;
     homeManager = {
       shellPackage = toString standaloneHomeConfig.sleepy.shellPackage;
-      quickshellConfig = standaloneHomeConfig.programs.quickshell.configs.sleepy;
+      shellUnit = "sleepy-shell.service";
+      shellExecStart = pkgs.lib.toList shellService.Service.ExecStart;
       artworkPackage = toString standaloneHomeConfig.sleepy.brandingPackage;
       sessionPackage = toString standaloneHomeConfig.sleepy.sessionPackage;
       service = {
@@ -43,6 +46,7 @@
         requisite = sessionService.Unit.Requisite;
         requires = sessionService.Unit.Requires;
         type = sessionService.Service.Type;
+        notifyAccess = sessionService.Service.NotifyAccess;
         restart = sessionService.Service.Restart;
         runtimeDirectory = sessionService.Service.RuntimeDirectory;
         runtimeDirectoryMode = sessionService.Service.RuntimeDirectoryMode;
@@ -52,11 +56,7 @@
         execStart = sessionService.Service.ExecStart;
       };
     };
-    sources = {
-      root = toString source;
-      sleepy-sdk = toString inputs.sleepy-sdk;
-    };
-    validators.niri = "${pkgs.niri}/bin/niri";
+    sources."sleepy-sdk" = toString inputs.sleepy-sdk;
   });
 in
   assert pkgs.lib.assertMsg
@@ -75,8 +75,8 @@ in
   (standaloneHomeConfig.sleepy.shellPackage == componentPackages.sleepy-shell)
   "standalone Home Manager must use the external desktop shell";
   assert pkgs.lib.assertMsg
-  (standaloneHomeConfig.programs.quickshell.configs.sleepy == "${componentPackages.sleepy-shell}/share/sleepy-desktop")
-  "standalone Quickshell must load the external desktop package layout";
+  (pkgs.lib.toList shellService.Service.ExecStart == expectedShellExec)
+  "standalone shell service must execute the external desktop wrapper";
   assert pkgs.lib.assertMsg
   (standaloneHomeConfig.sleepy.brandingPackage == componentPackages.sleepy-artwork)
   "standalone Home Manager must use the external artwork package";
@@ -87,8 +87,8 @@ in
   (integratedHomeConfig.sleepy.shellPackage == componentPackages.sleepy-shell)
   "integrated Home Manager must use the external desktop shell";
   assert pkgs.lib.assertMsg
-  (integratedHomeConfig.programs.quickshell.configs.sleepy == "${componentPackages.sleepy-shell}/share/sleepy-desktop")
-  "integrated Quickshell must load the external desktop package layout";
+  (pkgs.lib.toList integratedShellService.Service.ExecStart == expectedShellExec)
+  "integrated shell service must execute the external desktop wrapper";
   assert pkgs.lib.assertMsg
   (integratedHomeConfig.sleepy.brandingPackage == componentPackages.sleepy-artwork)
   "integrated Home Manager must use the external artwork package";
@@ -98,6 +98,13 @@ in
   assert pkgs.lib.assertMsg
   (sessionService == integratedSessionService)
   "standalone and integrated Home Manager must share the session service contract";
+  assert pkgs.lib.assertMsg
+  (shellService == integratedShellService)
+  "standalone and integrated Home Manager must share the shell service contract";
+  assert pkgs.lib.assertMsg
+  (!(standaloneHomeConfig.systemd.user.services ? quickshell)
+    && !(integratedHomeConfig.systemd.user.services ? quickshell))
+  "the generic quickshell.service name must not remain in the candidate graph";
   assert pkgs.lib.assertMsg
   (sessionService.Service.ExecStart == expectedSessionExec)
   "the session service must execute sleepy-sessiond from the external session package";

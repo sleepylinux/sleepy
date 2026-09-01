@@ -206,7 +206,7 @@ chmod +x "$desktop/bin/sleepy-shell" "$preview/bin/sleepy-settings-preview"
 
 cat >"$unit/share/systemd/user/sleepy-session.service" <<EOF
 [Service]
-Type=simple
+Type=notify
 ExecStart=$session/bin/sleepy-sessiond
 EOF
 
@@ -220,8 +220,6 @@ jq -n \
   --arg desktop "$desktop" \
   --arg preview "$preview" \
   --arg sdkSource "$sources/sleepy-sdk" \
-  --arg rootSource "$repo_root" \
-  --arg niriValidator "$validators/niri" \
   '{
     schemaVersion: 1,
     system: "x86_64-linux",
@@ -237,7 +235,8 @@ jq -n \
     defaultPackage: $desktop,
     homeManager: {
       shellPackage: $desktop,
-      quickshellConfig: ($desktop + "/share/sleepy-desktop"),
+      shellUnit: "sleepy-shell.service",
+      shellExecStart: [($desktop + "/bin/sleepy-shell")],
       artworkPackage: $artwork,
       sessionPackage: $session,
       service: {
@@ -248,7 +247,8 @@ jq -n \
         after: ["graphical-session.target", "dbus.socket", "sleepy-locker.service"],
         requisite: ["graphical-session.target"],
         requires: ["dbus.socket"],
-        type: "simple",
+        type: "notify",
+        notifyAccess: "main",
         restart: "on-failure",
         runtimeDirectory: "sleepy",
         runtimeDirectoryMode: "0700",
@@ -258,8 +258,7 @@ jq -n \
         execStart: [($session + "/bin/sleepy-sessiond")]
       }
     },
-    sources: {"sleepy-sdk": $sdkSource, root: $rootSource},
-    validators: {niri: $niriValidator}
+    sources: {"sleepy-sdk": $sdkSource}
   }' >"$actual"
 
 if ! bash "$contract" "$manifest" "$actual"; then
@@ -300,10 +299,12 @@ assert_rejected unbounded-session-path \
   '.homeManager.service.environment = ["PATH=/run/current-system/sw/bin"]'
 assert_rejected wrong-runtime-mode \
   '.homeManager.service.runtimeDirectoryMode = "0755"'
-assert_rejected legacy-in-tree-shell-layout \
-  '.homeManager.quickshellConfig = (.homeManager.shellPackage + "/share/quickshell/sleepy")'
-assert_rejected unpinned-validator '.validators.niri = "/bin/false"'
-assert_rejected missing-root-niri-tree '.sources.root = "/does-not-exist"'
+assert_rejected generic-quickshell-runner \
+  '.homeManager.shellExecStart = ["/nix/store/fake-quickshell/bin/quickshell"]'
+assert_rejected generic-quickshell-unit \
+  '.homeManager.shellUnit = "quickshell.service"'
+assert_rejected wrong-notify-access '.homeManager.service.notifyAccess = "all"'
+assert_rejected unexpected-root-source '.sources.root = "/does-not-exist"'
 
 cp "$session/bin/sleepyctl" "$fixture/sleepyctl.good"
 printf '#!%s\n' "$fixture_bash" >"$session/bin/sleepyctl"

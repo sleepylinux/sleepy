@@ -10,23 +10,20 @@ pkgs.runCommand "sleepy-update-safety-check" {
 
   home_files=${activationPackage}/home-files
   baseline_home_files=${baselineActivationPackage}/home-files
-  niri_dir="$home_files/.config/niri"
+  hyprland_config="$home_files/.config/hypr/hyprland.conf"
+  uwsm_env="$home_files/.config/uwsm/env"
 
   ${pkgs.bash}/bin/bash ${./update-safety-contract.sh} \
     "$home_files" ${activationPackage}/activate \
     ${../modules/home} ${../flake.nix}
 
-  test -d "$baseline_home_files"
+  test -d "$baseline_home_files/.config/niri"
+  test ! -e "$home_files/.config/niri"
+  test ! -L "$home_files/.config/niri"
 
-  if [ ! -d "$niri_dir" ]; then
-    echo "standalone activation has no managed Niri directory" >&2
-    exit 1
-  fi
-
-  niri_count=0
-  for managed_file in "$niri_dir"/*.kdl; do
+  for managed_file in "$hyprland_config" "$uwsm_env"; do
     if [ ! -L "$managed_file" ]; then
-      echo "managed Niri file is missing or is not a Home Manager link: $managed_file" >&2
+      echo "candidate Home Manager file is missing or not immutable: $managed_file" >&2
       exit 1
     fi
 
@@ -34,43 +31,20 @@ pkgs.runCommand "sleepy-update-safety-check" {
     case "$target" in
       /nix/store/*) ;;
       *)
-        echo "managed Niri file does not resolve into the Nix store: $managed_file -> $target" >&2
+        echo "candidate Home Manager file escapes the Nix store: $managed_file -> $target" >&2
         exit 1
         ;;
     esac
-
-    if [ ! -f "$target" ] || [ -w "$target" ]; then
-      echo "managed Niri target is missing or writable: $target" >&2
-      exit 1
-    fi
-
-    permissions=$(${pkgs.coreutils}/bin/stat -c '%A' "$target")
-    case "$permissions" in
-      *w*)
-        echo "managed Niri target has a write bit: $permissions $target" >&2
-        exit 1
-        ;;
-    esac
-
-    niri_count=$((niri_count + 1))
+    test -f "$target"
   done
 
-  if [ "$niri_count" -ne 6 ]; then
-    echo "expected exactly six immutable managed Niri KDL files, found $niri_count" >&2
+  test ! -e "$home_files/.config/hypr/sleepy-user.conf"
+  test ! -L "$home_files/.config/hypr/sleepy-user.conf"
+
+  if ${pkgs.ripgrep}/bin/rg -n 'NIRI_SOCKET|SLEEPY_NIRI|/niri/' ${activationPackage}/activate; then
+    echo "the candidate activation still reads or mutates Niri state" >&2
     exit 1
   fi
-
-  if [ -e "$niri_dir/sleepy-user-bindings.kdl" ] || [ -L "$niri_dir/sleepy-user-bindings.kdl" ]; then
-    echo "Home Manager must not own the generated Niri include" >&2
-    exit 1
-  fi
-
-  for expected_file in config input appearance bindings-core rules startup; do
-    if [ ! -L "$niri_dir/$expected_file.kdl" ]; then
-      echo "missing managed Niri file: $expected_file.kdl" >&2
-      exit 1
-    fi
-  done
 
   touch "$out"
 ''

@@ -5,7 +5,6 @@
 }: let
   cfg = config.sleepy;
 in {
-  imports = [./niri-version.nix];
   users.users.${cfg.primaryUser} = {
     isNormalUser = true;
     extraGroups = ["wheel"];

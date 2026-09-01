@@ -28,15 +28,19 @@ update_vm=checks/update-safety-vm.nix
 ci_workflow=.github/workflows/check.yml
 
 require_literal "$session_module" 'sleepy-sessiond'
-require_literal "$session_module" 'Type = "simple";'
+require_literal "$session_module" 'Type = "notify";'
+require_literal "$session_module" 'NotifyAccess = "main";'
 require_literal "$session_module" 'Restart = "on-failure";'
 require_literal "$session_module" 'RuntimeDirectory = "sleepy";'
 require_literal "$session_module" 'RuntimeDirectoryMode = "0700";'
 require_literal "$session_module" 'PATH=${sessionRuntimePath}'
 reject_literal "$session_module" 'ExecStart = "/'
 
-require_literal "$quickshell_module" 'Requires = ["sleepy-session.service"'
+require_literal "$quickshell_module" 'Wants = ["sleepy-session.service"'
 require_literal "$quickshell_module" 'After = ["sleepy-session.service"'
+require_literal "$quickshell_module" 'systemd.user.services.sleepy-shell = {'
+reject_literal "$quickshell_module" 'Requires = ["sleepy-session.service"'
+reject_literal "$quickshell_module" 'systemd.user.services.quickshell'
 
 for durable_path in \
   '.config/sleepy/settings.json' \
@@ -49,9 +53,9 @@ for durable_path in \
   require_literal "$update_vm" "$durable_path"
 done
 
-for socket_name in session control notification osd daily theme; do
-  require_literal "$update_vm" "/run/user/\$uid/sleepy/$socket_name.sock"
-done
+require_literal "$update_vm" '["session", "control", "notification", "osd", "daily", "theme", "desktop", "desktop-control", "secret"]'
+require_literal "$update_vm" '/run/user/$uid/sleepy/{socket_name}.sock'
+require_literal "$update_vm" 'stat -c %a /run/user/$uid/sleepy/{socket_name}.sock) = 600'
 require_literal "$update_vm" 'systemctl --user is-active sleepy-session.service'
 require_literal "$update_vm" 'systemctl --user stop sleepy-session.service'
 require_literal "$update_vm" 'test ! -e /run/user/$uid/sleepy'

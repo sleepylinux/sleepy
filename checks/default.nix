@@ -21,7 +21,6 @@
       integratedHomeConfig
       pkgs
       ;
-    inherit source;
     standaloneHomeConfig = homeConfiguration.config;
   };
   appsContract = import ./apps-contract.nix {
@@ -29,10 +28,8 @@
     standaloneHomeConfig = homeConfiguration.config;
     nixosConfig = nixosConfiguration.config;
   };
-  niriConfig = pkgs.callPackage ./niri-config.nix {};
-  bindingsContract = pkgs.callPackage ./bindings-contract.nix {
-    inherit source;
-    sessionPackage = componentPackages.sleepy-session;
+  hyprlandConfig = pkgs.callPackage ./hyprland-config.nix {
+    homeConfig = integratedHomeConfig;
   };
   controlCenterContract = pkgs.callPackage ./control-center-contract.nix {
     inherit source;
@@ -40,12 +37,12 @@
     sessionSource = inputs.sleepy-session;
     shellPackage = componentPackages.sleepy-shell;
   };
-  niriVersionContract = pkgs.callPackage ./niri-version-contract.nix {inherit source;};
   publicModule = import ./public-module.nix {
     inherit nixosModule nixpkgs pkgs;
   };
   sessionContract = import ./session-contract.nix {
     inherit pkgs;
+    homeConfig = integratedHomeConfig;
     inherit (nixosConfiguration) config;
   };
   lockerLifecycle = import ./locker-lifecycle.nix {
@@ -82,7 +79,6 @@
       ${pkgs.bash}/bin/bash ${source}/checks/source-clean.sh ${source}
       ${pkgs.bash}/bin/bash ${source}/checks/source-clean-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/baseline-provenance-test.sh
-      ${pkgs.bash}/bin/bash ${source}/checks/bindings-policy-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/component-contract-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/component-lock-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/current-component-pins-test.sh
@@ -90,11 +86,11 @@
       ${pkgs.bash}/bin/bash ${source}/checks/flake-input-contract-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/license-contract-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/journal-fault-runner-source-test.sh
-      ${pkgs.bash}/bin/bash ${source}/checks/online-readiness-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/update-safety-contract-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/root-integration-contract-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/desktop-m3-root-contract-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/locker-lifecycle-test.sh
+      ${pkgs.bash}/bin/bash ${source}/checks/hyprland-session-contract-test.sh
       touch "$out"
     '';
   freshCloneSource = pkgs.runCommand "sleepy-fresh-clone-source-check" {} ''
@@ -136,13 +132,11 @@ in
   (fallbackShell.meta.license == pkgs.lib.licenses.gpl3Only)
   "the retained shell fallback must declare GPL-3.0-only"; {
     apps-contract = appsContract;
-    bindings-contract = bindingsContract;
     component-contract = componentIntegration;
     control-center-contract = controlCenterContract;
     nixos = nixosConfiguration.config.system.build.toplevel;
     home = homeConfiguration.activationPackage;
-    niri-config = niriConfig;
-    niri-version-contract = niriVersionContract;
+    hyprland-config = hyprlandConfig;
     public-module = publicModule;
     session-contract = sessionContract;
     update-safety = updateSafety;
