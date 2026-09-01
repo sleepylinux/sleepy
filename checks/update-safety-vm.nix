@@ -87,11 +87,18 @@ pkgs.testers.runNixOSTest {
     machine.succeed("printf '%s\\n' '{\"schemaVersion\":1,\"notifications\":[]}' | install -o lazy -g users -m 600 /dev/stdin /home/lazy/.local/state/sleepy/notifications/archive.json")
     machine.succeed("printf '%s\\n' '{\"schemaVersion\":1,\"dnd\":true,\"nextNotificationId\":20}' | install -o lazy -g users -m 600 /dev/stdin /home/lazy/.local/state/sleepy/notifications/preferences.json")
 
+    # A pre-existing regular override is user-owned: activation must preserve
+    # its contents while correcting an overly broad mode deterministically.
+    machine.succeed("install -d -o lazy -g users -m 700 /home/lazy/.config/hypr")
+    machine.succeed("printf '%s\\n' '# VM preserved Hyprland override' | install -o lazy -g users -m 644 /dev/stdin /home/lazy/.config/hypr/sleepy-user.conf")
+    wrong_mode_override = machine.succeed("sha256sum /home/lazy/.config/hypr/sleepy-user.conf")
+
     before = machine.succeed(state_manifest)
     machine.succeed("sudo -u lazy HOME=/home/lazy ${activationPackage}/activate")
     assert_state_unchanged("Niri to Hyprland activation", before)
     assert_candidate_files()
     assert_legacy_niri_preserved()
+    assert machine.succeed("sha256sum /home/lazy/.config/hypr/sleepy-user.conf") == wrong_mode_override
     override_before = machine.succeed("sha256sum /home/lazy/.config/hypr/sleepy-user.conf")
 
     machine.succeed("sudo -u lazy HOME=/home/lazy ${activationPackage}/activate")

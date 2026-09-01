@@ -32,30 +32,16 @@ in {
     };
 
     # UWSM imports the same Home Manager environment as interactive shells.
-    xdg.configFile."uwsm/env".source =
-      "${config.home.sessionVariablesPackage}/etc/profile.d/hm-session-vars.sh";
+    xdg.configFile."uwsm/env".source = "${config.home.sessionVariablesPackage}/etc/profile.d/hm-session-vars.sh";
 
     home.activation.sleepyHyprlandUserConfig = lib.hm.dag.entryAfter ["linkGeneration"] ''
       hyprland_dir=${lib.escapeShellArg "${config.xdg.configHome}/hypr"}
       user_config=${lib.escapeShellArg userConfig}
-
-      if test -L "$hyprland_dir" || { test -e "$hyprland_dir" && ! test -d "$hyprland_dir"; }; then
-        echo "Sleepy refuses a non-directory Hyprland configuration path" >&2
-        exit 1
-      fi
-      if ! test -d "$hyprland_dir"; then
-        ${pkgs.coreutils}/bin/install -d -m 0700 "$hyprland_dir"
-      fi
-
-      if test -L "$user_config"; then
-        echo "Sleepy refuses a symlink at the Hyprland user override path" >&2
-        exit 1
-      elif test -e "$user_config" && ! test -f "$user_config"; then
-        echo "Sleepy requires the Hyprland user override path to be a regular file" >&2
-        exit 1
-      elif ! test -e "$user_config"; then
-        ${pkgs.coreutils}/bin/install -m 0600 /dev/null "$user_config"
-      fi
+      ${pkgs.bash}/bin/bash ${./ensure-user-config.sh} \
+        "$hyprland_dir" \
+        "$user_config" \
+        ${pkgs.coreutils}/bin/install \
+        ${pkgs.coreutils}/bin/chmod
     '';
   };
 }

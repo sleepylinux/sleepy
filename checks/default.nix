@@ -91,6 +91,7 @@
       ${pkgs.bash}/bin/bash ${source}/checks/desktop-m3-root-contract-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/locker-lifecycle-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/hyprland-session-contract-test.sh
+      ${pkgs.bash}/bin/bash ${source}/checks/hyprland-user-config-test.sh
       touch "$out"
     '';
   freshCloneSource = pkgs.runCommand "sleepy-fresh-clone-source-check" {} ''

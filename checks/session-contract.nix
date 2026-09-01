@@ -38,7 +38,8 @@ in
   (portalPreference."org.freedesktop.impl.portal.FileChooser" == "gtk")
   "GTK must own the FileChooser portal";
   assert pkgs.lib.assertMsg
-  (portalPreference."org.freedesktop.impl.portal.ScreenCast" == "hyprland"
+  (portalPreference."org.freedesktop.impl.portal.ScreenCast"
+    == "hyprland"
     && portalPreference."org.freedesktop.impl.portal.Screenshot" == "hyprland")
   "Hyprland must own screencast and screenshot portals";
   assert pkgs.lib.assertMsg
@@ -79,8 +80,9 @@ in
   "locker and clipboard helper must stop with the UWSM graphical session";
   assert pkgs.lib.assertMsg
   (builtins.elem "graphical-session.target" polkitAgent.partOf
-    && builtins.elem "graphical-session.target" keyring.partOf)
-  "policy agent and keyring must stop with the UWSM graphical session";
+    && builtins.elem "graphical-session.target" keyring.partOf
+    && builtins.elem "graphical-session.target" keyring.after)
+  "policy agent and keyring must share the active UWSM graphical lifecycle";
   assert pkgs.lib.assertMsg config.services.openssh.enable
   "Sleepy VM must retain OpenSSH maintenance access";
   assert pkgs.lib.assertMsg config.services.openssh.openFirewall

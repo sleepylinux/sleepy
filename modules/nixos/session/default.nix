@@ -70,7 +70,7 @@
   systemd.user.services.gnome-keyring-daemon = {
     wantedBy = ["graphical-session.target"];
     partOf = ["graphical-session.target"];
-    after = ["graphical-session-pre.target"];
+    after = ["graphical-session.target"];
     requisite = ["graphical-session.target"];
   };
 }

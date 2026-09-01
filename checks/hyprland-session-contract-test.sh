@@ -56,6 +56,12 @@ require_literal "$nixos_session" 'default = ["hyprland" "gtk"];'
 require_literal "$nixos_session" '"org.freedesktop.impl.portal.FileChooser" = ["gtk"];'
 require_literal "$nixos_session" '"org.freedesktop.impl.portal.ScreenCast" = ["hyprland"];'
 require_literal "$nixos_session" '"org.freedesktop.impl.portal.Screenshot" = ["hyprland"];'
+require_literal "$nixos_session" 'systemd.user.services.gnome-keyring-daemon = {'
+keyring_block=$(sed -n \
+  '/systemd[.]user[.]services[.]gnome-keyring-daemon = {/,/^  };/p' \
+  "$repo_root/$nixos_session")
+grep -F 'after = ["graphical-session.target"];' <<<"$keyring_block" >/dev/null \
+  || fail 'gnome-keyring-daemon is not ordered after graphical-session.target'
 reject_literal "$nixos_session" 'autoLogin'
 reject_literal "$nixos_session" 'programs.niri'
 reject_literal "$nixos_session" 'xwayland-satellite'

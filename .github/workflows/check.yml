@@ -59,6 +59,7 @@ jobs:
           nix develop --command bash checks/desktop-m3-root-contract-test.sh
           nix develop --command bash checks/locker-lifecycle-test.sh
           nix develop --command bash checks/hyprland-session-contract-test.sh
+          nix develop --command bash checks/hyprland-user-config-test.sh
 
       - name: Validate locked component revisions
         run: bash checks/component-lock.sh components/desktop-m1.json components/desktop-m2-baseline.json flake.lock
