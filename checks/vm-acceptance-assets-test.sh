@@ -42,8 +42,10 @@ validate_production_contract() {
     'SHELL_RESTART_RECOVERY_GATE' \
     'post_shell = read_snapshot("/tmp/desktop-post-shell.json")' \
     'shell_control_group = machine.succeed(f"{user_env} systemctl --user show sleepy-shell.service -P ControlGroup").strip()' \
+    'server_pid == daemon_main_pid' \
+    'client_local_id == server_peer_id and client_peer_id == server_local_id' \
     "cgroup_line == '0::' + shell_control_group" \
-    'shell_peer_pid = wait_for_shell_stream(shell_pid, shell_control_group)' \
+    'shell_peer_pid = wait_for_shell_stream(shell_pid, shell_control_group, daemon_pid)' \
     'assert reconnected_shell_peer_pid == shell_peer_pid' \
     'assert shell_peer_pid != previous_shell_peer_pid' \
     'legacy_manifest = ' \
@@ -58,7 +60,7 @@ validate_production_contract() {
     "grep -F {shlex.quote('pid=' + shell_main_pid + ',')}"; do
     ! grep -F "$forbidden_literal" "$production_check" >/dev/null || return 1
   done
-  test "$(grep -Fc 'wait_for_shell_stream(shell_pid, shell_control_group)' "$production_check")" -ge 3 \
+  test "$(grep -Fc 'wait_for_shell_stream(shell_pid, shell_control_group, daemon_pid)' "$production_check")" -ge 3 \
     || return 1
 }
 
@@ -212,9 +214,15 @@ if validate_production_contract "$mutated_production"; then
   exit 1
 fi
 install -m 0600 -- "$repo_root/checks/hyprland-production-vm.nix" "$mutated_production"
-sed -i '/shell_peer_pid = wait_for_shell_stream(shell_pid, shell_control_group)/d' "$mutated_production"
+sed -i '/shell_peer_pid = wait_for_shell_stream(shell_pid, shell_control_group, daemon_pid)/d' "$mutated_production"
 if validate_production_contract "$mutated_production"; then
   printf 'VM acceptance assets: removed initial shell stream mutation passed\n' >&2
+  exit 1
+fi
+install -m 0600 -- "$repo_root/checks/hyprland-production-vm.nix" "$mutated_production"
+sed -i '/client_local_id == server_peer_id and client_peer_id == server_local_id/d' "$mutated_production"
+if validate_production_contract "$mutated_production"; then
+  printf 'VM acceptance assets: removed reciprocal socket identity mutation passed\n' >&2
   exit 1
 fi
 install -m 0600 -- "$repo_root/checks/hyprland-production-vm.nix" "$mutated_production"
