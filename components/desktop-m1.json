@@ -15,8 +15,8 @@
       "revision": "175314b9c236c1b412e8e1ebc54bbe3937b0c90d"
     },
     "sleepy-desktop": {
-      "url": "github:sleepylinux/sleepy-desktop/e3d9370c555e99a2fc6fba813f30a90872077c4c",
-      "revision": "e3d9370c555e99a2fc6fba813f30a90872077c4c"
+      "url": "github:sleepylinux/sleepy-desktop/fe872c2ea81345a367f50ac84f2022caef6dcecc",
+      "revision": "fe872c2ea81345a367f50ac84f2022caef6dcecc"
     }
   },
   "rootPackages": {
