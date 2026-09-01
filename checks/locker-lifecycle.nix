@@ -21,7 +21,7 @@ in
   (builtins.elem "sleepy-locker-failsafe.service" locker.Unit.OnFailure)
   "locker exhaustion must activate the fixed fail-safe unit";
   assert pkgs.lib.assertMsg
-  (locker.Service.ExecStart == "${homeConfig.sleepy.lockerPackage}/bin/sleepy-locker")
+  (pkgs.lib.toList locker.Service.ExecStart == ["${homeConfig.sleepy.lockerPackage}/bin/sleepy-locker"])
   "the locker unit must execute the pinned package binary";
   assert pkgs.lib.assertMsg
   (locker.Service.Restart == "no")
@@ -33,7 +33,7 @@ in
   (!(locker.Service ? ExecStop))
   "systemd must stop the supervised locker cgroup with its expected signal";
   assert pkgs.lib.assertMsg
-  (failsafe.Service.ExecStart == "${pkgs.uwsm}/bin/uwsm stop")
+  (pkgs.lib.toList failsafe.Service.ExecStart == ["${pkgs.uwsm}/bin/uwsm stop"])
   "the locker fail-safe must terminate the UWSM session with a fixed command";
   assert pkgs.lib.assertMsg
   (failsafe.Service.Type == "oneshot" && failsafe.Service.TimeoutStartSec == 15)

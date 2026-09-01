@@ -35,6 +35,10 @@ test -f "$repo_root/checks/locker-lifecycle.nix" \
 assert_contains checks/default.nix 'lockerLifecycle = import ./locker-lifecycle.nix'
 assert_contains checks/default.nix 'checks/locker-lifecycle-test.sh'
 assert_contains checks/default.nix 'locker-lifecycle = lockerLifecycle;'
+assert_contains checks/locker-lifecycle.nix \
+  'pkgs.lib.toList locker.Service.ExecStart == ["${homeConfig.sleepy.lockerPackage}/bin/sleepy-locker"]'
+assert_contains checks/locker-lifecycle.nix \
+  'pkgs.lib.toList failsafe.Service.ExecStart == ["${pkgs.uwsm}/bin/uwsm stop"]'
 
 assert_contains modules/nixos/session/default.nix './pam.nix'
 assert_contains "$pam_module" 'security.pam.services.sleepy-locker = {}'
