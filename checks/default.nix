@@ -31,6 +31,19 @@
   hyprlandConfig = pkgs.callPackage ./hyprland-config.nix {
     homeConfig = integratedHomeConfig;
   };
+  hyprlandProductionVm = pkgs.callPackage ./hyprland-production-vm.nix {
+    inherit
+      baselineActivationPackage
+      baselineSessionPackage
+      pkgs
+      ;
+    inherit (homeConfiguration) activationPackage;
+    homeConfig = integratedHomeConfig;
+    lockerPackage = componentPackages.sleepy-locker;
+    nixosConfig = nixosConfiguration.config;
+    sessionPackage = componentPackages.sleepy-session;
+    shellPackage = componentPackages.sleepy-shell;
+  };
   controlCenterContract = pkgs.callPackage ./control-center-contract.nix {
     inherit source;
     homeConfig = homeConfiguration.config;
@@ -73,6 +86,7 @@
         git
         gnused
         jq
+        python3
         ripgrep
       ];
     } ''
@@ -92,6 +106,7 @@
       ${pkgs.bash}/bin/bash ${source}/checks/locker-lifecycle-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/hyprland-session-contract-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/hyprland-user-config-test.sh
+      ${pkgs.bash}/bin/bash ${source}/checks/vm-acceptance-assets-test.sh
       touch "$out"
     '';
   freshCloneSource = pkgs.runCommand "sleepy-fresh-clone-source-check" {} ''
@@ -138,6 +153,7 @@ in
     nixos = nixosConfiguration.config.system.build.toplevel;
     home = homeConfiguration.activationPackage;
     hyprland-config = hyprlandConfig;
+    hyprland-production-vm = hyprlandProductionVm;
     public-module = publicModule;
     session-contract = sessionContract;
     update-safety = updateSafety;

@@ -60,6 +60,7 @@ jobs:
           nix develop --command bash checks/locker-lifecycle-test.sh
           nix develop --command bash checks/hyprland-session-contract-test.sh
           nix develop --command bash checks/hyprland-user-config-test.sh
+          nix develop --command bash checks/vm-acceptance-assets-test.sh
 
       - name: Validate locked component revisions
         run: bash checks/component-lock.sh components/desktop-m1.json components/desktop-m2-baseline.json flake.lock
@@ -103,6 +104,9 @@ jobs:
         run: |
           nix build .#checks.x86_64-linux.hyprland-config --no-link -L
           nix build .#checks.x86_64-linux.session-contract --no-link -L
+
+      - name: Run the isolated Hyprland production VM gate
+        run: nix build .#checks.x86_64-linux.hyprland-production-vm --no-link -L
 
       - name: Build Sleepy NixOS
         run: nix build .#nixosConfigurations.sleepy-vm.config.system.build.toplevel --no-link -L
