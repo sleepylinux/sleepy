@@ -29,5 +29,30 @@ for provider in providers:
 markers = re.findall(r"<!-- provider:([a-z0-9-]+) -->", document)
 if markers != ids:
     raise SystemExit("provider order must match the executable registry")
-print(f"PASS: runtime ownership document covers {len(ids)} direct providers exactly once")
+
+session_operations = [
+    "set-idle-inhibited",
+    "start-recording",
+    "pause-recording",
+    "stop-recording",
+    "delete-recording",
+    "set-game-mode",
+    "lock",
+    "suspend",
+    "logout",
+    "reboot",
+    "power-off",
+]
+for operation in session_operations:
+    marker = f"<!-- session-operation:{operation} -->"
+    if document.count(marker) != 1:
+        raise SystemExit(f"session operation {operation} must appear exactly once")
+session_markers = re.findall(r"<!-- session-operation:([a-z0-9-]+) -->", document)
+if session_markers != session_operations:
+    raise SystemExit("session operation order must match the typed protocol")
+
+print(
+    f"PASS: runtime ownership document covers {len(ids)} direct providers and "
+    f"{len(session_operations)} protected session operations exactly once"
+)
 PY

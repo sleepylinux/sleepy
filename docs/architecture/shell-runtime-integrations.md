@@ -36,3 +36,28 @@ Each feature has one state owner and one mutation path. “Direct” means a rev
 ## Protected Sleepy Session ownership
 
 `sleepy-sessiond` owns recording start/pause/stop and confined deletion, idle inhibition, game mode, lock, suspend-after-confirmed-lock, logout, reboot and power-off. Requests are typed, generation-guarded and acknowledged over a private runtime socket. `sleepy-locker` alone owns ext-session-lock and PAM; the desktop protocol intentionally has no unlock operation.
+
+| Typed operation | Authoritative execution and confirmation | Failure behavior |
+|---|---|---|
+<!-- session-operation:set-idle-inhibited -->
+| `setIdleInhibited` | `sleepy-sessiond` owns the inhibitor handle and publishes its readback state. | A failed handle transition preserves the last confirmed state. |
+<!-- session-operation:start-recording -->
+| `startRecording(outputId, audio)` | The daemon validates the output, starts the fixed capture-helper contract, and waits for its ready acknowledgement. | No ready acknowledgement means no recording state is claimed. |
+<!-- session-operation:pause-recording -->
+| `pauseRecording` | The daemon signals the owned helper and confirms the helper state. | Ignored or failed signals leave the prior recording state authoritative. |
+<!-- session-operation:stop-recording -->
+| `stopRecording` | The daemon terminates and reaps the owned helper before publishing the final recording. | Timeout or helper failure is reported without fabricating a completed file. |
+<!-- session-operation:delete-recording -->
+| `deleteRecording(recordingId)` | The daemon accepts only a schema-valid recording ID, resolves it by directory file descriptor, and removes only a regular same-UID recording file. | Symlinks, foreign owners, non-regular files, path traversal and unknown IDs are rejected. |
+<!-- session-operation:set-game-mode -->
+| `setGameMode(enabled)` | The daemon invokes the typed game-mode backend and verifies backend status. | Missing or unconfirmed backends expose an unavailable/failure state. |
+<!-- session-operation:lock -->
+| `lock` | The daemon connects to the private locker socket; `sleepy-locker` acquires ext-session-lock and replies only after the lock is secure. | Bad, late or missing acknowledgement fails closed; shell state cannot unlock. |
+<!-- session-operation:suspend -->
+| `suspend` | The daemon holds the logind delay inhibitor, obtains confirmed secure lock, requests suspend, and retains the locker hold across the transition. | Suspend is not requested unless secure-lock confirmation succeeds. |
+<!-- session-operation:logout -->
+| `logout` | The daemon requests the supervised UWSM/session exit and lets the greeter become authoritative. | Failure is returned; QML never kills an arbitrary process tree. |
+<!-- session-operation:reboot -->
+| `reboot` | The daemon sends the typed logind reboot transition after user confirmation in the shell. | Denial or D-Bus failure is reported and no successful state is synthesized. |
+<!-- session-operation:power-off -->
+| `powerOff` | The daemon sends the typed logind power-off transition after user confirmation in the shell. | Denial or D-Bus failure is reported and the current session remains authoritative. |
