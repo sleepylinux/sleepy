@@ -15,6 +15,8 @@ validate_production_contract() {
   for required_literal in \
     'sdkSource}/schemas/desktop-event-v3.schema.json' \
     'Draft202012Validator(schema, format_checker=FormatChecker()).validate(document)' \
+    "frame, separator, _ = data.partition(b'\\\\n')" \
+    'open(sys.argv[2], '\''wb'\'').write(frame + separator)' \
     "grep -F 'Loaded TOML file:' /var/log/regreet/log" \
     'enableOCR = true;' \
     'machine.wait_for_text("Welcome back!", timeout=timedelta(seconds=30))' \
@@ -135,6 +137,12 @@ test -w "$fixture/source" || {
 }
 
 mutated_production="$fixture/source/hyprland-production-vm.nix"
+install -m 0600 -- "$repo_root/checks/hyprland-production-vm.nix" "$mutated_production"
+sed -i "/frame, separator, _ = data.partition/c\\        frame, separator, _ = data, b'', b''" "$mutated_production"
+if validate_production_contract "$mutated_production"; then
+  printf 'VM acceptance assets: unframed desktop stream mutation passed\n' >&2
+  exit 1
+fi
 install -m 0600 -- "$repo_root/checks/hyprland-production-vm.nix" "$mutated_production"
 sed -i 's/machine.send_key("ret")/pass # neutralized ReGreet submit/' "$mutated_production"
 if validate_production_contract "$mutated_production"; then

@@ -229,14 +229,17 @@ in
         s.settimeout(15)
         s.connect(sys.argv[1])
         data = bytes()
-        while not data.endswith(b'\\n'):
+        while b'\\n' not in data:
             part = s.recv(65536)
             if not part:
                 raise SystemExit('desktop socket closed before full snapshot')
             data += part
             if len(data) > 4 * 1024 * 1024:
                 raise SystemExit('desktop snapshot exceeded acceptance bound')
-        open(sys.argv[2], 'wb').write(data)
+        frame, separator, _ = data.partition(b'\\n')
+        if not frame or not separator:
+            raise SystemExit('desktop socket did not yield a complete first frame')
+        open(sys.argv[2], 'wb').write(frame + separator)
         """
         validator = """import json, sys
         from jsonschema import Draft202012Validator, FormatChecker
