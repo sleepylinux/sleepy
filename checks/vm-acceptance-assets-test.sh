@@ -79,6 +79,10 @@ for rollback_guard in \
     exit 1
   }
 done
+grep -F 'work_parent=${TMPDIR:-/var/tmp}' "$repo_root/scripts/vm/verify-restore.sh" >/dev/null || {
+  printf 'VM acceptance assets: restore drill must default large copies to /var/tmp\n' >&2
+  exit 1
+}
 
 validate_rollback_contract() {
   python3 - "$1" <<'PY'
@@ -326,6 +330,10 @@ case "$command_name" in
       qemu_extension=
       if test "${FAKE_XML_TOKEN_METADATA:-0}" = 1; then
         metadata="<metadata><vendor:record xmlns:vendor='https://example.invalid/vendor' token='do-not-persist'/></metadata>"
+      elif test "${FAKE_XML_OPAQUE_METADATA:-0}" = 1; then
+        metadata="<metadata><vendor:record xmlns:vendor='https://example.invalid/vendor'/></metadata>"
+      elif test "${FAKE_XML_LIBOSINFO:-0}" = 1; then
+        metadata="<metadata><libosinfo:libosinfo xmlns:libosinfo='http://libosinfo.org/xmlns/libvirt/domain/1.0'><libosinfo:os id='http://nixos.org/nixos/unstable'/></libosinfo:libosinfo></metadata>"
       fi
       if test "${FAKE_XML_QEMU_ENV:-0}" = 1; then
         qemu_extension="<qemu:commandline><qemu:env name='API_TOKEN' value='do-not-persist'/></qemu:commandline>"
@@ -391,6 +399,23 @@ ROWS
     ;;
   start)
     test "$1" = Sleepy-restore-verification
+    if test "${FAKE_REQUIRE_STORAGE_ACL:-0}" = 1; then
+      mapfile -t storage_paths < <(python3 - "$FAKE_VM_STATE_DIR/defined.xml" <<'PY'
+import sys
+import xml.etree.ElementTree as ET
+
+root = ET.parse(sys.argv[1]).getroot()
+disk = root.find("./devices/disk/source")
+print(disk.get("file") if disk is not None else "")
+print(root.findtext("./os/nvram") or "")
+PY
+      )
+      disk_path=${storage_paths[0]:-}
+      nvram_path=${storage_paths[1]:-}
+      work_path=$(dirname -- "$disk_path")
+      grep -F $'setfacl\t-m\t'"u:${FAKE_QEMU_UID}:--x"$'\t'"$work_path"$'\t' "$FAKE_VM_LOG" >/dev/null
+      grep -F $'setfacl\t-m\t'"u:${FAKE_QEMU_UID}:rw-"$'\t'"$disk_path"$'\t'"$nvram_path"$'\t' "$FAKE_VM_LOG" >/dev/null
+    fi
     touch "$FAKE_VM_STATE_DIR/running"
     ;;
   qemu-agent-command)
@@ -460,6 +485,15 @@ esac
 EOF
 chmod +x "$fake_bin/virsh"
 
+cat >"$fake_bin/setfacl" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'setfacl\t' >>"$FAKE_VM_LOG"
+printf '%s\t' "$@" >>"$FAKE_VM_LOG"
+printf '\n' >>"$FAKE_VM_LOG"
+EOF
+chmod +x "$fake_bin/setfacl"
+
 cat >"$fake_bin/qemu-img" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -524,6 +558,14 @@ jq -e '
 cmp "$disk" "$bundle/disk.qcow2"
 cmp "$nvram" "$bundle/nvram.fd"
 
+libosinfo_bundle="$fixture/libosinfo-baseline"
+PATH="$fake_bin:$PATH" FAKE_XML_LIBOSINFO=1 "$repo_root/scripts/vm/capture-baseline.sh" \
+  --domain Sleepy \
+  --run-dir "$libosinfo_bundle" \
+  --expected-system /nix/store/accepted-nixos-system-sleepy
+test -f "$libosinfo_bundle/bundle.complete"
+(cd "$libosinfo_bundle" && sha256sum --check checksums.sha256)
+
 existing_hash=$(sha256sum "$bundle/manifest.json")
 assert_rejected existing-run-dir env PATH="$fake_bin:$PATH" \
   "$repo_root/scripts/vm/capture-baseline.sh" --domain Sleepy --run-dir "$bundle" \
@@ -547,6 +589,12 @@ assert_rejected credential-metadata env PATH="$fake_bin:$PATH" FAKE_XML_TOKEN_ME
   "$repo_root/scripts/vm/capture-baseline.sh" --domain Sleepy --run-dir "$metadata_bundle" \
   --expected-system /nix/store/accepted-nixos-system-sleepy
 test ! -e "$metadata_bundle"
+
+opaque_metadata_bundle="$fixture/opaque-metadata-baseline"
+assert_rejected opaque-metadata env PATH="$fake_bin:$PATH" FAKE_XML_OPAQUE_METADATA=1 \
+  "$repo_root/scripts/vm/capture-baseline.sh" --domain Sleepy --run-dir "$opaque_metadata_bundle" \
+  --expected-system /nix/store/accepted-nixos-system-sleepy
+test ! -e "$opaque_metadata_bundle"
 
 qemu_env_bundle="$fixture/qemu-env-baseline"
 assert_rejected credential-qemu-env env PATH="$fake_bin:$PATH" FAKE_XML_QEMU_ENV=1 \
@@ -576,7 +624,8 @@ assert_rejected ambiguous-domain env PATH="$fake_bin:$PATH" \
   "$repo_root/scripts/vm/capture-baseline.sh" --domain sleepy --run-dir "$fixture/wrong-domain" \
   --expected-system /nix/store/accepted-nixos-system-sleepy
 
-PATH="$fake_bin:$PATH" FAKE_QGA_DELAY_CALLS=2 "$repo_root/scripts/vm/verify-restore.sh" \
+PATH="$fake_bin:$PATH" FAKE_QGA_DELAY_CALLS=2 FAKE_REQUIRE_STORAGE_ACL=1 \
+  FAKE_QEMU_UID="$(stat -c %u "$nvram")" "$repo_root/scripts/vm/verify-restore.sh" \
   --bundle "$bundle" \
   --domain Sleepy \
   --verification-domain Sleepy-restore-verification

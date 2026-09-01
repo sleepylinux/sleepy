@@ -154,10 +154,38 @@ for element in root.iter():
             raise SystemExit(1)
 
 # Custom metadata and QEMU command/environment extensions are opaque to this
-# tool. Refuse them instead of guessing whether their contents are safe.
+# tool. Refuse them instead of guessing whether their contents are safe. The
+# sole exception is virt-manager's standard libosinfo OS identifier, whose
+# complete shape and URI value are validated here.
 metadata = root.find("metadata")
 if metadata is not None and (list(metadata) or (metadata.text or "").strip()):
-    raise SystemExit(1)
+    namespace = "http://libosinfo.org/xmlns/libvirt/domain/1.0"
+    children = list(metadata)
+    allowed = len(children) == 1 and not (metadata.text or "").strip()
+    if allowed:
+        libosinfo = children[0]
+        os_children = list(libosinfo)
+        allowed = (
+            libosinfo.tag == f"{{{namespace}}}libosinfo"
+            and not libosinfo.attrib
+            and not (libosinfo.text or "").strip()
+            and not (libosinfo.tail or "").strip()
+            and len(os_children) == 1
+        )
+    if allowed:
+        os_element = os_children[0]
+        os_id = os_element.get("id", "")
+        allowed = (
+            os_element.tag == f"{{{namespace}}}os"
+            and set(os_element.attrib) == {"id"}
+            and not list(os_element)
+            and not (os_element.text or "").strip()
+            and not (os_element.tail or "").strip()
+            and re.fullmatch(r"https?://[A-Za-z0-9._~:/?#\[\]@!$&'()*+,;=%-]{1,512}", os_id)
+            is not None
+        )
+    if not allowed:
+        raise SystemExit(1)
 for element in root.iter():
     namespace = element.tag[1:].split("}", 1)[0] if element.tag.startswith("{") else ""
     local_tag = element.tag.rsplit("}", 1)[-1]

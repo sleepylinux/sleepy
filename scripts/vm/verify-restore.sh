@@ -51,7 +51,7 @@ case "$bundle" in
     ;;
 esac
 
-for command_name in base64 cp grep jq mktemp python3 qemu-img realpath sed seq sha256sum sleep stat tr virsh; do
+for command_name in base64 cp grep jq mktemp python3 qemu-img realpath sed seq setfacl sha256sum sleep stat tr virsh; do
   command -v "$command_name" >/dev/null 2>&1 || {
     printf 'verify restore: required command not found: %s\n' "$command_name" >&2
     exit 127
@@ -124,7 +124,19 @@ test "$(virsh_system domstate "$domain" | tr -d '\r' | sed -e 's/^[[:space:]]*//
   exit 1
 }
 
-work_parent=$(dirname -- "$bundle")
+work_parent=${TMPDIR:-/var/tmp}
+case "$work_parent" in
+  /*) ;;
+  *)
+    printf 'verify restore: temporary-directory parent must be absolute\n' >&2
+    exit 1
+    ;;
+esac
+test -d "$work_parent" && test ! -L "$work_parent" || {
+  printf 'verify restore: temporary-directory parent must be an existing non-symlink directory\n' >&2
+  exit 1
+}
+work_parent=$(realpath -e -- "$work_parent")
 work_dir=$(mktemp -d "$work_parent/.sleepy-restore-verification.XXXXXX")
 chmod 0700 "$work_dir"
 defined=0
@@ -222,6 +234,22 @@ check_protected_guard
 cp --reflink=auto --sparse=always -- "$bundle/disk.qcow2" "$work_dir/disk.qcow2"
 cp --reflink=auto --sparse=always -- "$bundle/nvram.fd" "$work_dir/nvram.fd"
 chmod 0600 "$work_dir/disk.qcow2" "$work_dir/nvram.fd"
+qemu_uid=$(jq -er '
+  .nvram.originalUid |
+  select(type == "number" and floor == . and . >= 0 and . <= 4294967294) |
+  tostring
+' "$bundle/manifest.json")
+case "$qemu_uid" in
+  '' | *[!0-9]*)
+    printf 'verify restore: invalid captured QEMU/NVRAM uid\n' >&2
+    exit 1
+    ;;
+  *) ;;
+esac
+# The bundle stays private. Grant only the captured libvirt QEMU uid traversal
+# of this one throw-away directory and read/write access to its private copies.
+setfacl -m "u:$qemu_uid:--x" "$work_dir"
+setfacl -m "u:$qemu_uid:rw-" "$work_dir/disk.qcow2" "$work_dir/nvram.fd"
 python3 - "$bundle/domain.xml" "$work_dir/domain.xml" "$verification_domain" "$work_dir/disk.qcow2" "$work_dir/nvram.fd" <<'PY'
 import sys
 import xml.etree.ElementTree as ET

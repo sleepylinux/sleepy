@@ -51,6 +51,7 @@ assert_contains modules/nixos/base/default.nix 'power-profiles-daemon.enable = t
 assert_not_contains modules/nixos/base/default.nix 'niri-version'
 assert_contains modules/nixos/session/default.nix 'programs.hyprland = {'
 assert_contains modules/nixos/session/default.nix 'programs.uwsm.enable = true;'
+assert_contains hosts/sleepy-vm/default.nix 'services.qemuGuest.enable = true;'
 
 assert_contains checks/default.nix 'hyprland-config = hyprlandConfig;'
 assert_contains checks/default.nix 'sleepy-artwork-assets'

@@ -78,10 +78,11 @@ mode-0700 directory.
 Capture is deliberately fail-closed on inactive XML: credential-like tag or
 attribute names; credential keywords anywhere in text, tails, or attribute
 values (`pass`, `password`, `passwd`, `token`, `secret`, `credential`, API,
-access, or private keys); bearer material; private-key headers; all nonempty
-custom metadata; and libvirt QEMU command/environment extensions abort the
-capture. This can reject harmless descriptions, which is preferable to
-retaining possible credentials in a rollback bundle.
+access, or private keys); bearer material; private-key headers; nonempty custom
+metadata other than the exactly shaped standard libosinfo OS identifier; and
+libvirt QEMU command/environment extensions abort the capture. This can reject
+harmless descriptions, which is preferable to retaining possible credentials
+in a rollback bundle.
 
 ```bash
 run_parent=/var/lib/libvirt/sleepy-acceptance
@@ -112,6 +113,11 @@ for QEMU Guest Agent, verifies the recorded system path plus live ReGreet and
 Cage processes, monitors the protected domain's UUID/offline state throughout,
 powers down, identity-checks cleanup, records the temporary UUID, and undefines
 only that temporary domain.
+
+The rollback bundle itself remains mode `0700/0600`. The drill creates its
+throw-away copies beneath `${TMPDIR:-/var/tmp}` and grants only the captured
+libvirt QEMU uid directory traversal plus read/write ACLs on those two copies;
+cleanup removes the ACL-bearing directory together with the temporary domain.
 
 ```bash
 sudo scripts/vm/verify-restore.sh \
