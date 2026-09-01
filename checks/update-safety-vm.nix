@@ -48,10 +48,13 @@ pkgs.testers.runNixOSTest {
     def start_and_check_session():
         machine.succeed("loginctl enable-linger lazy")
         machine.succeed("uid=$(id -u lazy); systemctl start user@$uid.service")
-        machine.succeed("uid=$(id -u lazy); install -d -o lazy -g users -m 700 /run/user/$uid/systemd/user && printf '%s\\n' '[Unit]' 'Wants=graphical-session.target' 'After=graphical-session-pre.target' | install -o lazy -g users -m 600 /dev/stdin /run/user/$uid/systemd/user/sleepy-test-session.target")
         machine.succeed("uid=$(id -u lazy); sudo -u lazy XDG_RUNTIME_DIR=/run/user/$uid DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$uid/bus systemctl --user mask --runtime sleepy-locker.service")
+        machine.succeed("uid=$(id -u lazy); install -d -o lazy -g users -m 700 /run/user/$uid/systemd/user/graphical-session.target.d && printf '%s\\n' '[Unit]' 'RefuseManualStart=no' 'RefuseManualStop=no' 'StopWhenUnneeded=no' | install -o lazy -g users -m 600 /dev/stdin /run/user/$uid/systemd/user/graphical-session.target.d/update-safety.conf")
         machine.succeed("uid=$(id -u lazy); sudo -u lazy XDG_RUNTIME_DIR=/run/user/$uid DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$uid/bus systemctl --user daemon-reload")
-        machine.succeed("uid=$(id -u lazy); sudo -u lazy XDG_RUNTIME_DIR=/run/user/$uid DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$uid/bus systemctl --user start sleepy-test-session.target")
+        # This state-preservation test starts the daemon explicitly below. Mark
+        # a graphical session active without pulling the full production unit
+        # graph; ReGreet/UWSM autostart is exercised by hyprland-production-vm.
+        machine.succeed("uid=$(id -u lazy); sudo -u lazy XDG_RUNTIME_DIR=/run/user/$uid DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$uid/bus systemctl --user start --job-mode=ignore-dependencies graphical-session.target")
         machine.succeed("uid=$(id -u lazy); sudo -u lazy XDG_RUNTIME_DIR=/run/user/$uid DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$uid/bus systemctl --user is-active graphical-session.target")
         machine.succeed("uid=$(id -u lazy); sudo -u lazy XDG_RUNTIME_DIR=/run/user/$uid DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$uid/bus systemctl --user start sleepy-session.service")
         machine.succeed("uid=$(id -u lazy); sudo -u lazy XDG_RUNTIME_DIR=/run/user/$uid DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$uid/bus systemctl --user is-active sleepy-session.service")
@@ -62,7 +65,7 @@ pkgs.testers.runNixOSTest {
         machine.wait_until_succeeds("uid=$(id -u lazy); test ! -e /run/user/$uid/sleepy")
 
     def stop_user_session_manager():
-        machine.succeed("uid=$(id -u lazy); sudo -u lazy XDG_RUNTIME_DIR=/run/user/$uid DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$uid/bus systemctl --user stop sleepy-test-session.target graphical-session.target")
+        machine.succeed("uid=$(id -u lazy); sudo -u lazy XDG_RUNTIME_DIR=/run/user/$uid DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$uid/bus systemctl --user stop graphical-session.target")
         machine.succeed("uid=$(id -u lazy); systemctl stop user@$uid.service")
         machine.succeed("loginctl disable-linger lazy")
         machine.wait_until_succeeds("uid=$(id -u lazy); test ! -e /run/user/$uid")
