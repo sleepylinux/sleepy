@@ -20,7 +20,8 @@ actual=$2
 
 jq -e '
   .schemaVersion == 1 and
-  (.milestone == "desktop-m1" or .milestone == "desktop-m2" or .milestone == "desktop-m3") and
+  (.milestone == "desktop-m1" or .milestone == "desktop-m2" or .milestone == "desktop-m3" or
+    .milestone == "hyprland-sleepy-desktop") and
   (.inputs | keys == ["sleepy-artwork", "sleepy-desktop", "sleepy-sdk", "sleepy-session"]) and
   all(.inputs | to_entries[];
     (.value.revision | type == "string" and test("^[0-9a-f]{40}$")) and

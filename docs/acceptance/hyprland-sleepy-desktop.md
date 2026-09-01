@@ -2,9 +2,9 @@
 
 ## Current status
 
-**PENDING — template only.** No real `Sleepy` VM switch, rollback drill,
-interactive login, framebuffer inspection, downgrade, or production pin/lock
-verification is claimed by this file.
+**PARTIAL — immutable public graph verified; real VM acceptance remains
+PENDING.** No real `Sleepy` VM switch, rollback drill, interactive login,
+framebuffer inspection, or downgrade is claimed by this file.
 
 Follow `docs/runbooks/sleepy-vm-hyprland.md`. Replace every `PENDING` only from
 fresh evidence produced by the exact immutable public graph. Do not paste raw
@@ -15,20 +15,21 @@ or other user data.
 
 | Field | Evidence |
 | --- | --- |
-| Root commit | PENDING |
-| `flake.lock` SHA-256 | PENDING |
-| `sleepy-sdk` revision | PENDING |
-| `sleepy-session` revision | PENDING |
-| `sleepy-artwork` revision | PENDING |
-| `sleepy-desktop` revision | PENDING |
+| Root commit | this file's containing review commit; resolve with `git rev-parse HEAD` |
+| `flake.lock` SHA-256 | `30b3025411cf4348199985216b1c4f40b549048ab1ad092441635f821a1298a7` |
+| `sleepy-sdk` revision | `d935d3d83ef3c01627cd315230607c4b04554d42` |
+| `sleepy-session` revision | `dc30d54159c19ccd5f218ba3bb29e537136790d3` |
+| `sleepy-artwork` revision | `175314b9c236c1b412e8e1ebc54bbe3937b0c90d` |
+| `sleepy-desktop` revision | `f68a8f903655eb0a611b2008ab4fa1c5061dba68` |
 | NixOS toplevel | PENDING |
 | `nix flake check --no-write-lock-file -L` | PENDING |
 | production VM check derivation/result | PENDING |
 | clean checkout after evaluation/build | PENDING |
 
-Local candidate commits are not production pins. Record a revision here only
-after the public input and generated lock node resolve to the same reviewed
-commit.
+Each component was fetched by exact SHA from its public GitHub repository, and
+the generated root lock node resolves to that same reviewed revision with a
+nonempty `narHash`. SDK, session, and desktop are also advertised by the public
+feature branch; artwork remains publicly fetchable as an exact commit object.
 
 The derivation's automated ReGreet gate uses a credential-free test-only PAM
 stack. It may support the greeter/UWSM plumbing row, but it is not evidence for

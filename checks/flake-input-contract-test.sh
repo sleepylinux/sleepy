@@ -47,5 +47,12 @@ if bash "$contract" "$fixture/following-baseline.nix" "$manifest" "$baseline_man
   exit 1
 fi
 
+sed '/sleepy-m2-baseline = {/a\      inputs = {\n        nixpkgs.follows = "nixpkgs";\n      };' \
+  "$fixture/valid.nix" >"$fixture/grouped-following-baseline.nix"
+if bash "$contract" "$fixture/grouped-following-baseline.nix" "$manifest" "$baseline_manifest" >/dev/null 2>&1; then
+  printf 'flake input contract accepted a grouped baseline redirect\n' >&2
+  exit 1
+fi
+
 bash "$contract" "$repo_root/flake.nix" "$manifest" "$baseline_manifest"
 printf 'flake input contract self-test: ok\n'

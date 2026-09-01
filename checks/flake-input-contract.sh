@@ -28,6 +28,7 @@ if ! awk '
     finished_inputs = 0
     current_input = ""
     current_url = ""
+    nested_inputs = 0
   }
 
   {
@@ -67,6 +68,22 @@ if ! awk '
         current_url = ""
       }
 
+      next
+    }
+
+    if (nested_inputs) {
+      if (trimmed == "};") {
+        nested_inputs = 0
+      }
+      next
+    }
+
+    if (trimmed == "inputs = {") {
+      if (current_input == "sleepy-m2-baseline") {
+        print "flake input contract: historical root inputs must retain their exact locked graph" > "/dev/stderr"
+        exit 1
+      }
+      nested_inputs = 1
       next
     }
 

@@ -262,7 +262,7 @@ jq -n \
   }' >"$actual"
 
 if ! bash "$contract" "$manifest" "$actual"; then
-  printf 'component contract rejected Home Manager normalized ExecStart list\n' >&2
+  printf 'component contract rejected the active reviewed manifest and normalized Home Manager contract\n' >&2
   exit 1
 fi
 
@@ -270,6 +270,13 @@ m3_manifest="$fixture/desktop-m3.json"
 jq '.milestone = "desktop-m3"' "$manifest" >"$m3_manifest"
 if ! bash "$contract" "$m3_manifest" "$actual" >/dev/null; then
   printf 'component contract rejected the strict desktop-m3 milestone\n' >&2
+  exit 1
+fi
+
+invalid_manifest="$fixture/invalid-milestone.json"
+jq '.milestone = "unreviewed"' "$manifest" >"$invalid_manifest"
+if bash "$contract" "$invalid_manifest" "$actual" >/dev/null 2>&1; then
+  printf 'component contract accepted an unreviewed milestone\n' >&2
   exit 1
 fi
 
