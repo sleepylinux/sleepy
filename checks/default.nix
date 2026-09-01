@@ -105,9 +105,11 @@
       ${builtins.replaceStrings [
           "cd ${inputs.sleepy-desktop}\n"
           "bash tests/run.sh\n"
+          "export SLEEPY_TEST_DBUS_SESSION_CONFIG=${pkgs.dbus}/share/dbus-1/session.conf\n"
         ] [
           "cd \"$writable_source\"\n"
-          "SLEEPY_TEST_WAYLAND_COMPOSITOR= SLEEPY_TEST_SWAY= bash tests/run.sh\n"
+          "SLEEPY_TEST_DBUS_SESSION_CONFIG= SLEEPY_TEST_WAYLAND_COMPOSITOR= SLEEPY_TEST_SWAY= bash tests/run.sh\n"
+          "unset SLEEPY_TEST_DBUS_SESSION_CONFIG\n"
         ]
         oldAttrs.buildCommand}
     '';
