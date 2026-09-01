@@ -16,11 +16,11 @@ or other user data.
 | Field | Evidence |
 | --- | --- |
 | Root commit | this file's containing review commit; resolve with `git rev-parse HEAD` |
-| `flake.lock` SHA-256 | `c05b7fb17d05badf9b698ecca313b3d5104cc4e5b0e6ce8d09019561a98ba042` |
+| `flake.lock` SHA-256 | `6a4137cb8f53b8dd8c45919519ea30b198f94d9871d2e09b9f4773726e71eea4` |
 | `sleepy-sdk` revision | `d935d3d83ef3c01627cd315230607c4b04554d42` |
 | `sleepy-session` revision | `dc30d54159c19ccd5f218ba3bb29e537136790d3` |
 | `sleepy-artwork` revision | `175314b9c236c1b412e8e1ebc54bbe3937b0c90d` |
-| `sleepy-desktop` revision | `8cc8cd6ad9dbad8b8dc856740f981f7101b9a7b1` |
+| `sleepy-desktop` revision | `6fa00c3836ad6d590e97310d0eb539938349b432` |
 | NixOS toplevel | PASS: `/nix/store/ihjfp6c1bkbjc0d1j6hmnrks6hccqraw-nixos-system-sleepy-vm-26.11.20260822.2c423e0` |
 | `nix flake check --no-write-lock-file -L` | PASS in isolated Docker with KVM; log SHA-256 `3568a4cd1c76d4cafd5c3bedbb70a472585fec1a1843a63f33fbc9e274904647` |
 | production VM check derivation/result | PASS: `/nix/store/cs479cyh1di2b38gmsznrpx796l92gnc-vm-test-run-sleepy-hyprland-production`; focused log SHA-256 `989d46815ea8a0409af3c321eb33959dfadf469fe95f2979bf90b79ee545c7a0` |

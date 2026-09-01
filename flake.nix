@@ -27,7 +27,7 @@
     };
 
     sleepy-desktop = {
-      url = "github:sleepylinux/sleepy-desktop/8cc8cd6ad9dbad8b8dc856740f981f7101b9a7b1";
+      url = "github:sleepylinux/sleepy-desktop/6fa00c3836ad6d590e97310d0eb539938349b432";
       inputs = {
         nixpkgs.follows = "nixpkgs";
         sleepy-artwork.follows = "sleepy-artwork";
