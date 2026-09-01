@@ -16,11 +16,11 @@ or other user data.
 | Field | Evidence |
 | --- | --- |
 | Root commit | this file's containing review commit; resolve with `git rev-parse HEAD` |
-| `flake.lock` SHA-256 | `30b3025411cf4348199985216b1c4f40b549048ab1ad092441635f821a1298a7` |
+| `flake.lock` SHA-256 | `91de4dba89d3173702a632ba06090a4f4f97d32888a7f0d10c11e366f3c0a3ba` |
 | `sleepy-sdk` revision | `d935d3d83ef3c01627cd315230607c4b04554d42` |
 | `sleepy-session` revision | `dc30d54159c19ccd5f218ba3bb29e537136790d3` |
 | `sleepy-artwork` revision | `175314b9c236c1b412e8e1ebc54bbe3937b0c90d` |
-| `sleepy-desktop` revision | `f68a8f903655eb0a611b2008ab4fa1c5061dba68` |
+| `sleepy-desktop` revision | `13b36b3b74dd9cf3ea345c17fc172cd5e8151b87` |
 | NixOS toplevel | PENDING |
 | `nix flake check --no-write-lock-file -L` | PENDING |
 | production VM check derivation/result | PENDING |
@@ -68,7 +68,7 @@ stable evidence-set identifier and artifact hashes, not host paths.
 | first desktop frame is complete schema-v3 snapshot | PENDING | PENDING |
 | launcher and keyboard navigation | PENDING | PENDING |
 | workspaces/window actions/special workspace | PENDING | PENDING |
-| notifications, dashboard, sidebar, OSD | PENDING | PENDING |
+| notifications, dashboard/sidebar, OSD, plus overlay toast visibility and focus return | PENDING | PENDING |
 | theme, wallpaper, opaque and reduced-motion modes | PENDING | PENDING |
 | network and audio controls through Sleepy IPC | PENDING | PENDING |
 | absent battery/backlight/Bluetooth degrade independently | PENDING | PENDING |

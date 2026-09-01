@@ -73,6 +73,45 @@
     inherit (homeConfiguration) activationPackage;
     sessionPackage = componentPackages.sleepy-session;
   };
+  dbusDaemonForChecks = pkgs.writeShellScript "sleepy-test-dbus-daemon" ''
+    args=()
+    for arg in "$@"; do
+      if [[ "$arg" != --session ]]; then
+        args+=("$arg")
+      fi
+    done
+    exec ${pkgs.dbus.out}/bin/dbus-daemon \
+      --config-file=${pkgs.dbus.out}/share/dbus-1/session.conf \
+      "''${args[@]}"
+  '';
+  dbusSessionForChecks = pkgs.writeShellScriptBin "dbus-run-session" ''
+    exec ${pkgs.dbus.out}/bin/dbus-run-session \
+      --dbus-daemon=${dbusDaemonForChecks} \
+      "$@"
+  '';
+  sleepyDesktopQml = inputs.sleepy-desktop.checks.${pkgs.stdenv.hostPlatform.system}.qml.overrideAttrs (oldAttrs: {
+    nativeBuildInputs = (oldAttrs.nativeBuildInputs or []) ++ [pkgs.git];
+    buildCommand = ''
+      check_tmp="$(${pkgs.coreutils}/bin/mktemp -d /tmp/sleepy-desktop-check.XXXXXX)"
+      writable_source="$check_tmp/sleepy-desktop"
+      ${pkgs.coreutils}/bin/cp -R ${inputs.sleepy-desktop} "$writable_source"
+      ${pkgs.coreutils}/bin/chmod -R u+w "$writable_source"
+      ${pkgs.coreutils}/bin/ln -s ${inputs.sleepy-sdk} "$check_tmp/sleepy-sdk"
+      ${pkgs.gnused}/bin/sed -i \
+        '/^timeout --signal=TERM/i export QT_QPA_PLATFORM="''${SLEEPY_TEST_QPA_PLATFORM:-$QT_QPA_PLATFORM}"' \
+        "$writable_source/tests/run.sh"
+      export PATH=${dbusSessionForChecks}/bin:$PATH
+      export TMPDIR="$check_tmp"
+      ${builtins.replaceStrings [
+          "cd ${inputs.sleepy-desktop}\n"
+          "bash tests/run.sh\n"
+        ] [
+          "cd \"$writable_source\"\n"
+          "SLEEPY_TEST_WAYLAND_COMPOSITOR= SLEEPY_TEST_SWAY= bash tests/run.sh\n"
+        ]
+        oldAttrs.buildCommand}
+    '';
+  });
   fallbackBranding = pkgs.callPackage ../packages/sleepy-branding {};
   fallbackShell = pkgs.callPackage ../packages/sleepy-shell {
     sleepy-branding = fallbackBranding;
@@ -169,7 +208,7 @@ in
     fresh-clone-source = freshCloneSource;
     inherit quickshell;
     sleepy-artwork-assets = inputs.sleepy-artwork.checks.${pkgs.stdenv.hostPlatform.system}.assets;
-    sleepy-desktop-qml = inputs.sleepy-desktop.checks.${pkgs.stdenv.hostPlatform.system}.qml;
+    sleepy-desktop-qml = sleepyDesktopQml;
     sleepy-desktop-package = inputs.sleepy-desktop.checks.${pkgs.stdenv.hostPlatform.system}.package;
     sleepy-desktop-preview = inputs.sleepy-desktop.checks.${pkgs.stdenv.hostPlatform.system}.preview;
   }
