@@ -16,15 +16,17 @@ or other user data.
 | Field | Evidence |
 | --- | --- |
 | Root commit | this file's containing review commit; resolve with `git rev-parse HEAD` |
-| `flake.lock` SHA-256 | `6a4137cb8f53b8dd8c45919519ea30b198f94d9871d2e09b9f4773726e71eea4` |
-| `sleepy-sdk` revision | `d935d3d83ef3c01627cd315230607c4b04554d42` |
-| `sleepy-session` revision | `dc30d54159c19ccd5f218ba3bb29e537136790d3` |
+| `flake.lock` SHA-256 | `4af281c19ba2e453c7eea49028f6f0d80fe179db0cca10b548228bcbd537c316` |
+| `sleepy-sdk` revision | `63b2370a39f47f2b361310c12c0333da0faaee9d` |
+| `sleepy-session` revision | `4fee02d6fa221df33b7df03fb1bdadcbb3f8f714` |
 | `sleepy-artwork` revision | `175314b9c236c1b412e8e1ebc54bbe3937b0c90d` |
-| `sleepy-desktop` revision | `6fa00c3836ad6d590e97310d0eb539938349b432` |
-| NixOS toplevel | PASS: `/nix/store/ihjfp6c1bkbjc0d1j6hmnrks6hccqraw-nixos-system-sleepy-vm-26.11.20260822.2c423e0` |
-| `nix flake check --no-write-lock-file -L` | PASS in isolated Docker with KVM; log SHA-256 `3568a4cd1c76d4cafd5c3bedbb70a472585fec1a1843a63f33fbc9e274904647` |
-| production VM check derivation/result | PASS: `/nix/store/cs479cyh1di2b38gmsznrpx796l92gnc-vm-test-run-sleepy-hyprland-production`; focused log SHA-256 `989d46815ea8a0409af3c321eb33959dfadf469fe95f2979bf90b79ee545c7a0` |
-| clean checkout after evaluation/build | PASS at implementation commit `43419cf64a241de0bb2abfb524ccdd8fc6c85ed5`; `git diff --exit-code` and `git status --short` were clean |
+| `sleepy-desktop` revision | `076ce83860e47d7b5960e94bc88ee98e6d2dad9c` |
+| NixOS toplevel | PASS: `/nix/store/mkpbp3qvc0aa105ynmg7ajnd5q10dcfz-nixos-system-sleepy-vm-26.11.20260822.2c423e0` |
+| `nix flake check --print-build-logs` | PASS in isolated Docker with KVM; log SHA-256 `2e24200bda9dc7996fe0b2059ca8a3b73ea45f6fc65532aadd2ed5c68dd78274` |
+| production VM check result | PASS: `/nix/store/5il94dzrwd62bnkh9bf360q8qmj6j6hp-vm-test-run-sleepy-hyprland-production`; daemon restart and shell reconnect passed in the full log above |
+| desktop QML/full-shell/locker result | PASS: `/nix/store/8fmwqrim8ac7cvfqv8a5pxlc7kplg8ld-sleepy-desktop-qml-contracts` |
+| root source-contract result | PASS: `/nix/store/zw970f6ia38w40x8fyr2jzkjbbkrv177-sleepy-source-contracts` |
+| isolated source after evaluation/build | PASS: the check ran from a fresh `.git`-free source copy; root pin/source contracts and `git diff --check` passed before launch |
 
 Each component was fetched by exact SHA from its public GitHub repository, and
 the generated root lock node resolves to that same reviewed revision with a

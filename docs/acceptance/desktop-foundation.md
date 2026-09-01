@@ -6,16 +6,22 @@ The root integration pins this exact reviewed public component graph:
 
 | Component | Reviewed revision |
 |---|---|
-| `sleepy-sdk` | `d935d3d83ef3c01627cd315230607c4b04554d42` |
-| `sleepy-session` | `dc30d54159c19ccd5f218ba3bb29e537136790d3` |
+| `sleepy-sdk` | `63b2370a39f47f2b361310c12c0333da0faaee9d` |
+| `sleepy-session` | `4fee02d6fa221df33b7df03fb1bdadcbb3f8f714` |
 | `sleepy-artwork` | `175314b9c236c1b412e8e1ebc54bbe3937b0c90d` |
-| `sleepy-desktop` | `6fa00c3836ad6d590e97310d0eb539938349b432` |
+| `sleepy-desktop` | `076ce83860e47d7b5960e94bc88ee98e6d2dad9c` |
 
 The generated `flake.lock` SHA-256 is
-`6a4137cb8f53b8dd8c45919519ea30b198f94d9871d2e09b9f4773726e71eea4`. This section records
+`4af281c19ba2e453c7eea49028f6f0d80fe179db0cca10b548228bcbd537c316`. This section records
 only the immutable source graph and automated build gate. Real ReGreet/PAM,
 rollback, downgrade, framebuffer, and protected-VM results remain `PENDING` in
 `docs/acceptance/hyprland-sleepy-desktop.md` until fresh target evidence exists.
+
+The isolated `nixos/nix:2.35.2` gate with `/dev/kvm` completed all flake checks
+on 2026-09-01. Its SHA-256 is
+2e24200bda9dc7996fe0b2059ca8a3b73ea45f6fc65532aadd2ed5c68dd78274;
+the production Hyprland VM check exercised shell startup, a real
+`sleepy-sessiond` restart, shell reconnection, and a fresh schema-v3 snapshot.
 
 ## Desktop Milestone 3 integration candidate
 

@@ -262,7 +262,7 @@ jq -n \
         runtimeDirectoryMode: "0700",
         killSignal: "SIGINT",
         timeoutStopSec: 20,
-        environment: ["PATH=/nix/store/fake-session-runtime/bin", "SLEEPY_LOCKER_SOCKET=%t/sleepy/locker.sock"],
+        environment: ["PATH=/nix/store/fake-session-runtime/bin", "SLEEPY_LOCKER_SOCKET=%t/sleepy/locker.sock", "SLEEPY_NOTIFICATION_BUS_OWNER=shell"],
         execStart: [($session + "/bin/sleepy-sessiond")]
       }
     },

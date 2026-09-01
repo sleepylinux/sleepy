@@ -63,9 +63,10 @@ jq -e --slurpfile reviewed "$manifest" '
   .homeManager.service.runtimeDirectoryMode == "0700" and
   .homeManager.service.killSignal == "SIGINT" and
   .homeManager.service.timeoutStopSec == 20 and
-  (.homeManager.service.environment | length == 2) and
+  (.homeManager.service.environment | length == 3) and
   (.homeManager.service.environment[0] | startswith("PATH=/nix/store/")) and
   .homeManager.service.environment[1] == "SLEEPY_LOCKER_SOCKET=%t/sleepy/locker.sock" and
+  .homeManager.service.environment[2] == "SLEEPY_NOTIFICATION_BUS_OWNER=shell" and
   .homeManager.service.execStart ==
     [(.packages["sleepy-session"].path + "/bin/sleepy-sessiond")] and
   (.sources | keys == ["sleepy-sdk"]) and

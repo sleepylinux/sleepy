@@ -51,6 +51,7 @@ in {
           Environment = [
             "PATH=${sessionRuntimePath}"
             "SLEEPY_LOCKER_SOCKET=%t/sleepy/locker.sock"
+            "SLEEPY_NOTIFICATION_BUS_OWNER=shell"
           ];
           Restart = "on-failure";
           RestartSec = 2;

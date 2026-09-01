@@ -28,6 +28,7 @@ update_vm=checks/update-safety-vm.nix
 ci_workflow=.github/workflows/check.yml
 
 require_literal "$session_module" 'sleepy-sessiond'
+require_literal "$session_module" 'SLEEPY_NOTIFICATION_BUS_OWNER=shell'
 require_literal "$session_module" 'Type = "notify";'
 require_literal "$session_module" 'NotifyAccess = "main";'
 require_literal "$session_module" 'Restart = "on-failure";'
