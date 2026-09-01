@@ -4,6 +4,8 @@
   ...
 }: {
   config = lib.mkIf config.sleepy.enable {
+    home.packages = [config.sleepy.shellPackage];
+
     systemd.user.services.sleepy-shell = {
       Unit = {
         Description = "Sleepy desktop shell";

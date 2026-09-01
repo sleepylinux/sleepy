@@ -147,6 +147,9 @@
       ${pkgs.bash}/bin/bash ${source}/checks/locker-lifecycle-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/hyprland-session-contract-test.sh
       ${pkgs.bash}/bin/bash ${source}/checks/hyprland-user-config-test.sh
+      ${pkgs.bash}/bin/bash ${source}/checks/shell-runtime-integrations.sh \
+        ${inputs.sleepy-desktop}/tests/direct-integrations.json \
+        ${source}/docs/architecture/shell-runtime-integrations.md
       ${pkgs.bash}/bin/bash ${source}/checks/vm-acceptance-assets-test.sh
       touch "$out"
     '';

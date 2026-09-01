@@ -81,4 +81,8 @@ assert_rejected widget-json-adapter "$widget_probe" \
   'JsonAdapter { }'
 
 bash "$contract" "$repo_root"
+rg -Fq 'home.packages = [config.sleepy.shellPackage];' \
+  "$repo_root/modules/home/quickshell/default.nix"
+rg -Fq 'ExecStart = "${config.sleepy.shellPackage}/bin/sleepy-shell";' \
+  "$repo_root/modules/home/quickshell/default.nix"
 printf 'quickshell contract self-test: ok\n'

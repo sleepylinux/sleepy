@@ -49,11 +49,19 @@
 
   environment.systemPackages = with pkgs; [
     git
+    bluez
+    brightnessctl
+    ddcutil
     grim
     jq
+    libqalculate
     libnotify
+    lm_sensors
     networkmanagerapplet
+    power-profiles-daemon
     ripgrep
+    swappy
+    wireplumber
     wl-clipboard
     cliphist
   ];

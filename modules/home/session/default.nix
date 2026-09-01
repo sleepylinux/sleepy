@@ -11,12 +11,16 @@
     wireplumber
     pipewire
     brightnessctl
+    ddcutil
+    lm_sensors
+    libqalculate
     power-profiles-daemon
     upower
     playerctl
     gammastep
     cliphist
     wl-clipboard
+    swappy
     systemd
     curl
   ];

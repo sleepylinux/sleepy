@@ -29,6 +29,14 @@ preview="$fixture/packages/sleepy-settings-preview"
 sources="$fixture/sources"
 validators="$fixture/validators"
 
+for runtime_package in networkmanager bluez wireplumber brightnessctl ddcutil \
+  power-profiles-daemon lm_sensors libqalculate swappy wl-clipboard; do
+  rg -wq "$runtime_package" "$repo_root/modules/home/session/default.nix" \
+    || { printf 'component contract: missing shell runtime package %s\n' "$runtime_package" >&2; exit 1; }
+done
+rg -Fq 'home.packages = [config.sleepy.shellPackage];' \
+  "$repo_root/modules/home/quickshell/default.nix"
+
 mkdir -p \
   "$sdk/bin" \
   "$session/bin" \
