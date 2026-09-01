@@ -75,6 +75,14 @@ inactive XML and backing chain, creates a flattened offline qcow2 copy, copies
 NVRAM separately, verifies the copy, and writes only mode-0600 artifacts in a
 mode-0700 directory.
 
+Capture is deliberately fail-closed on inactive XML: credential-like tag or
+attribute names; credential keywords anywhere in text, tails, or attribute
+values (`pass`, `password`, `passwd`, `token`, `secret`, `credential`, API,
+access, or private keys); bearer material; private-key headers; all nonempty
+custom metadata; and libvirt QEMU command/environment extensions abort the
+capture. This can reject harmless descriptions, which is preferable to
+retaining possible credentials in a rollback bundle.
+
 ```bash
 run_parent=/var/lib/libvirt/sleepy-acceptance
 sudo install -d -m 0700 "$run_parent"
@@ -223,6 +231,8 @@ original_target=$(sudo jq -r .disk.originalTarget "$baseline_dir/manifest.json")
 original_nvram=$(sudo jq -r .nvram.originalSource "$baseline_dir/manifest.json")
 test -f "$original_disk" && test ! -L "$original_disk"
 test -f "$original_nvram" && test ! -L "$original_nvram"
+original_disk_identity=$(stat -Lc '%d:%i' -- "$original_disk")
+original_nvram_identity=$(stat -Lc '%d:%i' -- "$original_nvram")
 live_disk=$(virsh --connect qemu:///system domblklist --inactive --details Sleepy |
   awk -v target="$original_target" '$2 == "disk" && $3 == target { print $4 }')
 live_nvram=$(virsh --connect qemu:///system dumpxml Sleepy --inactive |
@@ -272,6 +282,8 @@ test -f "$original_disk" && test ! -L "$original_disk"
 test -f "$original_nvram" && test ! -L "$original_nvram"
 test -f "$disk_candidate" && test ! -L "$disk_candidate"
 test -f "$nvram_candidate" && test ! -L "$nvram_candidate"
+test "$(stat -Lc '%d:%i' -- "$original_disk")" = "$original_disk_identity"
+test "$(stat -Lc '%d:%i' -- "$original_nvram")" = "$original_nvram_identity"
 
 sudo mv -- "$original_disk" "$failed_disk"
 sudo mv -- "$original_nvram" "$failed_nvram"

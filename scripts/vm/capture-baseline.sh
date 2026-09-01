@@ -136,7 +136,7 @@ credential_name = re.compile(
     re.IGNORECASE,
 )
 credential_value = re.compile(
-    r"(?:bearer[ ]+[A-Za-z0-9._~+/-]+|(?:pass(?:word|wd)?|token|secret|credential|api[-_]?key|access[-_]?key|private[-_]?key)[ ]*[:=]|BEGIN [A-Z ]*PRIVATE KEY)",
+    r"(?:bearer[ ]+[A-Za-z0-9._~+/-]+|BEGIN [A-Z ]*PRIVATE KEY|(?<![A-Za-z0-9])(?:pass(?:word|wd)?|token|secret|credential|api[-_ ]?key|access[-_ ]?key|private[-_ ]?key)(?![A-Za-z0-9]))",
     re.IGNORECASE,
 )
 

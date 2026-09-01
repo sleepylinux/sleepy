@@ -87,6 +87,7 @@
         git
         gnused
         jq
+        pngcheck
         python3
         ripgrep
       ];

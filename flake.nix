@@ -106,6 +106,7 @@
           deadnix
           git
           jq
+          pngcheck
           qmlLint
           quickshell
           ripgrep

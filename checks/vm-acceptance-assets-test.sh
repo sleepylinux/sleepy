@@ -3,7 +3,7 @@ set -euo pipefail
 
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)
 
-for command_name in base64 cmp install jq mktemp python3 sha256sum stat; do
+for command_name in base64 cmp install jq mktemp pngcheck python3 sha256sum stat; do
   command -v "$command_name" >/dev/null || {
     printf 'VM acceptance assets: missing test dependency %s\n' "$command_name" >&2
     exit 127
@@ -50,13 +50,18 @@ for rollback_guard in \
   }
 done
 
-python3 - "$repo_root/docs/runbooks/sleepy-vm-hyprland.md" <<'PY'
+validate_rollback_contract() {
+  python3 - "$1" <<'PY'
 import sys
 
 text = open(sys.argv[1], encoding="utf-8").read()
 conversion = text.index("sudo qemu-img convert -p -O qcow2")
 first_move = text.index('sudo mv -- "$original_disk" "$failed_disk"')
-required = [
+initial_identity = [
+    'original_disk_identity=$(stat -Lc \'%d:%i\' -- "$original_disk")',
+    'original_nvram_identity=$(stat -Lc \'%d:%i\' -- "$original_nvram")',
+]
+final_guards = [
     'final_state=$(virsh --connect qemu:///system domstate Sleepy | xargs)',
     'final_uuid=$(virsh --connect qemu:///system domuuid Sleepy)',
     'final_disk=$(virsh --connect qemu:///system domblklist --inactive --details Sleepy |',
@@ -64,12 +69,20 @@ required = [
     'test "$final_state" = "shut off"',
     'test "$final_disk" = "$original_disk"',
     'test "$final_nvram" = "$original_nvram"',
+    'test "$(stat -Lc \'%d:%i\' -- "$original_disk")" = "$original_disk_identity"',
+    'test "$(stat -Lc \'%d:%i\' -- "$original_nvram")" = "$original_nvram_identity"',
 ]
-for literal in required:
+for literal in initial_identity:
+    if text.index(literal) > conversion:
+        raise SystemExit(f"rollback identity was not recorded before conversion: {literal}")
+for literal in final_guards:
     position = text.index(literal)
     if not conversion < position < first_move:
         raise SystemExit(f"final rollback guard is not immediately pre-move: {literal}")
 PY
+}
+
+validate_rollback_contract "$repo_root/docs/runbooks/sleepy-vm-hyprland.md"
 
 for required in \
   checks/hyprland-production-vm.nix \
@@ -105,6 +118,13 @@ install -m 0600 -- "$repo_root/checks/hyprland-production-vm.nix" "$mutated_prod
 sed -i '/post_daemon = read_snapshot("\/tmp\/desktop-post-daemon.json")/d; /post_shell = read_snapshot("\/tmp\/desktop-post-shell.json")/d' "$mutated_production"
 if validate_production_contract "$mutated_production"; then
   printf 'VM acceptance assets: removed restart snapshot mutation passed\n' >&2
+  exit 1
+fi
+mutated_runbook="$fixture/source/sleepy-vm-hyprland.md"
+install -m 0600 -- "$repo_root/docs/runbooks/sleepy-vm-hyprland.md" "$mutated_runbook"
+sed -i "/= \"\$original_disk_identity\"$/d" "$mutated_runbook"
+if validate_rollback_contract "$mutated_runbook" >/dev/null 2>&1; then
+  printf 'VM acceptance assets: removed rollback inode guard mutation passed\n' >&2
   exit 1
 fi
 disk="$fixture/source/sleepy.qcow2"
@@ -175,6 +195,9 @@ case "$command_name" in
       description=
       if test "${FAKE_XML_CREDENTIAL_TEXT:-0}" = 1; then
         description="<description>api_token=do-not-persist</description>"
+      fi
+      if test "${FAKE_XML_CREDENTIAL_PROSE:-0}" = 1; then
+        description="<description>Password hunter2</description>"
       fi
       cat <<XML
 <domain type='kvm' xmlns:qemu='http://libvirt.org/schemas/domain/qemu/1.0'>
@@ -399,6 +422,12 @@ assert_rejected credential-text env PATH="$fake_bin:$PATH" FAKE_XML_CREDENTIAL_T
   --expected-system /nix/store/accepted-nixos-system-sleepy
 test ! -e "$credential_text_bundle"
 
+credential_prose_bundle="$fixture/credential-prose-baseline"
+assert_rejected credential-prose env PATH="$fake_bin:$PATH" FAKE_XML_CREDENTIAL_PROSE=1 \
+  "$repo_root/scripts/vm/capture-baseline.sh" --domain Sleepy --run-dir "$credential_prose_bundle" \
+  --expected-system /nix/store/accepted-nixos-system-sleepy
+test ! -e "$credential_prose_bundle"
+
 backed_copy_bundle="$fixture/backed-copy-baseline"
 assert_rejected non-flattened-copy env PATH="$fake_bin:$PATH" FAKE_COPY_HAS_BACKING=1 \
   "$repo_root/scripts/vm/capture-baseline.sh" --domain Sleepy --run-dir "$backed_copy_bundle" \
@@ -558,6 +587,41 @@ assert_rejected signature-only-png env PATH="$fake_bin:$PATH" FAKE_DOMAIN_STATE=
   "$repo_root/scripts/vm/collect-evidence.sh" --domain Sleepy \
   --run-dir "$fixture/signature-only-evidence" --label desktop \
   --redacted-framebuffer "$signature_only" --redacted-runtime "$runtime" --confirm-redacted \
+  --reviewer local-owner --delete-after 2099-10-01
+
+invalid_indexed_depth="$fixture/indexed-16-bit.png"
+indexed_without_palette="$fixture/indexed-without-palette.png"
+python3 - "$invalid_indexed_depth" "$indexed_without_palette" <<'PY'
+import struct
+import sys
+import zlib
+
+signature = b"\x89PNG\r\n\x1a\n"
+
+def chunk(kind, payload):
+    return struct.pack(">I", len(payload)) + kind + payload + struct.pack(">I", zlib.crc32(kind + payload) & 0xFFFFFFFF)
+
+def write(path, bit_depth, include_palette, scanline):
+    ihdr = struct.pack(">IIBBBBB", 1, 1, bit_depth, 3, 0, 0, 0)
+    parts = [signature, chunk(b"IHDR", ihdr)]
+    if include_palette:
+        parts.append(chunk(b"PLTE", b"\0\0\0"))
+    parts.extend([chunk(b"IDAT", zlib.compress(scanline)), chunk(b"IEND", b"")])
+    open(path, "wb").write(b"".join(parts))
+
+write(sys.argv[1], 16, True, b"\0\0\0")
+write(sys.argv[2], 8, False, b"\0\0")
+PY
+chmod 0600 "$invalid_indexed_depth" "$indexed_without_palette"
+assert_rejected invalid-indexed-depth env PATH="$fake_bin:$PATH" FAKE_DOMAIN_STATE=running \
+  "$repo_root/scripts/vm/collect-evidence.sh" --domain Sleepy \
+  --run-dir "$fixture/invalid-indexed-depth-evidence" --label desktop \
+  --redacted-framebuffer "$invalid_indexed_depth" --redacted-runtime "$runtime" --confirm-redacted \
+  --reviewer local-owner --delete-after 2099-10-01
+assert_rejected indexed-without-palette env PATH="$fake_bin:$PATH" FAKE_DOMAIN_STATE=running \
+  "$repo_root/scripts/vm/collect-evidence.sh" --domain Sleepy \
+  --run-dir "$fixture/indexed-without-palette-evidence" --label desktop \
+  --redacted-framebuffer "$indexed_without_palette" --redacted-runtime "$runtime" --confirm-redacted \
   --reviewer local-owner --delete-after 2099-10-01
 
 assert_rejected unsafe-label env PATH="$fake_bin:$PATH" FAKE_DOMAIN_STATE=running \
