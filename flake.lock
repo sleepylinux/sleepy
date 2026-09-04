@@ -318,17 +318,17 @@
         ]
       },
       "locked": {
-        "lastModified": 1788295419,
-        "narHash": "sha256-5cUaGNMWlABAIQZR9+AaGuPusK6vM1ypc+h+Ufkb30E=",
+        "lastModified": 1788554723,
+        "narHash": "sha256-hpjFfH5BYFohlhyykfOf1xe97rzUg6niqoVOZoCTbnk=",
         "owner": "sleepylinux",
         "repo": "sleepy-desktop",
-        "rev": "4e0b621262391ff506ce28652b5ec2529e8d10ed",
+        "rev": "57f8e72ad7eaed62c5e8b6061ceefbb4dcc26697",
         "type": "github"
       },
       "original": {
         "owner": "sleepylinux",
         "repo": "sleepy-desktop",
-        "rev": "4e0b621262391ff506ce28652b5ec2529e8d10ed",
+        "rev": "57f8e72ad7eaed62c5e8b6061ceefbb4dcc26697",
         "type": "github"
       }
     },
@@ -568,17 +568,17 @@
         ]
       },
       "locked": {
-        "lastModified": 1788281856,
-        "narHash": "sha256-vmql7k9Oy9MtjvXR3PlkfASspbweScgtj5HGFJVEY3Q=",
+        "lastModified": 1788552947,
+        "narHash": "sha256-kzgUJdFdh/DLRR+cCbV/PCqMn/KOhF96L6+PjC2Qsl0=",
         "owner": "sleepylinux",
         "repo": "sleepy-sdk",
-        "rev": "63b2370a39f47f2b361310c12c0333da0faaee9d",
+        "rev": "1ee5b424887eb6f7acfe3b931b37a2c610ff6498",
         "type": "github"
       },
       "original": {
         "owner": "sleepylinux",
         "repo": "sleepy-sdk",
-        "rev": "63b2370a39f47f2b361310c12c0333da0faaee9d",
+        "rev": "1ee5b424887eb6f7acfe3b931b37a2c610ff6498",
         "type": "github"
       }
     },
@@ -659,17 +659,17 @@
         ]
       },
       "locked": {
-        "lastModified": 1788287827,
-        "narHash": "sha256-d7LqTc5mK8k1iGHmQVsxVigr1/fNGiWaDDBAWya3/uo=",
+        "lastModified": 1788553283,
+        "narHash": "sha256-vqhmLdOvJlSDY4SNkz9IRkTmGlbZUswODokD5LTp3oI=",
         "owner": "sleepylinux",
         "repo": "sleepy-session",
-        "rev": "4fee02d6fa221df33b7df03fb1bdadcbb3f8f714",
+        "rev": "125efe94e4ef9b22dea1369c4bbb11d4cad80237",
         "type": "github"
       },
       "original": {
         "owner": "sleepylinux",
         "repo": "sleepy-session",
-        "rev": "4fee02d6fa221df33b7df03fb1bdadcbb3f8f714",
+        "rev": "125efe94e4ef9b22dea1369c4bbb11d4cad80237",
         "type": "github"
       }
     }

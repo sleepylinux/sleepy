@@ -20,6 +20,7 @@
     gammastep
     cliphist
     wl-clipboard
+    gpu-screen-recorder
     swappy
     systemd
     curl

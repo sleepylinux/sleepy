@@ -39,6 +39,8 @@ session_operations = [
     "set-game-mode",
     "lock",
     "suspend",
+    "hibernate",
+    "suspend-then-hibernate",
     "logout",
     "reboot",
     "power-off",

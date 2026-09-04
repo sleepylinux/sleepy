@@ -4,6 +4,8 @@ Each feature has one state owner and one mutation path. “Direct” means a rev
 
 | Feature | State source | Mutation path | Executable/API | Why | Secret handling | Failure behavior |
 |---|---|---|---|---|---|---|
+<!-- provider:region-selection -->
+| `region-selection`; owner: sleepy-shell | interactive Wayland region selection | bounded geometry sent to typed Sleepy recording IPC | `slurp` with fixed argv | Selection is shell UI; recording remains daemon-owned. | no credentials accepted | successful selection exit and validated integer geometry; cancellation sends no recording request. |
 <!-- provider:hyprland -->
 | `hyprland`; owner: sleepy-shell | Quickshell.Hyprland socket model | Quickshell.Hyprland dispatch | `hyprctl`, `xmllint` | Native compositor authority. | no credentials accepted | native Hyprland events followed by targeted refresh; controls disable on disconnect. |
 <!-- provider:network -->
@@ -35,16 +37,16 @@ Each feature has one state owner and one mutation path. “Direct” means a rev
 
 ## Protected Sleepy Session ownership
 
-`sleepy-sessiond` owns recording start/pause/stop and confined deletion, idle inhibition, game mode, lock, suspend-after-confirmed-lock, logout, reboot and power-off. Requests are typed, generation-guarded and acknowledged over a private runtime socket. `sleepy-locker` alone owns ext-session-lock and PAM; the desktop protocol intentionally has no unlock operation.
+`sleepy-sessiond` owns recording start/pause/stop and confined deletion, idle inhibition, game mode, lock, guarded suspend/hibernate/suspend-then-hibernate, logout, reboot and power-off. Requests are typed, generation-guarded and acknowledged over a private runtime socket. `sleepy-locker` alone owns ext-session-lock and PAM; the desktop protocol intentionally has no unlock operation.
 
 | Typed operation | Authoritative execution and confirmation | Failure behavior |
 |---|---|---|
 <!-- session-operation:set-idle-inhibited -->
 | `setIdleInhibited` | `sleepy-sessiond` owns the inhibitor handle and publishes its readback state. | A failed handle transition preserves the last confirmed state. |
 <!-- session-operation:start-recording -->
-| `startRecording(outputId, audio)` | The daemon validates the output, starts the fixed capture-helper contract, and waits for its ready acknowledgement. | No ready acknowledgement means no recording state is claimed. |
+| `startRecording(outputId, target, audio, region?)` | Region selection uses fixed-argv `slurp` before IPC. SDK validates bounded integer geometry. The daemon validates the monitor and starts its own `sleepy-recording-helper`, which invokes `gpu-screen-recorder` with fixed arguments and acknowledges only after the live backend produces output. | Cancellation sends no request. Missing backend disables recording; failed startup removes its newly created file and claims no recording state. |
 <!-- session-operation:pause-recording -->
-| `pauseRecording` | The daemon signals the owned helper and confirms the helper state. | Ignored or failed signals leave the prior recording state authoritative. |
+| `pauseRecording` | The daemon sends SIGUSR1 to its helper, which forwards the recorder's SIGUSR2 toggle and acknowledges the requested state. This is signal acknowledgement, not independent video-frame readback. | Missing acknowledgement invalidates and stops the owned recording process. |
 <!-- session-operation:stop-recording -->
 | `stopRecording` | The daemon terminates and reaps the owned helper before publishing the final recording. | Timeout or helper failure is reported without fabricating a completed file. |
 <!-- session-operation:delete-recording -->
@@ -55,9 +57,22 @@ Each feature has one state owner and one mutation path. “Direct” means a rev
 | `lock` | The daemon connects to the private locker socket; `sleepy-locker` acquires ext-session-lock and replies only after the lock is secure. | Bad, late or missing acknowledgement fails closed; shell state cannot unlock. |
 <!-- session-operation:suspend -->
 | `suspend` | The daemon holds the logind delay inhibitor, obtains confirmed secure lock, requests suspend, and retains the locker hold across the transition. | Suspend is not requested unless secure-lock confirmation succeeds. |
+<!-- session-operation:hibernate -->
+| `hibernate` | The daemon holds the logind delay inhibitor, obtains confirmed secure lock, requests hibernation, and retains the locker hold across the transition. | Hibernation is not requested unless secure-lock confirmation succeeds. |
+<!-- session-operation:suspend-then-hibernate -->
+| `suspendThenHibernate` | The same guarded sleep lifecycle invokes logind `SuspendThenHibernate`. Both the default launcher Sleep action and idle timeout use this typed command. | Unsupported sleep configuration or policy denial is reported by logind; there is no shell-command fallback. |
 <!-- session-operation:logout -->
 | `logout` | The daemon requests the supervised UWSM/session exit and lets the greeter become authoritative. | Failure is returned; QML never kills an arbitrary process tree. |
 <!-- session-operation:reboot -->
 | `reboot` | The daemon sends the typed logind reboot transition after user confirmation in the shell. | Denial or D-Bus failure is reported and no successful state is synthesized. |
 <!-- session-operation:power-off -->
 | `powerOff` | The daemon sends the typed logind power-off transition after user confirmation in the shell. | Denial or D-Bus failure is reported and the current session remains authoritative. |
+
+Recordings and the shell history use `$XDG_STATE_HOME/sleepy/captures` (default
+`~/.local/state/sleepy/captures`). The daemon allocates `recording_*.mp4` names;
+the helper refuses existing files. The helper monitors daemon reparenting and
+owns one recorder child; it never signals unrelated recordings by process name.
+The package supplies `gpu-screen-recorder` and `slurp`; it does not invoke a
+Caelestia executable. Real GPU encoding and exact visual parity remain separate
+hardware/reference acceptance gates; subprocess fixtures verify lifecycle and
+argument routing, not captured video quality.

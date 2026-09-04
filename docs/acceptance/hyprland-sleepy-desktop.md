@@ -2,9 +2,13 @@
 
 ## Current status
 
-**PARTIAL — immutable public graph verified; real VM acceptance remains
-PENDING.** No real `Sleepy` VM switch, rollback drill, interactive login,
-framebuffer inspection, or downgrade is claimed by this file.
+**PARTIAL — post-review candidate; current automated and formal VM evidence
+must be recorded against the final pinned graph.**
+The operator confirmed the preceding visual deployment on 2026-09-02. That
+smoke test predates the protected-action and recording fixes and is not evidence
+for the current component heads. The disposable recovery VM was subsequently
+removed at the operator's request. No exact-pixel parity, rollback drill,
+redacted evidence bundle, or downgrade is claimed by this file.
 
 Follow `docs/runbooks/sleepy-vm-hyprland.md`. Replace every `PENDING` only from
 fresh evidence produced by the exact immutable public graph. Do not paste raw
@@ -16,17 +20,17 @@ or other user data.
 | Field | Evidence |
 | --- | --- |
 | Root commit | this file's containing review commit; resolve with `git rev-parse HEAD` |
-| `flake.lock` SHA-256 | `4af281c19ba2e453c7eea49028f6f0d80fe179db0cca10b548228bcbd537c316` |
-| `sleepy-sdk` revision | `63b2370a39f47f2b361310c12c0333da0faaee9d` |
-| `sleepy-session` revision | `4fee02d6fa221df33b7df03fb1bdadcbb3f8f714` |
+| `flake.lock` SHA-256 | `543dad46f74c043541a7bf9e1fa019e658effa6dbcf6698e4d94c3915adbef39` |
+| `sleepy-sdk` revision | `1ee5b424887eb6f7acfe3b931b37a2c610ff6498` |
+| `sleepy-session` revision | `125efe94e4ef9b22dea1369c4bbb11d4cad80237` |
 | `sleepy-artwork` revision | `175314b9c236c1b412e8e1ebc54bbe3937b0c90d` |
-| `sleepy-desktop` revision | `4e0b621262391ff506ce28652b5ec2529e8d10ed` |
-| NixOS toplevel | PASS: `/nix/store/mkpbp3qvc0aa105ynmg7ajnd5q10dcfz-nixos-system-sleepy-vm-26.11.20260822.2c423e0` |
-| `nix flake check --print-build-logs` | PASS in isolated Docker with KVM; log SHA-256 `2e24200bda9dc7996fe0b2059ca8a3b73ea45f6fc65532aadd2ed5c68dd78274` |
-| production VM check result | PASS: `/nix/store/5il94dzrwd62bnkh9bf360q8qmj6j6hp-vm-test-run-sleepy-hyprland-production`; daemon restart and shell reconnect passed in the full log above |
-| desktop QML/full-shell/locker result | PASS: `/nix/store/8fmwqrim8ac7cvfqv8a5pxlc7kplg8ld-sleepy-desktop-qml-contracts` |
-| root source-contract result | PASS: `/nix/store/zw970f6ia38w40x8fyr2jzkjbbkrv177-sleepy-source-contracts` |
-| isolated source after evaluation/build | PASS: the check ran from a fresh `.git`-free source copy; root pin/source contracts and `git diff --check` passed before launch |
+| `sleepy-desktop` revision | `57f8e72ad7eaed62c5e8b6061ceefbb4dcc26697` |
+| NixOS toplevel | PENDING: rebuild final pinned graph |
+| `nix flake check --print-build-logs` | PENDING: current graph; preceding log hashes do not apply |
+| production VM check result | PENDING: current graph |
+| desktop QML/full-shell/locker result | PENDING: current graph |
+| root source-contract result | PENDING: current graph |
+| isolated source after evaluation/build | PENDING: current graph |
 
 Each component was fetched by exact SHA from its public GitHub repository, and
 the generated root lock node resolves to that same reviewed revision with a
@@ -72,12 +76,13 @@ stable evidence-set identifier and artifact hashes, not host paths.
 | workspaces/window actions/special workspace | PENDING | PENDING |
 | notifications, dashboard/sidebar, OSD, plus overlay toast visibility and focus return | PENDING | PENDING |
 | theme, wallpaper, opaque and reduced-motion modes | PENDING | PENDING |
-| network and audio controls through Sleepy IPC | PENDING | PENDING |
+| network through fixed-argv `nmcli`; audio through native PipeWire | PENDING | PENDING |
 | absent battery/backlight/Bluetooth degrade independently | PENDING | PENDING |
 | daemon restart recovery | PENDING | PENDING |
 | shell restart recovery | PENDING | PENDING |
 | PAM failure/empty input and lock crash cases remain secure | PENDING | PENDING |
 | suspend waits for secure lock and resumes securely | PENDING | PENDING |
+| hibernate waits for secure lock and follows the guarded sleep lifecycle | PENDING | PENDING |
 | logout returns to ReGreet without orphan processes | PENDING | PENDING |
 | GTK file chooser portal | PENDING | PENDING |
 | Hyprland/PipeWire screencast portal | PENDING | PENDING |
@@ -113,8 +118,13 @@ explicitly authorizes retention.
 
 ## Final disposition
 
-- Acceptance decision: PENDING
-- Open failures/deviations: PENDING
+- Integration decision: operator approved merging the tested implementation on
+  2026-09-04, explicitly accepting that full 1:1 Caelestia parity is unconfirmed.
+  This is not completion of the manual acceptance matrix above.
+- Open failures/deviations: `sleepy-desktop/tests/full-parity-contract.sh`
+  currently exits 1: the parity manifest is still v1 and retains deviations;
+  a complete verified reference comparison is absent. This strict parity gate
+  is separate from the standard Nix checks. Real GPU recording remains unverified.
 - Rollback bundle retention decision: PENDING
 - Raw evidence deletion confirmed: PENDING
 - Reviewer approval: PENDING

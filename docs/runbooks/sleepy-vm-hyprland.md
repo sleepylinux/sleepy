@@ -164,8 +164,9 @@ Require all of the following before marking the runtime JSON successful:
 - the first frame read from `desktop.sock` is schema version 3 and
   `fullSnapshot`, with independently degraded absent VM hardware;
 - launcher, workspaces, notifications, dashboard/sidebar, theme/wallpaper,
-  network, audio, OSD, utilities, window actions, and session confirmation UI
-  behave through Sleepy IPC;
+  OSD and window actions behave through their documented native providers;
+  network uses fixed-argument `nmcli`, audio uses native PipeWire, and protected
+  session/recording operations use typed Sleepy IPC;
 - daemon and shell restart independently and recover automatically;
 - incorrect/empty lock authentication, shell crash, daemon crash, locker
   fail-safe, monitor coverage, suspend/resume, and logout return remain secure;
