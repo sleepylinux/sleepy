@@ -1,5 +1,23 @@
 # Deploying the Sleepy desktop
 
+## Hyprland Sleepy desktop candidate gate
+
+The Hyprland integration consumes only these exact reviewed, publicly
+fetchable component commits:
+
+```text
+sleepy-sdk      1ee5b424887eb6f7acfe3b931b37a2c610ff6498
+sleepy-session  6c31e392f96de4e03997580fdcb02eaaed590eb6
+sleepy-artwork  175314b9c236c1b412e8e1ebc54bbe3937b0c90d
+sleepy-desktop  22f1cbe617e59b1d27e155c38c9a8e0bf5e7a3ac
+```
+
+The generated candidate lock SHA-256 is
+`e45a0777f7aed401685d741ef37942c5b3922ad7b3371ee9cf2120374669d8d6`.
+Regenerate it only with Nix and validate both the current graph and immutable
+historical M2/M1 graphs. A derivation build is not real-VM acceptance; the
+protected `Sleepy` domain stays off until rollback capture and restore drill.
+
 ## Desktop Milestone 3 candidate gate
 
 The M3 integration consumes only the reviewed component trees merged into each

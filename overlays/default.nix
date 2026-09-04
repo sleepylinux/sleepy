@@ -8,7 +8,7 @@ in {
   inherit (sdkPackages) sleepy-contract;
   inherit (sessionPackages) sleepy-session sleepy-session-user-unit;
   inherit (artworkPackages) sleepy-artwork;
-  inherit (desktopPackages) sleepy-settings-preview sleepy-shell;
+  inherit (desktopPackages) sleepy-locker sleepy-settings-preview sleepy-shell;
   sleepy-journal-fault-runner = final.callPackage ../packages/sleepy-journal-fault-runner {
     inherit (sessionPackages) sleepy-session;
   };

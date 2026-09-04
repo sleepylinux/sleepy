@@ -29,6 +29,14 @@ preview="$fixture/packages/sleepy-settings-preview"
 sources="$fixture/sources"
 validators="$fixture/validators"
 
+for runtime_package in networkmanager bluez wireplumber brightnessctl ddcutil \
+  power-profiles-daemon lm_sensors libqalculate swappy wl-clipboard; do
+  rg -wq "$runtime_package" "$repo_root/modules/home/session/default.nix" \
+    || { printf 'component contract: missing shell runtime package %s\n' "$runtime_package" >&2; exit 1; }
+done
+rg -Fq 'home.packages = [config.sleepy.shellPackage];' \
+  "$repo_root/modules/home/quickshell/default.nix"
+
 mkdir -p \
   "$sdk/bin" \
   "$session/bin" \
@@ -206,7 +214,7 @@ chmod +x "$desktop/bin/sleepy-shell" "$preview/bin/sleepy-settings-preview"
 
 cat >"$unit/share/systemd/user/sleepy-session.service" <<EOF
 [Service]
-Type=simple
+Type=notify
 ExecStart=$session/bin/sleepy-sessiond
 EOF
 
@@ -220,8 +228,6 @@ jq -n \
   --arg desktop "$desktop" \
   --arg preview "$preview" \
   --arg sdkSource "$sources/sleepy-sdk" \
-  --arg rootSource "$repo_root" \
-  --arg niriValidator "$validators/niri" \
   '{
     schemaVersion: 1,
     system: "x86_64-linux",
@@ -237,32 +243,34 @@ jq -n \
     defaultPackage: $desktop,
     homeManager: {
       shellPackage: $desktop,
-      quickshellConfig: ($desktop + "/share/sleepy-desktop"),
+      shellUnit: "sleepy-shell.service",
+      shellExecStart: [($desktop + "/bin/sleepy-shell")],
       artworkPackage: $artwork,
       sessionPackage: $session,
       service: {
         unit: "sleepy-session.service",
         wantedBy: ["graphical-session.target"],
         partOf: ["graphical-session.target"],
-        after: ["graphical-session.target", "dbus.socket"],
+        wants: ["sleepy-locker.service"],
+        after: ["graphical-session.target", "dbus.socket", "sleepy-locker.service"],
         requisite: ["graphical-session.target"],
         requires: ["dbus.socket"],
-        type: "simple",
+        type: "notify",
+        notifyAccess: "main",
         restart: "on-failure",
         runtimeDirectory: "sleepy",
         runtimeDirectoryMode: "0700",
         killSignal: "SIGINT",
         timeoutStopSec: 20,
-        environment: ["PATH=/nix/store/fake-session-runtime/bin"],
+        environment: ["PATH=/nix/store/fake-session-runtime/bin", "SLEEPY_LOCKER_SOCKET=%t/sleepy/locker.sock", "SLEEPY_NOTIFICATION_BUS_OWNER=shell"],
         execStart: [($session + "/bin/sleepy-sessiond")]
       }
     },
-    sources: {"sleepy-sdk": $sdkSource, root: $rootSource},
-    validators: {niri: $niriValidator}
+    sources: {"sleepy-sdk": $sdkSource}
   }' >"$actual"
 
 if ! bash "$contract" "$manifest" "$actual"; then
-  printf 'component contract rejected Home Manager normalized ExecStart list\n' >&2
+  printf 'component contract rejected the active reviewed manifest and normalized Home Manager contract\n' >&2
   exit 1
 fi
 
@@ -270,6 +278,13 @@ m3_manifest="$fixture/desktop-m3.json"
 jq '.milestone = "desktop-m3"' "$manifest" >"$m3_manifest"
 if ! bash "$contract" "$m3_manifest" "$actual" >/dev/null; then
   printf 'component contract rejected the strict desktop-m3 milestone\n' >&2
+  exit 1
+fi
+
+invalid_manifest="$fixture/invalid-milestone.json"
+jq '.milestone = "unreviewed"' "$manifest" >"$invalid_manifest"
+if bash "$contract" "$invalid_manifest" "$actual" >/dev/null 2>&1; then
+  printf 'component contract accepted an unreviewed milestone\n' >&2
   exit 1
 fi
 
@@ -299,10 +314,12 @@ assert_rejected unbounded-session-path \
   '.homeManager.service.environment = ["PATH=/run/current-system/sw/bin"]'
 assert_rejected wrong-runtime-mode \
   '.homeManager.service.runtimeDirectoryMode = "0755"'
-assert_rejected legacy-in-tree-shell-layout \
-  '.homeManager.quickshellConfig = (.homeManager.shellPackage + "/share/quickshell/sleepy")'
-assert_rejected unpinned-validator '.validators.niri = "/bin/false"'
-assert_rejected missing-root-niri-tree '.sources.root = "/does-not-exist"'
+assert_rejected generic-quickshell-runner \
+  '.homeManager.shellExecStart = ["/nix/store/fake-quickshell/bin/quickshell"]'
+assert_rejected generic-quickshell-unit \
+  '.homeManager.shellUnit = "quickshell.service"'
+assert_rejected wrong-notify-access '.homeManager.service.notifyAccess = "all"'
+assert_rejected unexpected-root-source '.sources.root = "/does-not-exist"'
 
 cp "$session/bin/sleepyctl" "$fixture/sleepyctl.good"
 printf '#!%s\n' "$fixture_bash" >"$session/bin/sleepyctl"

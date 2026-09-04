@@ -2,7 +2,8 @@
   imports = [
     ./options.nix
     ./apps
-    ./niri
+    ./hyprland
+    ./locker
     ./quickshell
     ./session
   ];

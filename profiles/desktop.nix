@@ -19,6 +19,7 @@
         enable = true;
         inherit primaryUser;
         brandingPackage = pkgs.sleepy-artwork;
+        lockerPackage = pkgs.sleepy-locker;
         sessionPackage = pkgs.sleepy-session;
         shellPackage = pkgs.sleepy-shell;
       };

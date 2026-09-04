@@ -1,22 +1,22 @@
 {
   "schemaVersion": 1,
-  "milestone": "desktop-m3",
+  "milestone": "hyprland-sleepy-desktop",
   "inputs": {
     "sleepy-sdk": {
-      "url": "github:sleepylinux/sleepy-sdk/152173b470fa7d1e90c6d3d6be103a4a4d3529bc",
-      "revision": "152173b470fa7d1e90c6d3d6be103a4a4d3529bc"
+      "url": "github:sleepylinux/sleepy-sdk/1ee5b424887eb6f7acfe3b931b37a2c610ff6498",
+      "revision": "1ee5b424887eb6f7acfe3b931b37a2c610ff6498"
     },
     "sleepy-session": {
-      "url": "github:sleepylinux/sleepy-session/03eef8fa32595d7887ed36830212f9abc6c01a84",
-      "revision": "03eef8fa32595d7887ed36830212f9abc6c01a84"
+      "url": "github:sleepylinux/sleepy-session/6c31e392f96de4e03997580fdcb02eaaed590eb6",
+      "revision": "6c31e392f96de4e03997580fdcb02eaaed590eb6"
     },
     "sleepy-artwork": {
       "url": "github:sleepylinux/sleepy-artwork/175314b9c236c1b412e8e1ebc54bbe3937b0c90d",
       "revision": "175314b9c236c1b412e8e1ebc54bbe3937b0c90d"
     },
     "sleepy-desktop": {
-      "url": "github:sleepylinux/sleepy-desktop/08630cf77d7c9abb337f6f5f0df61cabb1fb030a",
-      "revision": "08630cf77d7c9abb337f6f5f0df61cabb1fb030a"
+      "url": "github:sleepylinux/sleepy-desktop/22f1cbe617e59b1d27e155c38c9a8e0bf5e7a3ac",
+      "revision": "22f1cbe617e59b1d27e155c38c9a8e0bf5e7a3ac"
     }
   },
   "rootPackages": {

@@ -9,13 +9,16 @@
     };
 
     sleepy-sdk = {
-      url = "github:sleepylinux/sleepy-sdk/152173b470fa7d1e90c6d3d6be103a4a4d3529bc";
+      url = "github:sleepylinux/sleepy-sdk/1ee5b424887eb6f7acfe3b931b37a2c610ff6498";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
     sleepy-session = {
-      url = "github:sleepylinux/sleepy-session/03eef8fa32595d7887ed36830212f9abc6c01a84";
-      inputs.nixpkgs.follows = "nixpkgs";
+      url = "github:sleepylinux/sleepy-session/6c31e392f96de4e03997580fdcb02eaaed590eb6";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        sleepy-sdk.follows = "sleepy-sdk";
+      };
     };
 
     sleepy-artwork = {
@@ -24,8 +27,13 @@
     };
 
     sleepy-desktop = {
-      url = "github:sleepylinux/sleepy-desktop/08630cf77d7c9abb337f6f5f0df61cabb1fb030a";
-      inputs.nixpkgs.follows = "nixpkgs";
+      url = "github:sleepylinux/sleepy-desktop/22f1cbe617e59b1d27e155c38c9a8e0bf5e7a3ac";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        sleepy-artwork.follows = "sleepy-artwork";
+        sleepy-sdk.follows = "sleepy-sdk";
+        sleepy-session.follows = "sleepy-session";
+      };
     };
 
     sleepy-m2-baseline = {
@@ -63,6 +71,7 @@
         sleepy-branding
         sleepy-contract
         sleepy-journal-fault-runner
+        sleepy-locker
         sleepy-session
         sleepy-session-user-unit
         sleepy-settings-preview
@@ -105,6 +114,7 @@
           deadnix
           git
           jq
+          pngcheck
           qmlLint
           quickshell
           ripgrep
@@ -139,6 +149,7 @@
             enable = true;
             primaryUser = "lazy";
             brandingPackage = self.packages.${baseline.system}.sleepy-artwork;
+            lockerPackage = self.packages.${baseline.system}.sleepy-locker;
             sessionPackage = self.packages.${baseline.system}.sleepy-session;
             shellPackage = self.packages.${baseline.system}.sleepy-shell;
           };

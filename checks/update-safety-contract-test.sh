@@ -45,6 +45,8 @@ assert_owned_path_rejected presets-owned \
   '.local/state/sleepy/presets.json'
 assert_owned_path_rejected generated-bindings-owned \
   '.config/niri/sleepy-user-bindings.kdl'
+assert_owned_path_rejected hyprland-user-override-owned \
+  '.config/hypr/sleepy-user.conf'
 assert_owned_path_rejected themes-owned \
   '.config/sleepy/themes/user-theme.json'
 assert_owned_path_rejected overrides-owned \

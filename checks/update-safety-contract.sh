@@ -29,7 +29,8 @@ for relative_path in \
   '.local/state/sleepy/presets.json' \
   '.local/state/sleepy/launcher.json' \
   '.local/state/sleepy/notifications' \
-  '.config/niri/sleepy-user-bindings.kdl'; do
+  '.config/niri/sleepy-user-bindings.kdl' \
+  '.config/hypr/sleepy-user.conf'; do
   managed_path="$home_files/$relative_path"
   if test -e "$managed_path" || test -L "$managed_path"; then
     printf 'Home Manager must not manage the user-owned XDG default path: %s\n' \

@@ -17,28 +17,28 @@ expected=$(mktemp /tmp/sleepy-current-component-pins.XXXXXX.json)
 deployment_candidate=$(mktemp /tmp/sleepy-deployment-candidate.XXXXXX.md)
 acceptance_candidate=$(mktemp /tmp/sleepy-acceptance-candidate.XXXXXX.md)
 trap 'rm -f -- "$expected" "$deployment_candidate" "$acceptance_candidate"' EXIT
-approved_lock_sha=30a383fc3ae7458dfc1beb2a392274a59730972679365bb71fed24ff848f29c4
+approved_lock_sha=e45a0777f7aed401685d741ef37942c5b3922ad7b3371ee9cf2120374669d8d6
 
 cat >"$expected" <<'EOF'
 {
   "schemaVersion": 1,
-  "milestone": "desktop-m3",
+  "milestone": "hyprland-sleepy-desktop",
   "inputs": {
     "sleepy-sdk": {
-      "url": "github:sleepylinux/sleepy-sdk/152173b470fa7d1e90c6d3d6be103a4a4d3529bc",
-      "revision": "152173b470fa7d1e90c6d3d6be103a4a4d3529bc"
+      "url": "github:sleepylinux/sleepy-sdk/1ee5b424887eb6f7acfe3b931b37a2c610ff6498",
+      "revision": "1ee5b424887eb6f7acfe3b931b37a2c610ff6498"
     },
     "sleepy-session": {
-      "url": "github:sleepylinux/sleepy-session/03eef8fa32595d7887ed36830212f9abc6c01a84",
-      "revision": "03eef8fa32595d7887ed36830212f9abc6c01a84"
+      "url": "github:sleepylinux/sleepy-session/6c31e392f96de4e03997580fdcb02eaaed590eb6",
+      "revision": "6c31e392f96de4e03997580fdcb02eaaed590eb6"
     },
     "sleepy-artwork": {
       "url": "github:sleepylinux/sleepy-artwork/175314b9c236c1b412e8e1ebc54bbe3937b0c90d",
       "revision": "175314b9c236c1b412e8e1ebc54bbe3937b0c90d"
     },
     "sleepy-desktop": {
-      "url": "github:sleepylinux/sleepy-desktop/08630cf77d7c9abb337f6f5f0df61cabb1fb030a",
-      "revision": "08630cf77d7c9abb337f6f5f0df61cabb1fb030a"
+      "url": "github:sleepylinux/sleepy-desktop/22f1cbe617e59b1d27e155c38c9a8e0bf5e7a3ac",
+      "revision": "22f1cbe617e59b1d27e155c38c9a8e0bf5e7a3ac"
     }
   }
 }
@@ -47,32 +47,32 @@ EOF
 failures=0
 
 if ! jq -e --slurpfile expected "$expected" \
-  '.milestone == "desktop-m3" and .inputs == $expected[0].inputs' \
+  '.milestone == "hyprland-sleepy-desktop" and .inputs == $expected[0].inputs' \
   "$manifest" >/dev/null; then
-  printf 'current component pins: current manifest does not match the approved M3 revisions\n' >&2
+  printf 'current component pins: current manifest does not match the reviewed Hyprland revisions\n' >&2
   failures=1
 fi
 
 if ! bash "$repo_root/checks/flake-input-contract.sh" \
   "$repo_root/flake.nix" "$expected" "$baseline" >/dev/null 2>&1; then
-  printf 'current component pins: flake input literals do not match the approved M3 revisions\n' >&2
+  printf 'current component pins: flake input literals do not match the reviewed Hyprland revisions\n' >&2
   failures=1
 fi
 
 if ! bash "$repo_root/checks/component-lock.sh" \
   "$expected" "$baseline" "$repo_root/flake.lock" >/dev/null 2>&1; then
-  printf 'current component pins: generated lock graph does not match the approved M3 revisions\n' >&2
+  printf 'current component pins: generated lock graph does not match the reviewed Hyprland revisions\n' >&2
   failures=1
 fi
 
-awk '/^## Desktop Milestone 3 candidate gate$/ { keep=1 } /^## Desktop Milestone 2 candidate gate$/ { keep=0 } keep' \
+awk '/^## Hyprland Sleepy desktop candidate gate$/ { keep=1 } /^## Desktop Milestone 3 candidate gate$/ { keep=0 } keep' \
   "$repo_root/docs/deployment.md" >"$deployment_candidate"
-awk '/^## Desktop Milestone 3 integration candidate$/ { keep=1 } /^## Desktop Milestone 2 integration candidate$/ { keep=0 } keep' \
+awk '/^## Hyprland Sleepy desktop integration candidate$/ { keep=1 } /^## Desktop Milestone 3 integration candidate$/ { keep=0 } keep' \
   "$repo_root/docs/acceptance/desktop-foundation.md" >"$acceptance_candidate"
 
 computed_lock_sha=$(sha256sum "$repo_root/flake.lock" | awk '{print $1}')
 if test "$computed_lock_sha" != "$approved_lock_sha"; then
-  printf 'current component pins: generated lock SHA-256 does not match the approved M2 lock\n' >&2
+  printf 'current component pins: generated lock SHA-256 does not match the reviewed Hyprland lock\n' >&2
   failures=1
 fi
 
@@ -84,7 +84,7 @@ validate_candidate_lock_sha() {
   if test "${#hashes[@]}" -ne 1 || \
     test "${hashes[0]:-}" != "$approved_lock_sha" || \
     test "${hashes[0]:-}" != "$computed_lock_sha"; then
-    printf 'current component pins: %s candidate must contain exactly the approved generated lock SHA-256\n' \
+    printf 'current component pins: %s candidate must contain exactly the reviewed generated lock SHA-256\n' \
       "$name" >&2
     failures=1
   fi
@@ -103,10 +103,10 @@ if test "${#deployment_rows[@]}" -ne 4; then
 fi
 
 for expected_line in \
-  'sleepy-sdk      152173b470fa7d1e90c6d3d6be103a4a4d3529bc' \
-  'sleepy-session  03eef8fa32595d7887ed36830212f9abc6c01a84' \
+  'sleepy-sdk      1ee5b424887eb6f7acfe3b931b37a2c610ff6498' \
+  'sleepy-session  6c31e392f96de4e03997580fdcb02eaaed590eb6' \
   'sleepy-artwork  175314b9c236c1b412e8e1ebc54bbe3937b0c90d' \
-  'sleepy-desktop  08630cf77d7c9abb337f6f5f0df61cabb1fb030a'; do
+  'sleepy-desktop  22f1cbe617e59b1d27e155c38c9a8e0bf5e7a3ac'; do
   if test "$(grep -Fxc -- "$expected_line" "$deployment_candidate")" -ne 1; then
     printf 'current component pins: deployment candidate must contain exactly one %s\n' \
       "$expected_line" >&2
@@ -131,10 +131,10 @@ while IFS=$'\t' read -r component revision; do
     failures=1
   fi
 done <<'EOF'
-sleepy-sdk	152173b470fa7d1e90c6d3d6be103a4a4d3529bc
-sleepy-session	03eef8fa32595d7887ed36830212f9abc6c01a84
+sleepy-sdk	1ee5b424887eb6f7acfe3b931b37a2c610ff6498
+sleepy-session	6c31e392f96de4e03997580fdcb02eaaed590eb6
 sleepy-artwork	175314b9c236c1b412e8e1ebc54bbe3937b0c90d
-sleepy-desktop	08630cf77d7c9abb337f6f5f0df61cabb1fb030a
+sleepy-desktop	22f1cbe617e59b1d27e155c38c9a8e0bf5e7a3ac
 EOF
 
 if test "$failures" -ne 0; then
@@ -145,14 +145,17 @@ if test "${SLEEPY_CURRENT_PINS_FIXTURE:-0}" != 1; then
   fixture=$(mktemp -d /tmp/sleepy-current-component-pins-fixture.XXXXXX)
   trap 'rm -rf -- "$fixture"; rm -f -- "$expected" "$deployment_candidate" "$acceptance_candidate"' EXIT
   mkdir -p "$fixture/checks" "$fixture/components" "$fixture/docs/acceptance"
-  cp "$repo_root/flake.nix" "$repo_root/flake.lock" "$fixture/"
-  cp "$repo_root/components/desktop-m1.json" \
-    "$repo_root/components/desktop-m2-baseline.json" "$fixture/components/"
+  install -m 0600 "$repo_root/flake.nix" "$fixture/flake.nix"
+  install -m 0600 "$repo_root/flake.lock" "$fixture/flake.lock"
+  install -m 0600 "$repo_root/components/desktop-m1.json" \
+    "$fixture/components/desktop-m1.json"
+  install -m 0600 "$repo_root/components/desktop-m2-baseline.json" \
+    "$fixture/components/desktop-m2-baseline.json"
   cp "$repo_root/checks/flake-input-contract.sh" \
     "$repo_root/checks/component-lock.sh" "$fixture/checks/"
-  cp "$repo_root/docs/deployment.md" "$fixture/docs/"
-  cp "$repo_root/docs/acceptance/desktop-foundation.md" "$fixture/docs/acceptance/"
-  chmod u+w "$fixture/docs/deployment.md" \
+  install -m 0600 "$repo_root/docs/deployment.md" \
+    "$fixture/docs/deployment.md"
+  install -m 0600 "$repo_root/docs/acceptance/desktop-foundation.md" \
     "$fixture/docs/acceptance/desktop-foundation.md"
 
   negative_failures=0
@@ -166,25 +169,44 @@ if test "${SLEEPY_CURRENT_PINS_FIXTURE:-0}" != 1; then
     fi
   }
 
-  sed -i '0,/30a383fc3ae7458dfc1beb2a392274a59730972679365bb71fed24ff848f29c4/s//0000000000000000000000000000000000000000000000000000000000000000/' \
+  sed -i '0,/e45a0777f7aed401685d741ef37942c5b3922ad7b3371ee9cf2120374669d8d6/s//0000000000000000000000000000000000000000000000000000000000000000/' \
     "$fixture/docs/deployment.md"
   assert_rejected deployment-lock-sha
-  cp "$repo_root/docs/deployment.md" "$fixture/docs/deployment.md"
+  install -m 0600 "$repo_root/docs/deployment.md" "$fixture/docs/deployment.md"
 
-  sed -i '0,/30a383fc3ae7458dfc1beb2a392274a59730972679365bb71fed24ff848f29c4/s//0000000000000000000000000000000000000000000000000000000000000000/' \
+  sed -i '0,/e45a0777f7aed401685d741ef37942c5b3922ad7b3371ee9cf2120374669d8d6/s//0000000000000000000000000000000000000000000000000000000000000000/' \
     "$fixture/docs/acceptance/desktop-foundation.md"
   assert_rejected acceptance-lock-sha
-  cp "$repo_root/docs/acceptance/desktop-foundation.md" \
+  install -m 0600 "$repo_root/docs/acceptance/desktop-foundation.md" \
     "$fixture/docs/acceptance/desktop-foundation.md"
 
-  sed -i '/^sleepy-session  03eef8fa32595d7887ed36830212f9abc6c01a84$/a sleepy-session  6f1857bd786323ad89ac91c250a8485f944eb39c' \
+  sed -i '/^sleepy-session  6c31e392f96de4e03997580fdcb02eaaed590eb6$/a sleepy-session  6f1857bd786323ad89ac91c250a8485f944eb39c' \
     "$fixture/docs/deployment.md"
   assert_rejected deployment-stale-duplicate
-  cp "$repo_root/docs/deployment.md" "$fixture/docs/deployment.md"
+  install -m 0600 "$repo_root/docs/deployment.md" "$fixture/docs/deployment.md"
 
-  sed -i '/^| `sleepy-session` | `03eef8fa32595d7887ed36830212f9abc6c01a84` |$/a | `sleepy-session` | `6f1857bd786323ad89ac91c250a8485f944eb39c` |' \
+  sed -i '/^| `sleepy-session` | `6c31e392f96de4e03997580fdcb02eaaed590eb6` |$/a | `sleepy-session` | `6f1857bd786323ad89ac91c250a8485f944eb39c` |' \
     "$fixture/docs/acceptance/desktop-foundation.md"
   assert_rejected acceptance-stale-duplicate
+  install -m 0600 "$repo_root/docs/acceptance/desktop-foundation.md" \
+    "$fixture/docs/acceptance/desktop-foundation.md"
+
+  sed -i '0,/1ee5b424887eb6f7acfe3b931b37a2c610ff6498/s//0000000000000000000000000000000000000000/' \
+    "$fixture/flake.nix"
+  assert_rejected flake-sdk-pin
+  install -m 0600 "$repo_root/flake.nix" "$fixture/flake.nix"
+
+  sed -i '0,/6c31e392f96de4e03997580fdcb02eaaed590eb6/s//0000000000000000000000000000000000000000/' \
+    "$fixture/components/desktop-m1.json"
+  assert_rejected manifest-session-pin
+  install -m 0600 "$repo_root/components/desktop-m1.json" \
+    "$fixture/components/desktop-m1.json"
+
+  jq '(.nodes[.nodes[.root].inputs["sleepy-desktop"]].locked.rev) =
+    "0000000000000000000000000000000000000000"' \
+    "$fixture/flake.lock" >"$fixture/flake.lock.mutated"
+  mv "$fixture/flake.lock.mutated" "$fixture/flake.lock"
+  assert_rejected lock-desktop-pin
 
   if test "$negative_failures" -ne 0; then
     exit 1

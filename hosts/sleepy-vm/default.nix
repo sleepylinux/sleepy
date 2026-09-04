@@ -10,6 +10,9 @@ in
       ./boot.nix
       ./ghostty.nix
       ./ssh.nix
-      {system.stateVersion = baseline.systemStateVersion;}
+      {
+        services.qemuGuest.enable = true;
+        system.stateVersion = baseline.systemStateVersion;
+      }
     ];
   }
