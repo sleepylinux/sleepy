@@ -4,9 +4,9 @@
 
 **Full visual/manual acceptance remains PARTIAL.**
 The current merge candidate includes CI-only host-test interpreter and
-shutdown-test generation-race fixes and
+shutdown-test generation-race fixes plus a publication-cancellation fix, and
 is gated by the required checks on [root PR #7](https://github.com/sleepylinux/sleepy/pull/7)
-and [session PR #7](https://github.com/sleepylinux/sleepy-session/pull/7).
+and [session PR #8](https://github.com/sleepylinux/sleepy-session/pull/8).
 [Desktop PR #6](https://github.com/sleepylinux/sleepy-desktop/pull/6) passed both
 required checks and was merged on 2026-09-04.
 On 2026-09-04 the local baseline below passed the root Nix check, including the
@@ -26,8 +26,8 @@ or other user data.
 ## Current merge candidate
 
 The current desktop pin is `22f1cbe617e59b1d27e155c38c9a8e0bf5e7a3ac` and the
-root lock SHA-256 is `9b5fb1acb019a19a8651ca05862a12cd6897282a970951005c066fce95af1cdc`.
-The session pin is `9298446b5b8f6fdcce09737488cba3ae487822ac`;
+root lock SHA-256 is `e45a0777f7aed401685d741ef37942c5b3922ad7b3371ee9cf2120374669d8d6`.
+The session pin is `6c31e392f96de4e03997580fdcb02eaaed590eb6`;
 SDK and artwork retain the baseline revisions below. The desktop delta
 changes only the host-test launcher and adds a regression fixture: direct
 shebang execution failed in the GitHub Nix sandbox without `/usr/bin/env`.
@@ -38,12 +38,27 @@ Wayland lifecycle/host contracts passed locally.
 Root CI run `33921226327` exposed a pre-SIGINT test setup race: background
 events advanced the generation after the event replay, so theme application
 correctly rejected the stale request. A temporary 250 ms replay-to-request delay
-reproduced `stale theme generation: expected 2, current 7`. The session delta
+reproduced `stale theme generation: expected 2, current 7`. The first session fix
 changes only that process test: it forces a stale first request, retries only
 that specific rejection using a fresh validated snapshot under a bounded setup
 deadline, and keeps every lifecycle and socket-cleanup assertion. All Rust
 targets, all five process tests, and 60 consecutive runs of the revised shutdown
 test passed locally; an independent read-only review found no issues.
+
+Both attempts of root CI run `33923255828` subsequently failed the publication
+shutdown test. The initial resource-contention hypothesis was superseded by a
+reproduced runtime defect: a commit guard began before waiting for the external
+generation file lock, so synchronous cancellation waited for that guard and
+could starve the Tokio timeout itself. An added elapsed-time assertion failed
+before the fix with a `1.97251956s` executor stall. The new allocator path keeps
+lock waiting cancellable and returns the guard from the irreversible-rename
+boundary, retaining it through final publication. No timeout was increased.
+After the fix, the regression scenario completes in approximately `0.14s`,
+20 consecutive regression runs pass, and the existing controlled-publication
+atomicity tests pass. All release targets pass locally; their log SHA-256 is
+`09c80b58e25a68371967bfa49e6c6dbbad5d765b81e82b1ea186b09da10d3a10`.
+Independent read-only review found no issues. This does not establish a hard
+shutdown bound for stalled storage: synchronous filesystem calls remain.
 
 Required GitHub checks on the
 exact PR heads determine merge eligibility; the baseline store paths below
