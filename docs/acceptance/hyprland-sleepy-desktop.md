@@ -2,8 +2,10 @@
 
 ## Current status
 
-**PARTIAL — post-review candidate; current automated and formal VM evidence
-must be recorded against the final pinned graph.**
+**Standard automated checks PASS; full visual/manual acceptance remains PARTIAL.**
+On 2026-09-04 the final pinned graph passed the root Nix check, including the
+Hyprland production VM and update-safety VM. These isolated VM tests do not
+replace the real-hardware and exact-reference acceptance gates below.
 The operator confirmed the preceding visual deployment on 2026-09-02. That
 smoke test predates the protected-action and recording fixes and is not evidence
 for the current component heads. The disposable recovery VM was subsequently
@@ -19,18 +21,24 @@ or other user data.
 
 | Field | Evidence |
 | --- | --- |
-| Root commit | this file's containing review commit; resolve with `git rev-parse HEAD` |
+| Tested integration commit | `7540141debd587d81e45971633419d9c5173e368`; subsequent acceptance-record edits are documentation only |
 | `flake.lock` SHA-256 | `543dad46f74c043541a7bf9e1fa019e658effa6dbcf6698e4d94c3915adbef39` |
 | `sleepy-sdk` revision | `1ee5b424887eb6f7acfe3b931b37a2c610ff6498` |
 | `sleepy-session` revision | `125efe94e4ef9b22dea1369c4bbb11d4cad80237` |
 | `sleepy-artwork` revision | `175314b9c236c1b412e8e1ebc54bbe3937b0c90d` |
 | `sleepy-desktop` revision | `57f8e72ad7eaed62c5e8b6061ceefbb4dcc26697` |
-| NixOS toplevel | PENDING: rebuild final pinned graph |
-| `nix flake check --print-build-logs` | PENDING: current graph; preceding log hashes do not apply |
-| production VM check result | PENDING: current graph |
-| desktop QML/full-shell/locker result | PENDING: current graph |
-| root source-contract result | PENDING: current graph |
-| isolated source after evaluation/build | PENDING: current graph |
+| NixOS toplevel | `/nix/store/zqwjyskd0pffi61qqr4amblz5nbk38gj-nixos-system-sleepy-vm-26.11.20260822.2c423e0` |
+| `nix flake check --print-build-logs` | PASS, x86_64-linux; log SHA-256 `1374ee62d2e69aaa906820d6e23af5b03d3350d89319fa3d104c8def8bd06624` |
+| production VM check result | PASS: `/nix/store/xdj3alpzimbk3cpdhzznf9691pqyrbrs-vm-test-run-sleepy-hyprland-production` |
+| update-safety VM result | PASS: `/nix/store/97cs0g66nmlyy48s6xqhwh18k2p03frh-vm-test-run-sleepy-niri-to-hyprland-update-safety` |
+| desktop QML/full-shell/locker result | PASS: `/nix/store/5bingc8qdmkxxllmy8g2sn1vcz01j0kh-sleepy-desktop-qml-contracts`; primary QML suite 476 passed, 0 failed, 1 skipped |
+| root source-contract result | PASS: `/nix/store/rxvfg44p8v6piz6psk3wxhk9fpw3wi96-sleepy-source-contracts` |
+| isolated source after evaluation/build | PASS: `/nix/store/8bjzqq4nin6c2g2b8x0rn8jjfvpd92br-sleepy-fresh-clone-source-check` |
+
+The standalone desktop flake also passed all its standard x86_64-linux checks;
+its log SHA-256 is `fade2fe17eb2328de7f67fcc3419a04995264d1cb1701cef83f7252dc3f627c9`.
+Store paths identify the verified outputs; the temporary local build cache may
+be removed at the operator's request and is not a retained rollback bundle.
 
 Each component was fetched by exact SHA from its public GitHub repository, and
 the generated root lock node resolves to that same reviewed revision with a
