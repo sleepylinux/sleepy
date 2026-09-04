@@ -3,9 +3,12 @@
 ## Current status
 
 **Full visual/manual acceptance remains PARTIAL.**
-The current merge candidate includes a CI-only host-test interpreter fix and
+The current merge candidate includes CI-only host-test interpreter and
+shutdown-test generation-race fixes and
 is gated by the required checks on [root PR #7](https://github.com/sleepylinux/sleepy/pull/7)
-and [desktop PR #6](https://github.com/sleepylinux/sleepy-desktop/pull/6).
+and [session PR #7](https://github.com/sleepylinux/sleepy-session/pull/7).
+[Desktop PR #6](https://github.com/sleepylinux/sleepy-desktop/pull/6) passed both
+required checks and was merged on 2026-09-04.
 On 2026-09-04 the local baseline below passed the root Nix check, including the
 Hyprland production VM and update-safety VM. These isolated VM tests do not
 replace the real-hardware and exact-reference acceptance gates below.
@@ -23,13 +26,26 @@ or other user data.
 ## Current merge candidate
 
 The current desktop pin is `22f1cbe617e59b1d27e155c38c9a8e0bf5e7a3ac` and the
-root lock SHA-256 is `950378594b8680a6a4e96dc81ea1682e16600b3064e4d3dc0a6a867848b84e41`.
-SDK, session and artwork retain the baseline revisions below. The desktop delta
+root lock SHA-256 is `9b5fb1acb019a19a8651ca05862a12cd6897282a970951005c066fce95af1cdc`.
+The session pin is `9298446b5b8f6fdcce09737488cba3ae487822ac`;
+SDK and artwork retain the baseline revisions below. The desktop delta
 changes only the host-test launcher and adds a regression fixture: direct
 shebang execution failed in the GitHub Nix sandbox without `/usr/bin/env`.
 Both host modes now invoke an explicit `bash` inside the private Wayland wrapper.
 The failing-then-passing missing-interpreter fixture and the existing private
-Wayland lifecycle/host contracts passed locally. Required GitHub checks on the
+Wayland lifecycle/host contracts passed locally.
+
+Root CI run `33921226327` exposed a pre-SIGINT test setup race: background
+events advanced the generation after the event replay, so theme application
+correctly rejected the stale request. A temporary 250 ms replay-to-request delay
+reproduced `stale theme generation: expected 2, current 7`. The session delta
+changes only that process test: it forces a stale first request, retries only
+that specific rejection using a fresh validated snapshot under a bounded setup
+deadline, and keeps every lifecycle and socket-cleanup assertion. All Rust
+targets, all five process tests, and 60 consecutive runs of the revised shutdown
+test passed locally; an independent read-only review found no issues.
+
+Required GitHub checks on the
 exact PR heads determine merge eligibility; the baseline store paths below
 must not be attributed to this updated source graph.
 
