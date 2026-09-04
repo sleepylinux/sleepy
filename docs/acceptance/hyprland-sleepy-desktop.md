@@ -2,8 +2,11 @@
 
 ## Current status
 
-**Standard automated checks PASS; full visual/manual acceptance remains PARTIAL.**
-On 2026-09-04 the final pinned graph passed the root Nix check, including the
+**Full visual/manual acceptance remains PARTIAL.**
+The current merge candidate includes a CI-only host-test interpreter fix and
+is gated by the required checks on [root PR #7](https://github.com/sleepylinux/sleepy/pull/7)
+and [desktop PR #6](https://github.com/sleepylinux/sleepy-desktop/pull/6).
+On 2026-09-04 the local baseline below passed the root Nix check, including the
 Hyprland production VM and update-safety VM. These isolated VM tests do not
 replace the real-hardware and exact-reference acceptance gates below.
 The operator confirmed the preceding visual deployment on 2026-09-02. That
@@ -17,7 +20,20 @@ fresh evidence produced by the exact immutable public graph. Do not paste raw
 journals, credentials, SSIDs, notification text, document paths, device names,
 or other user data.
 
-## Immutable candidate
+## Current merge candidate
+
+The current desktop pin is `22f1cbe617e59b1d27e155c38c9a8e0bf5e7a3ac` and the
+root lock SHA-256 is `950378594b8680a6a4e96dc81ea1682e16600b3064e4d3dc0a6a867848b84e41`.
+SDK, session and artwork retain the baseline revisions below. The desktop delta
+changes only the host-test launcher and adds a regression fixture: direct
+shebang execution failed in the GitHub Nix sandbox without `/usr/bin/env`.
+Both host modes now invoke an explicit `bash` inside the private Wayland wrapper.
+The failing-then-passing missing-interpreter fixture and the existing private
+Wayland lifecycle/host contracts passed locally. Required GitHub checks on the
+exact PR heads determine merge eligibility; the baseline store paths below
+must not be attributed to this updated source graph.
+
+## Local verification baseline before the CI-only fix
 
 | Field | Evidence |
 | --- | --- |

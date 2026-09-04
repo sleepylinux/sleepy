@@ -9,18 +9,19 @@ The root integration pins this exact reviewed public component graph:
 | `sleepy-sdk` | `1ee5b424887eb6f7acfe3b931b37a2c610ff6498` |
 | `sleepy-session` | `125efe94e4ef9b22dea1369c4bbb11d4cad80237` |
 | `sleepy-artwork` | `175314b9c236c1b412e8e1ebc54bbe3937b0c90d` |
-| `sleepy-desktop` | `57f8e72ad7eaed62c5e8b6061ceefbb4dcc26697` |
+| `sleepy-desktop` | `22f1cbe617e59b1d27e155c38c9a8e0bf5e7a3ac` |
 
 The generated `flake.lock` SHA-256 is
-`543dad46f74c043541a7bf9e1fa019e658effa6dbcf6698e4d94c3915adbef39`. This section records
+`950378594b8680a6a4e96dc81ea1682e16600b3064e4d3dc0a6a867848b84e41`. This section records
 only the immutable source graph and automated build gate. Real ReGreet/PAM,
 rollback, downgrade, framebuffer, and protected-VM results remain `PENDING` in
 `docs/acceptance/hyprland-sleepy-desktop.md` until fresh target evidence exists.
 
-An earlier candidate completed an isolated KVM gate on 2026-09-01, before the
-current protected-action and recording fixes. Its results do not verify the
-component graph above. Fresh automated results for the final graph remain
-pending in `docs/acceptance/hyprland-sleepy-desktop.md`.
+The 2026-09-04 local baseline and the subsequent CI-only interpreter correction
+are recorded separately in `docs/acceptance/hyprland-sleepy-desktop.md`.
+The required checks on [root PR #7](https://github.com/sleepylinux/sleepy/pull/7)
+record automated results for this exact current graph; earlier local artifacts
+are not evidence for the changed source pin.
 
 ## Desktop Milestone 3 integration candidate
 
