@@ -1,5 +1,87 @@
 # Recovering the Sleepy desktop
 
+These instructions target the current Hyprland/UWSM desktop. The historical
+Niri instructions below apply only after booting that older deployment.
+Generation numbers and store paths in historical records are not universal:
+inspect the actual machine before selecting a recovery generation.
+
+## Boot or activate a previous system generation
+
+If the desktop cannot start, select an older generation from the bootloader,
+or log in on a TTY (`Ctrl+Alt+F2` through `Ctrl+Alt+F6`) and inspect:
+
+```bash
+readlink -f /run/current-system
+readlink -f /nix/var/nix/profiles/system
+sudo nix-env --profile /nix/var/nix/profiles/system --list-generations
+```
+
+To activate the previous system generation:
+
+```bash
+sudo nixos-rebuild switch --rollback
+```
+
+Keep previous generations while investigating. A system-generation rollback
+restores system software and configuration; it does not restore arbitrary
+user files or undo application data migrations. Booting an older generation
+may be necessary when the kernel or graphics stack is affected.
+
+## Inspect the current Hyprland session
+
+Run user-service commands as the affected user, without sudo:
+
+```bash
+systemctl --user --no-pager --full status \
+  graphical-session.target wayland-wm@hyprland.desktop.service \
+  sleepy-session.service sleepy-shell.service sleepy-locker.service
+journalctl --user -b \
+  -u wayland-wm@hyprland.desktop.service \
+  -u sleepy-session.service -u sleepy-shell.service -u sleepy-locker.service
+systemctl --user show sleepy-shell.service \
+  -p ActiveState -p SubState -p Result -p NRestarts -p MainPID
+```
+
+The compositor belongs to UWSM. The desktop is `sleepy-shell.service`, not
+`quickshell.service`; the daemon is `sleepy-session.service`. Avoid starting
+additional unmanaged copies. A graphical target that is inactive after logout
+is expected, not a reason to start the desktop from a TTY.
+
+After diagnosing a shell failure, recover it inside an active graphical session:
+
+```bash
+systemctl --user reset-failed sleepy-shell.service
+systemctl --user restart sleepy-shell.service
+systemctl --user --no-pager --full status sleepy-shell.service
+```
+
+The shell allows three starts in 30 seconds and waits two seconds before an
+automatic restart. If it fails again, inspect the journal before retrying.
+Do not stop or restart the locker as a workaround while the session is locked.
+For a greeter failure inspect `sudo systemctl status greetd.service` and
+`sudo journalctl -b -u greetd.service` from a TTY.
+
+## Configuration and keyboard recovery
+
+Home Manager generates `~/.config/hypr/hyprland.conf`. Persistent personal
+changes belong in `~/.config/hypr/sleepy-user.conf`; preserve a copy before
+editing. Do not overwrite the generated symlink or use `force = true` to hide
+an activation collision. If a personal change prevents login, inspect that
+include from a TTY and revert only the offending change.
+
+Current bindings include `Super+Return` for the terminal, `Super+D` for the
+launcher, `Super+L` for lock and `Super+Escape` for the power menu. `Super+T`
+toggles floating windows. If these work with direct guest input but not through
+a VM window, check the host's keyboard capture before changing guest bindings.
+
+Full current-revision rollback and real-password acceptance are still open in
+[the acceptance record](acceptance/hyprland-sleepy-desktop.md). Do not interpret
+historical recovery evidence below as completion of those checks.
+
+---
+
+# Historical Niri deployment recovery record
+
 ## Boot a previous generation
 
 At the systemd-boot menu, choose an older NixOS generation. The generation
@@ -114,3 +196,16 @@ received it. Grab the VM keyboard in virt-manager (use its configured grab-key
 sequence) and retry. Diagnose a Niri binding only after distinguishing this
 host-side capture behavior. The accepted binding tests used guest-directed
 libvirt key events, so host interception was not part of their PASS result.
+
+## A blank desktop immediately after graphical login
+
+Choose **Hyprland (uwsm-managed)** in ReGreet's session selector and sign in
+again. The raw Hyprland entry starts the compositor without the managed Sleepy
+services. Fresh installations prefer the managed entry; previously saved
+choices are preserved, so an existing raw-session choice may need changing once.
+From an authenticated TTY, inspect `systemctl --user status graphical-session.target
+sleepy-session.service sleepy-shell.service sleepy-locker.service`.
+
+
+If Ghostty cannot open a window on the available GPU, press `Super+Shift+Enter`
+for the preinstalled Foot terminal. `Super+Enter` remains the Ghostty shortcut.

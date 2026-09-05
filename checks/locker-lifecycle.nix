@@ -47,6 +47,13 @@ in
   assert pkgs.lib.assertMsg
   (builtins.elem "SLEEPY_LOCKER_SOCKET=%t/sleepy/locker.sock" session.Service.Environment)
   "the daemon and locker must share only the private locker endpoint";
+  assert pkgs.lib.assertMsg
+  (builtins.all (unit:
+    unit.Service.RuntimeDirectory
+    == "sleepy"
+    && unit.Service.RuntimeDirectoryMode == "0700"
+    && unit.Service.RuntimeDirectoryPreserve == "yes") [locker session])
+  "independent services must preserve their shared private runtime directory";
     pkgs.runCommand "sleepy-locker-lifecycle" {} ''
       test -f ${pamFile}
       test -x ${homeConfig.sleepy.lockerPackage}/bin/sleepy-locker

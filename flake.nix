@@ -67,6 +67,8 @@
     in {
       inherit
         (pkgs)
+        snug
+        sleepy-installer
         sleepy-artwork
         sleepy-branding
         sleepy-contract
@@ -77,6 +79,7 @@
         sleepy-settings-preview
         sleepy-shell
         ;
+      iso = self.nixosConfigurations.sleepy-iso.config.system.build.isoImage;
       default = pkgs.sleepy-shell;
     });
 
@@ -115,6 +118,7 @@
           git
           jq
           pngcheck
+          python3
           qmlLint
           quickshell
           ripgrep
@@ -127,9 +131,24 @@
     });
 
     overlays.default = overlay;
+    lib.mkSleepyHost = mkSleepyHost;
+    templates.host = {
+      path = ./templates/host;
+      description = "A rolling Sleepy host with local hardware and user configuration";
+    };
 
     nixosModules.sleepy = import ./modules/nixos;
     homeManagerModules.sleepy = import ./modules/home;
+
+    nixosConfigurations.sleepy-iso = nixpkgs.lib.nixosSystem {
+      inherit (baseline) system;
+      modules = [
+        (import ./hosts/iso {
+          inherit inputs;
+          source = nixpkgs.lib.cleanSource self;
+        })
+      ];
+    };
 
     nixosConfigurations.sleepy-vm = import ./hosts/sleepy-vm {
       inherit mkSleepyHost;

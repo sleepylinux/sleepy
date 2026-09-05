@@ -24,7 +24,10 @@
           ];
           KillMode = "control-group";
           Restart = "no";
+          # Shared with the peer service: stopping either must not unlink
+          # the other server's sockets. The user runtime owns final cleanup.
           RuntimeDirectory = "sleepy";
+          RuntimeDirectoryPreserve = "yes";
           RuntimeDirectoryMode = "0700";
           UMask = "0077";
         };

@@ -8,6 +8,9 @@ on:
 permissions:
   contents: read
 
+env:
+  PYTHONDONTWRITEBYTECODE: "1"
+
 concurrency:
   group: check-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -62,6 +65,15 @@ jobs:
           nix develop --command bash checks/hyprland-user-config-test.sh
           nix develop --command bash checks/vm-acceptance-assets-test.sh
 
+      - name: Test Snug and installer behavior
+        run: |
+          nix develop --command python3 checks/snug-test.py
+          nix develop --command python3 checks/snug-system-test.py
+          nix develop --command python3 checks/snug-desktop-test.py
+          nix develop --command python3 checks/installer-test.py
+          nix develop --command python3 checks/shell-defaults-test.py
+          bash checks/snug-real.sh
+
       - name: Validate locked component revisions
         run: bash checks/component-lock.sh components/desktop-m1.json components/desktop-m2-baseline.json flake.lock
 
@@ -113,6 +125,9 @@ jobs:
 
       - name: Build standalone Home Manager
         run: nix build '.#homeConfigurations."lazy@sleepy-vm".activationPackage' --no-link -L
+
+      - name: Build minimal Sleepy installer ISO
+        run: nix build .#iso --no-link -L
 
       - name: Assert clean checkout
         shell: bash

@@ -30,6 +30,14 @@ in {
   config = lib.mkIf (config.sleepy.enable && config.sleepy.sessionPackage != null) {
     home.packages = sessionRuntimePackages;
 
+    # The default installer does not provision hibernation. Initialize mutable
+    # shell settings once with plain suspend; existing user choices win.
+    home.activation.sleepyShellDefaults = lib.hm.dag.entryAfter ["linkGeneration"] ''
+      ${pkgs.python3}/bin/python3 ${./ensure-shell-config.py} \
+        ${lib.escapeShellArg "${config.xdg.configHome}/sleepy"} \
+        ${./default-shell.json}
+    '';
+
     systemd.user.services = {
       sleepy-session = {
         Unit = {
@@ -56,7 +64,10 @@ in {
           ];
           Restart = "on-failure";
           RestartSec = 2;
+          # Shared with the peer service: stopping either must not unlink
+          # the other server's sockets. The user runtime owns final cleanup.
           RuntimeDirectory = "sleepy";
+          RuntimeDirectoryPreserve = "yes";
           RuntimeDirectoryMode = "0700";
           KillSignal = "SIGINT";
           TimeoutStopSec = 20;

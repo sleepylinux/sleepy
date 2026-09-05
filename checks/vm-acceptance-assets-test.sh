@@ -28,7 +28,8 @@ validate_production_contract() {
     'machine.wait_for_text(re.escape("${selectedSessionName}"), timeout=timedelta(seconds=30))' \
     'machine.send_key("ret")' \
     'regreet_ready = "pgrep -f' \
-    '${pkgs.cage}/bin/cage -s -d -- ${pkgs.regreet}/bin/regreet' \
+    'regreetPackage = nixosConfig.services.displayManager.regreet.package;' \
+    '${pkgs.cage}/bin/cage -s -d -- ${regreetPackage}/bin/regreet' \
     'hyprland_ready = "pgrep -u lazy -f -x' \
     '${hyprlandPackage}/bin/Hyprland --watchdog-fd [0-9]+' \
     'niri_absent = "! pgrep -u lazy -f -x' \

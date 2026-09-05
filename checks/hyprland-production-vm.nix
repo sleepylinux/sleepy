@@ -14,6 +14,7 @@
   shellUnit = homeConfig.systemd.user.services.sleepy-shell;
   lockerUnit = homeConfig.systemd.user.services.sleepy-locker;
   hyprlandPackage = nixosConfig.programs.hyprland.package;
+  regreetPackage = nixosConfig.services.displayManager.regreet.package;
   eventSchema = "${sdkSource}/schemas/desktop-event-v3.schema.json";
   schemaPython = pkgs.python3.withPackages (pythonPackages: [pythonPackages.jsonschema]);
   selectedSessionName = "Hyprland (uwsm-managed)";
@@ -176,7 +177,7 @@ in
         # Nix wrappers intentionally change /proc/$pid/comm (for example to
         # .cage-wrapped), so match the complete argv instead of a mutable
         # wrapper process name.  -x also prevents a partial command match.
-        regreet_ready = "pgrep -f -x '${pkgs.cage}/bin/cage -s -d -- ${pkgs.regreet}/bin/regreet' >/dev/null && pgrep -f -x '${pkgs.regreet}/bin/regreet' >/dev/null"
+        regreet_ready = "pgrep -f -x '${pkgs.cage}/bin/cage -s -d -- ${regreetPackage}/bin/regreet' >/dev/null && pgrep -f -x '${regreetPackage}/bin/regreet' >/dev/null"
         try:
           machine.wait_until_succeeds(regreet_ready, timeout=timedelta(seconds=30))
         except Exception:
@@ -193,7 +194,7 @@ in
         machine.wait_until_succeeds("grep -F 'Loaded TOML file:' /var/log/regreet/log", timeout=timedelta(seconds=30))
         machine.wait_for_text("Welcome back!", timeout=timedelta(seconds=30))
         machine.wait_for_text(re.escape("${selectedSessionName}"), timeout=timedelta(seconds=30))
-        regreet_pid = machine.succeed("pgrep -f -x '${pkgs.regreet}/bin/regreet'").strip()
+        regreet_pid = machine.succeed("pgrep -f -x '${regreetPackage}/bin/regreet'").strip()
         # ReGreet focuses Login after initialization.  Return activates the
         # visible, asserted UWSM selection and enters the real greetd exchange.
         machine.send_key("ret")
@@ -375,6 +376,14 @@ in
 
         # DAEMON_RESTART_RECOVERY_GATE: reconnect to the replacement
         # daemon socket and validate a fresh full snapshot.
+        # A daemon restart must retain the live locker's pathname and server.
+        locker_pid = machine.succeed(f"{user_env} systemctl --user show sleepy-locker.service -P MainPID").strip()
+        locker_socket = f"/run/user/{uid}/sleepy/locker.sock"
+        locker_inode = machine.succeed(f"stat -c %i {locker_socket}").strip()
+        locker_probe = "import socket,struct,sys; s=socket.socket(socket.AF_UNIX); s.settimeout(5); s.connect(sys.argv[1]); print(struct.unpack('3i',s.getsockopt(socket.SOL_SOCKET,socket.SO_PEERCRED,12))[0]); s.close()"
+        locker_probe_command = f"{user_env} ${pkgs.python3}/bin/python3 -c {shlex.quote(locker_probe)} {locker_socket}"
+        locker_server_pid = machine.succeed(locker_probe_command).strip()
+        assert int(locker_server_pid) > 1
         previous_daemon_pid = daemon_pid
         machine.succeed(f"{user_env} systemctl --user restart sleepy-session.service")
         machine.wait_until_succeeds(f"test $({user_env} systemctl --user show sleepy-session.service -P MainPID) != {shlex.quote(previous_daemon_pid)}", timeout=timedelta(seconds=30))
@@ -382,6 +391,9 @@ in
         machine.wait_until_succeeds(f"{user_env} systemctl --user is-active sleepy-shell.service", timeout=timedelta(seconds=30))
         reconnected_shell_peer_pid = wait_for_shell_stream(shell_pid, shell_control_group, daemon_pid)
         assert reconnected_shell_peer_pid == shell_peer_pid
+        assert machine.succeed(f"{user_env} systemctl --user show sleepy-locker.service -P MainPID").strip() == locker_pid
+        assert machine.succeed(f"stat -c %i {locker_socket}").strip() == locker_inode
+        assert machine.succeed(locker_probe_command).strip() == locker_server_pid
         post_daemon = read_snapshot("/tmp/desktop-post-daemon.json")
         assert post_daemon["eventId"] != initial_snapshot["eventId"]
         assert wait_for_shell_stream(shell_pid, shell_control_group, daemon_pid) == shell_peer_pid
@@ -405,7 +417,7 @@ in
         machine.wait_until_succeeds("systemctl is-active greetd.service", timeout=timedelta(seconds=30))
         machine.wait_until_succeeds(regreet_ready, timeout=timedelta(seconds=30))
         machine.wait_until_succeeds("test $(grep -Fc 'Loaded TOML file' /var/log/regreet/log) -ge 2", timeout=timedelta(seconds=30))
-        machine.wait_until_succeeds(f"test $(pgrep -f -x '${pkgs.regreet}/bin/regreet') != {shlex.quote(regreet_pid)}", timeout=timedelta(seconds=30))
+        machine.wait_until_succeeds(f"test $(pgrep -f -x '${regreetPackage}/bin/regreet') != {shlex.quote(regreet_pid)}", timeout=timedelta(seconds=30))
         machine.wait_for_text("Welcome back!", timeout=timedelta(seconds=30))
 
         machine.succeed("sudo -u lazy HOME=/home/lazy ${baselineActivationPackage}/activate")

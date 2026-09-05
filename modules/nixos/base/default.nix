@@ -5,6 +5,8 @@
 }: let
   cfg = config.sleepy;
 in {
+  nix.settings.experimental-features = ["nix-command" "flakes"];
+
   users.users.${cfg.primaryUser} = {
     isNormalUser = true;
     extraGroups = ["wheel"];
@@ -31,6 +33,8 @@ in {
   };
 
   services = {
+    gvfs.enable = true;
+    udisks2.enable = true;
     pipewire = {
       enable = true;
       alsa.enable = true;

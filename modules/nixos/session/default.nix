@@ -19,6 +19,18 @@
 
   services = {
     displayManager.regreet.enable = true;
+    # ReGreet has no configurable default session: its fresh fallback is the
+    # first HashMap entry. Prefer UWSM without changing saved per-user choices
+    # or removing hyprland.desktop, which UWSM needs to launch the compositor.
+    displayManager.regreet.package = pkgs.regreet.overrideAttrs (old: {
+      postPatch =
+        (old.postPatch or "")
+        + ''
+          substituteInPlace src/gui/component.rs --replace-fail \
+            'let mut initial_session = None;' \
+            'let mut initial_session = model.sys_util.get_sessions().contains_key("Hyprland (uwsm-managed)").then(|| "Hyprland (uwsm-managed)".to_string());'
+        '';
+    });
     gnome.gnome-keyring.enable = true;
     greetd.enable = true;
   };

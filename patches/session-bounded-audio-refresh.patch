@@ -1,0 +1,229 @@
+--- a/src/sessiond/sources.rs
++++ b/src/sessiond/sources.rs
+@@ -33,6 +33,7 @@
+ };
+ 
+ const RESTART_DELAY: Duration = Duration::from_millis(250);
++const AUDIO_REFRESH_INTERVAL: Duration = Duration::from_millis(500);
+ const MAX_EVENT_LINE: usize = 64 * 1024;
+ 
+ #[derive(Clone, Copy)]
+@@ -177,12 +178,8 @@
+             let _ = sender.try_send(Trigger::Read);
+         }
+ 
+-        tasks.push(tokio::spawn(run_process_event_source(
+-            "pw-mon",
+-            &[],
++        tasks.push(tokio::spawn(run_audio_refresh_source(
+             triggers[&RuntimeCapabilityId::Audio].clone(),
+-            authority.clone(),
+-            RuntimeCapabilityId::Audio,
+             shutdown_receiver.clone(),
+         )));
+         tasks.push(tokio::spawn(run_niri_source(
+@@ -456,76 +453,29 @@
+     }
+ }
+ 
+-async fn run_process_event_source(
+-    program: &'static str,
+-    args: &'static [&'static str],
++// wpctl readbacks create and remove PipeWire Client objects. Feeding every
++// pw-mon line back into the Audio actor therefore makes reads trigger reads.
++// A bounded timer is independent of probe-generated events. The actor already
++// receives one initial read; skip the interval's immediate first tick here.
++async fn run_audio_refresh_source(
+     trigger: mpsc::Sender<Trigger>,
+-    authority: GenerationAuthority,
+-    capability: RuntimeCapabilityId,
+     mut shutdown: watch::Receiver<bool>,
+ ) -> io::Result<()> {
+-    'supervisor: loop {
+-        if *shutdown.borrow() {
+-            return Ok(());
+-        }
+-        let mut child = match spawn_monitor(program, args) {
+-            Ok(child) => child,
+-            Err(error) => {
+-                publish_degraded(&authority, capability, error.kind(), &error.to_string()).await?;
+-                if wait_backoff(&mut shutdown).await {
++    let mut interval = tokio::time::interval(AUDIO_REFRESH_INTERVAL);
++    interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
++    interval.tick().await;
++    loop {
++        tokio::select! {
++            biased;
++            changed = shutdown.changed() => {
++                if changed.is_err() || *shutdown.borrow() {
+                     return Ok(());
+                 }
+-                continue;
+             }
+-        };
+-        let stdout = child
+-            .stdout
+-            .take()
+-            .ok_or_else(|| io::Error::other("monitor stdout missing"))?;
+-        let mut lines = BufReader::with_capacity(4096, stdout);
+-        loop {
+-            let read = tokio::select! {
+-                biased;
+-                changed = shutdown.changed() => {
+-                    if changed.is_err() || *shutdown.borrow() {
+-                        stop_child(&mut child).await;
+-                        return Ok(());
+-                    }
+-                    continue;
+-                }
+-                read = read_bounded_line(&mut lines) => read,
+-            };
+-            match read {
+-                Ok(Some(_)) => {
+-                    let _ = trigger.try_send(Trigger::Read);
+-                }
+-                Ok(None) => {
+-                    stop_child(&mut child).await;
+-                    publish_degraded(
+-                        &authority,
+-                        capability,
+-                        io::ErrorKind::BrokenPipe,
+-                        &format!("{program} event stream reached EOF"),
+-                    )
+-                    .await?;
+-                    if wait_backoff(&mut shutdown).await {
+-                        return Ok(());
+-                    }
+-                    continue 'supervisor;
+-                }
+-                Err(error) => {
+-                    stop_child(&mut child).await;
+-                    publish_degraded(
+-                        &authority,
+-                        capability,
+-                        error.kind(),
+-                        &format!("{program} event stream read failed: {error}"),
+-                    )
+-                    .await?;
+-                    if wait_backoff(&mut shutdown).await {
+-                        return Ok(());
+-                    }
+-                    continue 'supervisor;
++            _ = interval.tick() => {
++                match trigger.try_send(Trigger::Read) {
++                    Ok(()) | Err(mpsc::error::TrySendError::Full(_)) => {}
++                    Err(mpsc::error::TrySendError::Closed(_)) => return Ok(()),
+                 }
+             }
+         }
+@@ -1160,6 +1110,44 @@
+     use super::*;
+     use tokio::io::{AsyncWriteExt, BufReader};
+ 
++    #[tokio::test(start_paused = true)]
++    async fn audio_refresh_cannot_be_retriggered_by_its_own_readback() {
++        let (trigger, mut reads) = mpsc::channel(1);
++        let (shutdown, receiver) = watch::channel(false);
++        let task = tokio::spawn(run_audio_refresh_source(trigger, receiver));
++        tokio::task::yield_now().await;
++        assert!(reads.try_recv().is_err(), "initial read belongs to the actor");
++        tokio::time::advance(AUDIO_REFRESH_INTERVAL - Duration::from_millis(1)).await;
++        tokio::task::yield_now().await;
++        assert!(reads.try_recv().is_err());
++        tokio::time::advance(Duration::from_millis(1)).await;
++        tokio::task::yield_now().await;
++        assert!(reads.try_recv().is_ok());
++        // Consuming/completing a probe cannot immediately request another probe.
++        for _ in 0..100 {
++            tokio::task::yield_now().await;
++            assert!(reads.try_recv().is_err());
++        }
++        shutdown.send(true).unwrap();
++        task.await.unwrap().unwrap();
++    }
++
++    #[tokio::test(start_paused = true)]
++    async fn audio_refresh_coalesces_backlog_and_stops_on_cancellation() {
++        let (trigger, mut reads) = mpsc::channel(1);
++        let (shutdown, receiver) = watch::channel(false);
++        let task = tokio::spawn(run_audio_refresh_source(trigger, receiver));
++        tokio::task::yield_now().await;
++        tokio::time::advance(Duration::from_secs(30)).await;
++        tokio::task::yield_now().await;
++        assert!(reads.try_recv().is_ok());
++        tokio::task::yield_now().await;
++        assert!(reads.try_recv().is_err(), "missed ticks must not replay a burst");
++        shutdown.send(true).unwrap();
++        task.await.unwrap().unwrap();
++        assert!(reads.recv().await.is_none());
++    }
++
+     #[test]
+     fn dbus_source_specs_keep_system_power_and_session_mpris_isolated() {
+         assert_eq!(DbusSourceSpec::power_profile().bus, DbusBus::System);
+--- a/tests/m3_daemon_process.rs
++++ b/tests/m3_daemon_process.rs
+@@ -329,7 +329,6 @@
+     let bin = temp.path().join("bin");
+     let marker = temp.path().join("audio-changed");
+     let niri_hold = temp.path().join("niri-hold");
+-    let pw_hold = temp.path().join("pw-hold");
+     let pw_count = temp.path().join("pw-count");
+     std::fs::create_dir_all(&runtime).unwrap();
+     std::fs::create_dir_all(&state).unwrap();
+@@ -341,20 +340,13 @@
+         .write(true)
+         .open(&niri_hold)
+         .unwrap();
+-    let fifo = CString::new(pw_hold.as_os_str().as_bytes()).unwrap();
+-    assert_eq!(unsafe { libc::mkfifo(fifo.as_ptr(), 0o600) }, 0);
+-    let _pw_hold = OpenOptions::new()
+-        .read(true)
+-        .write(true)
+-        .open(&pw_hold)
+-        .unwrap();
+     write_executable(
+         &bin.join("niri"),
+         "#!/bin/sh\n[ \"$1|$2|$3|$#\" = 'msg|--json|event-stream|3' ] || exit 64\nprintf '%s\\n' '{\"WorkspacesChanged\":{\"workspaces\":[{\"id\":9,\"output\":\"DP-9\"}]}}'\nprintf '%s\\n' '{\"WorkspaceActivated\":{\"id\":9,\"focused\":true}}'\nIFS= read -r ignored < \"$SLEEPY_NIRI_HOLD\"\n",
+     );
+     write_executable(
+         &bin.join("pw-mon"),
+-        "#!/bin/sh\n[ \"$#\" -eq 0 ] || exit 64\ncount=0\nif [ -r \"$SLEEPY_PW_COUNT\" ]; then IFS= read -r count < \"$SLEEPY_PW_COUNT\"; fi\ncount=$((count + 1))\nprintf '%s\\n' \"$count\" > \"$SLEEPY_PW_COUNT\"\nif [ \"$count\" -eq 1 ]; then\n  printf '%065537d' 0\nelse\n  : > \"$SLEEPY_FIXTURE_MARKER\"\n  printf '%s\\n' changed\nfi\nIFS= read -r ignored < \"$SLEEPY_PW_HOLD\"\n",
++        "#!/bin/sh\n: > \"$SLEEPY_PW_COUNT\"\nexit 64\n",
+     );
+     write_executable(
+         &bin.join("wpctl"),
+@@ -384,7 +376,6 @@
+         .env("PATH", path)
+         .env("SLEEPY_FIXTURE_MARKER", &marker)
+         .env("SLEEPY_NIRI_HOLD", &niri_hold)
+-        .env("SLEEPY_PW_HOLD", &pw_hold)
+         .env("SLEEPY_PW_COUNT", &pw_count)
+         .stdin(Stdio::null())
+         .stdout(Stdio::null())
+@@ -402,6 +393,10 @@
+         // four-second total readback deadline plus one source restart.
+         .set_read_timeout(Some(Duration::from_secs(10)))
+         .unwrap();
++    // The physical state change is independent of any monitor process. Give
++    // initial reconciliation time to establish the focused output first.
++    std::thread::sleep(Duration::from_secs(1));
++    std::fs::write(&marker, b"changed").unwrap();
+     let mut lines = BufReader::new(stream).lines();
+     let publication: OsdPublication = loop {
+         let line = lines.next().unwrap().unwrap();
+@@ -414,12 +409,8 @@
+     };
+     assert!(publication.sequence > 0);
+     assert!(
+-        std::fs::read_to_string(&pw_count)
+-            .unwrap()
+-            .trim()
+-            .parse::<u64>()
+-            .unwrap()
+-            >= 2
++        !pw_count.exists(),
++        "audio polling must not start the self-observing pw-mon process"
+     );
+ 
+     let daemon_pid = daemon.0.as_ref().unwrap().id() as libc::pid_t;

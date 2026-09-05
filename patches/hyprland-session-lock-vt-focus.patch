@@ -1,0 +1,21 @@
+--- a/src/protocols/core/Seat.cpp
++++ b/src/protocols/core/Seat.cpp
+@@ -584,6 +584,18 @@
+     if (caps == m_currentCaps)
+         return;
+ 
++    // End keyboard focus before clients destroy their keyboard objects on a
++    // capability loss (for example while switching VTs). Keep the seat's
++    // logical target so a restored keyboard can enter the same surface.
++    // sendLeave must run while the old keyboard capability is still present.
++    if ((m_currentCaps & eHIDCapabilityType::HID_INPUT_CAPABILITY_KEYBOARD) &&
++        !(caps & eHIDCapabilityType::HID_INPUT_CAPABILITY_KEYBOARD)) {
++        for (auto const& keyboard : m_keyboards) {
++            if (keyboard)
++                keyboard->sendLeave();
++        }
++    }
++
+     m_currentCaps = caps;
+ 
+     for (auto const& s : m_seatResources) {

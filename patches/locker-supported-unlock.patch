@@ -1,0 +1,55 @@
+--- a/locker/qml/LockRoot.qml
++++ b/locker/qml/LockRoot.qml
+@@ -50,12 +50,22 @@
+                 Accessible.passwordEdit: true
+                 Accessible.description: qsTr("Native secure password input")
+ 
++                // Returning from another VT reactivates the window without
++                // changing WlSessionLockSurface.visible. Restore native input
++                // focus after that activation has reached the event loop.
++                Window.onActiveChanged: {
++                    if (Window.active)
++                        Qt.callLater(() => {
++                            if (prompt.Window.active)
++                                prompt.forceActiveFocus();
++                        });
++                }
+                 Component.onCompleted: forceActiveFocus()
+                 onAuthenticated: {
+                     // The native successful PAM result is the sole trigger for
+                     // the protocol's unlock-and-destroy request.
+                     if (sessionLock.secure && endpoint.unlockAllowed)
+-                        sessionLock.unlock();
++                        root.lockRequested = false;
+                 }
+ 
+                 SleepyLockView {
+@@ -63,7 +73,7 @@
+                     inputLength: prompt.inputLength
+                     authState: prompt.authState
+                     outputSize: Qt.size(lockSurface.width, lockSurface.height)
+-                    onAuthenticateRequested: prompt.authenticate()
++                    onFocusRequested: prompt.forceActiveFocus()
+                 }
+             }
+         }
+--- a/locker/qml/SleepyLockView.qml
++++ b/locker/qml/SleepyLockView.qml
+@@ -15,7 +15,7 @@
+     property var resources: ({})
+     property size outputSize: Qt.size(width, height)
+ 
+-    signal authenticateRequested()
++    signal focusRequested()
+ 
+     readonly property color surface: "#dfe3eb"
+     readonly property color surfaceText: "#171c23"
+@@ -181,7 +181,7 @@
+                     MouseArea {
+                         anchors.fill: parent
+                         cursorShape: Qt.PointingHandCursor
+-                        onClicked: root.authenticateRequested()
++                        onClicked: root.focusRequested()
+                     }
+                 }
+                 Text {

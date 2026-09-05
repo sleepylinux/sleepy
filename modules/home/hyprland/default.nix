@@ -21,7 +21,7 @@ in {
         (import ./settings.nix)
         (import ./appearance.nix)
         (import ./rules.nix {inherit config;})
-        (import ./binds.nix {inherit config;})
+        (import ./binds.nix {inherit config pkgs;})
       ];
 
       # This mutable, user-owned include is initialized once below and is

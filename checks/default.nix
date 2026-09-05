@@ -193,6 +193,51 @@ in
   assert pkgs.lib.assertMsg
   (fallbackShell.meta.license == pkgs.lib.licenses.gpl3Only)
   "the retained shell fallback must declare GPL-3.0-only"; {
+    snug = pkgs.runCommand "snug-tests" {nativeBuildInputs = [pkgs.python3];} ''
+      export PYTHONDONTWRITEBYTECODE=1
+      python3 ${source}/checks/snug-test.py
+      python3 ${source}/checks/snug-system-test.py
+      python3 ${source}/checks/snug-desktop-test.py
+      touch "$out"
+    '';
+    installer = pkgs.runCommand "sleepy-installer-tests" {nativeBuildInputs = [pkgs.python3];} ''
+      export PYTHONDONTWRITEBYTECODE=1
+      python3 ${source}/checks/installer-test.py
+      python3 ${source}/checks/shell-defaults-test.py
+      touch "$out"
+    '';
+    nmcli-lifecycle = pkgs.runCommand "sleepy-nmcli-lifecycle" {nativeBuildInputs = [pkgs.python3];} ''
+      export QML_IMPORT_PATH=${pkgs.qt6.qtdeclarative}/lib/qt-6/qml
+      export FONTCONFIG_FILE=${pkgs.makeFontsConf {fontDirectories = [pkgs.dejavu_fonts];}}
+      export XDG_CACHE_HOME="$TMPDIR/cache"
+      mkdir -p "$XDG_CACHE_HOME"
+      python3 ${source}/checks/nmcli-test.py \
+        ${pkgs.sleepy-shell}/share/sleepy-desktop/services/Nmcli.qml \
+        ${pkgs.qt6.qtdeclarative}/bin/qmltestrunner
+      touch "$out"
+    '';
+    locker-unlock = pkgs.runCommand "sleepy-locker-unlock" {nativeBuildInputs = [pkgs.python3];} ''
+      export QML_IMPORT_PATH=${pkgs.qt6.qtdeclarative}/lib/qt-6/qml
+      export FONTCONFIG_FILE=${pkgs.makeFontsConf {fontDirectories = [pkgs.dejavu_fonts];}}
+      export XDG_CACHE_HOME="$TMPDIR/cache"
+      mkdir -p "$XDG_CACHE_HOME"
+      python3 ${source}/checks/locker-unlock-test.py \
+        ${pkgs.sleepy-locker}/share/sleepy-locker/LockRoot.qml \
+        ${pkgs.sleepy-locker.runner}
+      python3 ${source}/checks/locker-focus-test.py \
+        ${pkgs.sleepy-locker} ${pkgs.qt6.qtdeclarative}/bin/qmltestrunner
+      touch "$out"
+    '';
+    runtime-directory-vm = import ./runtime-directory-vm.nix {
+      inherit pkgs;
+      homeConfig = integratedHomeConfig;
+    };
+    hardware = import ./hardware.nix {inherit nixpkgs pkgs;};
+    usability = import ./usability.nix {
+      inherit pkgs;
+      nixosConfig = nixosConfiguration.config;
+      homeConfig = integratedHomeConfig;
+    };
     apps-contract = appsContract;
     component-contract = componentIntegration;
     control-center-contract = controlCenterContract;

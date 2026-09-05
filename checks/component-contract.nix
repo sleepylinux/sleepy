@@ -9,11 +9,44 @@
   system = pkgs.stdenv.hostPlatform.system;
   reviewedRevision = name: componentContract.inputs.${name}.revision;
   inputRevision = name: inputs.${name}.rev;
-  packageContract = name: componentContract.rootPackages.${name};
+  # The secure locker is also part of the runtime, though the older component
+  # manifest predates its separate package output.
+  packageContracts =
+    componentContract.rootPackages
+    // {
+      sleepy-locker = {
+        input = "sleepy-desktop";
+        output = "sleepy-locker";
+      };
+    };
+  packageContract = name: packageContracts.${name};
   expectedPackage = name: let
     contract = packageContract name;
   in
     inputs.${contract.input}.packages.${system}.${contract.output};
+  reviewedPatches = {
+    sleepy-session = [../patches/session-bounded-audio-refresh.patch];
+    sleepy-locker = [../patches/locker-supported-unlock.patch];
+    sleepy-shell = [../patches/desktop-bounded-nmcli.patch];
+    sleepy-settings-preview = [../patches/desktop-bounded-nmcli.patch];
+  };
+  matchesReviewedPackage = name: let
+    actual = componentPackages.${name};
+    upstream = expectedPackage name;
+    patches = reviewedPatches.${name} or [];
+    patched = upstream.overrideAttrs (old: {
+      patches = (old.patches or []) ++ patches;
+    });
+  in
+    if patches == []
+    then actual == upstream
+    else
+      actual
+      == patched
+      && (actual.sleepyUpstreamPackage or null) == upstream
+      && (actual.sleepyDownstreamPatches or []) == patches
+      && (actual.patches or []) == (upstream.patches or []) ++ patches
+      && actual.src == upstream.src;
   sessionService = standaloneHomeConfig.systemd.user.services.sleepy-session;
   integratedSessionService = integratedHomeConfig.systemd.user.services.sleepy-session;
   shellService = standaloneHomeConfig.systemd.user.services.sleepy-shell;
@@ -28,8 +61,12 @@
       builtins.mapAttrs (name: contract: {
         inherit (contract) input output;
         path = toString componentPackages.${name};
+        downstreamPatches = map (patch: {
+          name = builtins.baseNameOf patch;
+          sha256 = builtins.hashFile "sha256" patch;
+        }) (reviewedPatches.${name} or []);
       })
-      componentContract.rootPackages;
+      packageContracts;
     defaultPackage = toString componentPackages.default;
     homeManager = {
       shellPackage = toString standaloneHomeConfig.sleepy.shellPackage;
@@ -63,14 +100,19 @@ in
   (builtins.all (name: inputRevision name == reviewedRevision name) (builtins.attrNames componentContract.inputs))
   "component inputs must resolve to the reviewed immutable revisions";
   assert pkgs.lib.assertMsg
-  (builtins.all (name: componentPackages.${name} == expectedPackage name) (builtins.attrNames componentContract.rootPackages))
-  "root package outputs must be direct aliases of the reviewed component outputs";
+  (builtins.all matchesReviewedPackage (builtins.attrNames packageContracts))
+  "root packages must use reviewed component outputs and explicitly reviewed downstream patches";
   assert pkgs.lib.assertMsg
-  (builtins.all (name: componentPackages.${name}.meta.license == pkgs.lib.licenses.gpl3Only) (builtins.attrNames componentContract.rootPackages))
+  (builtins.all (name: componentPackages.${name}.meta.license == pkgs.lib.licenses.gpl3Only) (builtins.attrNames packageContracts))
   "all externally owned root packages must declare GPL-3.0-only";
   assert pkgs.lib.assertMsg
   (componentPackages.default == componentPackages.${componentContract.defaultPackage})
   "the root default package must remain the external Sleepy shell";
+  assert pkgs.lib.assertMsg
+  (standaloneHomeConfig.sleepy.lockerPackage
+    == componentPackages.sleepy-locker
+    && integratedHomeConfig.sleepy.lockerPackage == componentPackages.sleepy-locker)
+  "both Home Manager configurations must use the reviewed secure locker";
   assert pkgs.lib.assertMsg
   (standaloneHomeConfig.sleepy.shellPackage == componentPackages.sleepy-shell)
   "standalone Home Manager must use the external desktop shell";

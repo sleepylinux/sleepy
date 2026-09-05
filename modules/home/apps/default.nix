@@ -5,10 +5,30 @@
   ...
 }: {
   config = lib.mkIf config.sleepy.enable {
+    home.packages = [pkgs.thunar];
+
+    xdg.mimeApps = {
+      enable = true;
+      defaultApplications."inode/directory" = ["thunar.desktop"];
+    };
+
     programs = {
       firefox.enable = true;
 
       fish.enable = true;
+
+      # A software-rendered Wayland terminal remains usable on GPUs below
+      # Ghostty's OpenGL requirement.
+      foot = {
+        enable = true;
+        settings = {
+          main.shell = "${pkgs.fish}/bin/fish";
+          colors-dark = {
+            background = "181620";
+            foreground = "e8e2f0";
+          };
+        };
+      };
 
       ghostty = {
         enable = true;

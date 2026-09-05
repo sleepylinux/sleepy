@@ -1,0 +1,127 @@
+--- a/src/services/Nmcli.qml
++++ b/src/services/Nmcli.qml
+@@ -198,11 +198,16 @@
+ 
+         activeProcesses.push(proc);
+ 
++        let finished = false;
+         proc.processFinished.connect(() => {
++            if (finished)
++                return;
++            finished = true;
+             const index = activeProcesses.indexOf(proc);
+             if (index >= 0) {
+                 activeProcesses.splice(index, 1);
+             }
++            proc.destroy();
+         });
+ 
+         Qt.callLater(() => {
+@@ -215,7 +220,32 @@
+     }
+ 
+     function isMutationCommand(args: list<string>): bool {
+-        return args.some(arg => ["connect", "disconnect", "up", "down", "add", "delete", "modify", "radio"].includes(arg));
++        // cmdArgs starts with the packaged executable. Skip global options,
++        // then inspect the command grammar, never profile names or field values.
++        let index = 1;
++        while (index < args.length && args[index].startsWith("-")) {
++            const option = args[index++];
++            if (["-f", "--fields", "-g", "--get-values", "-w", "--wait",
++                 "-m", "--mode", "-e", "--escape", "-c", "--colors"].includes(option))
++                index++;
++            else if (!["-t", "--terse", "-p", "--pretty", "--ask", "-a",
++                       "--show-secrets", "-s"].includes(option))
++                return false;
++        }
++        const object = args[index];
++        const operation = args[index + 1];
++        if (object === "radio")
++            return ["wifi", "wwan", "all"].includes(operation)
++                && ["on", "off"].includes(args[index + 2]);
++        if (["connection", "con", "c"].includes(object))
++            return ["up", "down", "add", "delete", "modify", "clone", "reload", "load", "import"].includes(operation);
++        if (["device", "dev", "d"].includes(object)) {
++            if (["connect", "disconnect", "delete", "modify", "reapply"].includes(operation))
++                return true;
++            return ["wifi", "w"].includes(operation)
++                && ["connect", "hotspot", "rescan"].includes(args[index + 2]);
++        }
++        return false;
+     }
+ 
+     function refresh(): void {
+@@ -1702,42 +1732,41 @@
+             exitCode = code;
+ 
+             Qt.callLater(() => {
+-                if (callbackCalled) {
+-                    processFinished();
+-                    return;
+-                }
+-
+-                if (proc.callback) {
+-                    const output = (stdoutCollector && stdoutCollector.text) ? stdoutCollector.text : "";
+-                    const error = (stderrCollector && stderrCollector.text) ? stderrCollector.text : "";
+-                    const success = exitCode === 0;
+-                    const cmdIsConnection = isConnectionCommand(proc.cmdArgs);
+-
+-                    if (root.handlePasswordRequired(proc, error, output, exitCode)) {
+-                        processFinished();
++                try {
++                    if (callbackCalled) {
+                         return;
+                     }
+ 
+-                    const needsPassword = cmdIsConnection && root.detectPasswordRequired(error);
+-
+-                    if (!success && cmdIsConnection && root.pendingConnection) {
+-                        const failedSsid = root.pendingConnection.ssid;
+-                        root.connectionFailed(failedSsid);
++                    if (proc.callback) {
++                        const output = (stdoutCollector && stdoutCollector.text) ? stdoutCollector.text : "";
++                        const error = (stderrCollector && stderrCollector.text) ? stderrCollector.text : "";
++                        const success = exitCode === 0;
++                        const cmdIsConnection = isConnectionCommand(proc.cmdArgs);
++
++                        if (root.handlePasswordRequired(proc, error, output, exitCode)) {
++                            return;
++                        }
++
++                        const needsPassword = cmdIsConnection && root.detectPasswordRequired(error);
++
++                        if (!success && cmdIsConnection && root.pendingConnection) {
++                            const failedSsid = root.pendingConnection.ssid;
++                            root.connectionFailed(failedSsid);
++                        }
++
++                        callbackCalled = true;
++                        callback({
++                            success: success,
++                            output: output,
++                            error: error,
++                            exitCode: proc.exitCode,
++                            needsPassword: needsPassword || false
++                        });
++                        root.lastError = success ? "" : error;
++                        if (success && root.isMutationCommand(proc.cmdArgs))
++                            Qt.callLater(root.refresh);
+                     }
+-
+-                    callbackCalled = true;
+-                    callback({
+-                        success: success,
+-                        output: output,
+-                        error: error,
+-                        exitCode: proc.exitCode,
+-                        needsPassword: needsPassword || false
+-                    });
+-                    root.lastError = success ? "" : error;
+-                    if (success && root.isMutationCommand(proc.cmdArgs))
+-                        Qt.callLater(root.refresh);
+-                    processFinished();
+-                } else {
++                } finally {
+                     processFinished();
+                 }
+             });
