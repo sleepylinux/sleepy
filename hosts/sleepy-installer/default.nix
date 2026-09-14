@@ -1,6 +1,7 @@
 {
   lib,
   modulesPath,
+  pkgs,
   ...
 }: {
   imports = [(modulesPath + "/installer/cd-dvd/installation-cd-minimal.nix")];
@@ -14,6 +15,17 @@
     wireless.enable = lib.mkForce false;
   };
   services.openssh.enable = lib.mkForce false;
+  # The installer only needs a firmware framebuffer and network access. Full
+  # desktop/GPU firmware is still selected by the installed hardware profile.
+  hardware.enableRedistributableFirmware = lib.mkForce false;
+  hardware.wirelessRegulatoryDatabase = true;
+  hardware.firmware = [
+    (import ../../packages/sleepy-installer-firmware {inherit pkgs;})
+    pkgs.ipw2200-firmware
+    pkgs.rtl8192su-firmware
+    pkgs.zd1211fw
+  ];
+  boot.blacklistedKernelModules = ["amdgpu" "radeon" "nouveau" "nvidia" "i915" "xe"];
   services.getty.helpLine = lib.mkForce "Sleepy installation and recovery · run sleepy-install";
   programs.bash.interactiveShellInit = ''
     if [ "$(tty)" = /dev/tty1 ] && [ -z "''${SLEEPY_INSTALLER_STARTED:-}" ]; then
