@@ -243,7 +243,7 @@ print("SLEEPY_SAFETY_" + mode.upper() + "_OK", flush=True)
 
 
 
-def install(machine, password, timeout, cache_url=None, cache_public_key=None, interrupt_install=False):
+def install(machine, password, timeout, cache_url=None, cache_public_key=None, interrupt_install=False, keyboard="us"):
     # tty1 is the visible, automatically launched production TUI. Serial carries
     # boot diagnostics only: no parallel hidden installer or injected request.
     channel = socket.socket(socket.AF_UNIX)
@@ -293,11 +293,15 @@ def install(machine, password, timeout, cache_url=None, cache_public_key=None, i
             (('Type your', 'again', 'Your input stays hidden'), 'installer-password-confirm', password),
             ('Computer name', 'installer-hostname', ''),
             ('Language', 'installer-locale', ''),
-            ('Installed keyboard layout', 'installer-keyboard', ''),
+            ('Installed desktop keyboard layout', 'installer-keyboard', ''),
             ('Timezone', 'installer-timezone', ''),
             ('Only what you need', 'installer-options', ''),
         ]:
             machine.wait_screen(prompt, screenshot)
+            if screenshot == 'installer-keyboard':
+                for _ in range(('us', 'ru', 'de', 'cz').index(keyboard)):
+                    machine.qmp.keys('down')
+                machine.screen('installer-keyboard-selected')
             machine.qmp.text(value + '\n')
         machine.wait_screen('One last check', 'installer-confirmation')
         machine.qmp.text('/dev/vda\n')
@@ -378,6 +382,55 @@ cmp /etc/nixos/configuration.nix /var/lib/sleepy-alpha/configuration.before
 printf 'PREVIOUS_GENERATION_REAL_BOOT_OK\n'
 '''
     return ''
+
+
+def lock_fixture(keyboard):
+    """Read-only locker protocol probe; authentication stays native/QMP-only."""
+    layout = 'us' if keyboard == 'us' else 'us,' + keyboard
+    script = r'''
+hypr getoption input:kb_layout -j | jq -e --arg expected "__LAYOUT__" '.str == $expected'
+# Reuse the interpreter already required by installed nixos-rebuild-ng.
+# This diagnostic does not add Python, Git or other developer tools globally.
+rebuild=$(readlink -f "$(command -v nixos-rebuild)")
+read -r python_shebang < "$(dirname "$rebuild")/.nixos-rebuild-wrapped"
+python=${python_shebang#\#!}
+test -x "$python"
+locker_state() {
+  runuser -u sleepy -- "$python" -c 'import socket,sys
+with socket.socket(socket.AF_UNIX) as peer:
+ peer.settimeout(2)
+ peer.connect(sys.argv[1])
+ peer.sendall(b"status\n")
+ reply=peer.recv(32)
+ assert reply in (b"locked\n",b"unlocked\n"), repr(reply)
+ print(reply.decode().strip())' "/run/user/$uid/sleepy/locker.sock"
+}
+test "$(locker_state)" = unlocked
+hypr switchxkblayout all __GROUP__
+hypr devices -j | jq -e '[.keyboards[] | select(.main) | .active_keymap] | length == 1 and (.[0] __LAYOUT_COMPARISON__ "English (US)")'
+printf 'KEYBOARD_LAYOUT_SELECTED_OK\n'
+printf 'LOCK_RETURN_TO_DESKTOP\n'
+hypr dispatch exec 'sleepy-shell-ipc call sleepy lock'
+locked=false
+for attempt in $(seq 1 40); do
+  if test "$(locker_state)" = locked; then locked=true; break; fi
+  sleep 1
+done
+test "$locked" = true
+printf 'LOCK_READY_FOR_REAL_PASSWORD\n'
+unlocked=false
+for attempt in $(seq 1 120); do
+  if test "$(locker_state)" = unlocked; then unlocked=true; break; fi
+  sleep 1
+done
+test "$unlocked" = true
+hypr devices -j | jq -e '[.keyboards[] | select(.main) | .active_keymap] == ["English (US)"]'
+__SWITCH_MARKER__
+printf 'REAL_PASSWORD_LOCK_UNLOCK_OK\n'
+'''
+    return script.replace('__LAYOUT__', layout).replace('__GROUP__', '0' if keyboard == 'us' else '1').replace(
+        '__SWITCH_MARKER__', '' if keyboard == 'us' else "printf 'LOCK_SCREEN_LAYOUT_SWITCH_OK\\n'").replace(
+        '__LAYOUT_COMPARISON__', '==' if keyboard == 'us' else '!=')
 
 
 def guest_report(machine, password, stage, after_reboot=False, update_phase=None, final=False):
@@ -473,7 +526,7 @@ runuser -u sleepy -- mkdir -p /home/sleepy/.config/sleepy
 runuser -u sleepy -- sh -c 'printf sleepy-alpha-state > /home/sleepy/.config/sleepy/alpha-persistence'
 sync
 printf 'PERSISTENCE_MARKER_WRITTEN\n'
-''') + update_fixture(update_phase) + (r'''
+''') + lock_fixture(getattr(machine, 'keyboard', 'us')) + update_fixture(update_phase) + (r'''
 cp -p /var/lib/sleepy-alpha/hypr-user.before /home/sleepy/.config/hypr/sleepy-user.conf
 hypr reload
 printf 'USER_SETTING_FIXTURE_RESTORED_OK\n'
@@ -490,6 +543,9 @@ printf 'SLEEPY_REPORT_COMPLETE\n'
     machine.qmp.text(password + '\n')
     channel.sendall(script.encode())
     report = b''
+    lock_desktop_shown = False
+    lock_input_sent = False
+    lock_returned_to_console = False
     deadline = time.monotonic() + audit_timeout
     report_file = (machine.output / f'{stage}-guest-report.txt').open('wb')
     try:
@@ -499,6 +555,19 @@ printf 'SLEEPY_REPORT_COMPLETE\n'
             if not chunk: break
             report += chunk
             report_file.write(chunk); report_file.flush()
+            if b'LOCK_RETURN_TO_DESKTOP' in report and not lock_desktop_shown:
+                machine.qmp.keys('ctrl', 'alt', 'f1')
+                lock_desktop_shown = True
+            if b'LOCK_READY_FOR_REAL_PASSWORD' in report and not lock_input_sent:
+                machine.wait_screen('Password', f'{stage}-locked')
+                if getattr(machine, 'keyboard', 'us') != 'us':
+                    machine.qmp.keys('alt', 'shift')
+                machine.qmp.text(password + '\n')
+                lock_input_sent = True
+            if b'REAL_PASSWORD_LOCK_UNLOCK_OK' in report and not lock_returned_to_console:
+                machine.screen(f'{stage}-unlocked')
+                machine.qmp.keys('ctrl', 'alt', 'f2')
+                lock_returned_to_console = True
             if len(report) > 1024 * 1024: raise RuntimeError('Guest audit exceeded 1 MiB output bound')
     finally:
         channel.close()
@@ -550,6 +619,7 @@ def main():
     parser.add_argument('--memory', type=int, default=8192)
     parser.add_argument('--install-timeout', type=int, default=10800)
     parser.add_argument('--interrupt-install', action='store_true', help='Before visible TUI installation, interrupt a real disposable-disk install after mounting and verify cleanup')
+    parser.add_argument('--keyboard', choices=('us', 'ru', 'de', 'cz'), default='us', help='Select the installed keyboard through the real TUI and test lock-screen switching')
     parser.add_argument('--update-safety', action='store_true', help='Also test failed rebuild boot safety, boot a second generation, then rollback and boot the original')
     parser.add_argument('--pause-at-greeter', action='store_true', help='Pause and release QMP before first graphical login for field inspection; see printed continuation instructions')
     parser.add_argument('--cache-url', help='Optional signed binary cache reachable inside VM (e.g. http://10.0.2.2:8080)')
@@ -581,10 +651,12 @@ def main():
               'runner_source_dirty': bool(subprocess.run(['git', 'status', '--porcelain'], capture_output=True, text=True).stdout)}
     machine = Machine(output, args.firmware.resolve(), args.memory, acceleration)
     machine.pause_at_greeter = args.pause_at_greeter
+    machine.keyboard = args.keyboard
+    result['keyboard'] = args.keyboard
     try:
         print('Booting installer and driving the visible tty1 TUI.', flush=True)
         machine.boot('installer', iso)
-        install(machine, password, args.install_timeout, args.cache_url, args.cache_public_key, args.interrupt_install)
+        install(machine, password, args.install_timeout, args.cache_url, args.cache_public_key, args.interrupt_install, args.keyboard)
         result['completed'] += getattr(machine, 'safety_completed', [])
         result['completed'].append('tui-install-and-shutdown')
         machine.stop()
@@ -644,6 +716,8 @@ def main():
             if check not in result['completed']: result['completed'].append(check)
         # Preserve verified substeps even if a later update or reboot gate fails.
         markers = {
+            'REAL_PASSWORD_LOCK_UNLOCK_OK': 'real-password-lock-unlock',
+            'LOCK_SCREEN_LAYOUT_SWITCH_OK': 'lock-screen-layout-switch',
             'REAL_USER_LOGIN_OK': 'real-password-login',
             'FIRST_BOOT_WELCOME_DISMISSED_AND_INACTIVE_OK': 'first-boot-welcome-dismissed',
             'FIRST_BOOT_WELCOME_STATE_PERSISTED_OK': 'first-boot-welcome-state-persistence',
