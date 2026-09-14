@@ -45,7 +45,7 @@ def ocr_image(path):
             frame = frame.convert('RGB')
             mask = Image.new('L', frame.size)
             mask.putdata([0 if b - r > 25 and b - g > 10 else 255
-                          for r, g, b in frame.getdata()])
+                          for r, g, b in getattr(frame, 'get_flattened_data', frame.getdata)()])
             target = Path(directory) / 'title.png'
             mask.resize((frame.width * 3, frame.height * 3)).save(target)
             text += '\n' + subprocess.run(['tesseract', str(target), 'stdout', '--psm', '11'],
@@ -614,6 +614,9 @@ def main():
                      update_phase='verify' if args.update_safety else None, final=True)
         result['completed'] += ['offline-disk-reboot', 'offline-password-login', 'user-state-persistence', 'real-Hyprland-setting-persistence']
         if args.update_safety: result['completed'].append('previous-generation-real-boot')
+        machine.qmp.call('system_powerdown')
+        machine.process.wait(timeout=120)
+        result['completed'].append('clean-final-shutdown')
         result['status'] = 'passed'
     except (Exception, KeyboardInterrupt) as error:
         result['status'] = 'interrupted' if isinstance(error, KeyboardInterrupt) else 'failed'
