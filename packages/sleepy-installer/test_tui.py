@@ -41,7 +41,7 @@ class WizardTests(unittest.TestCase):
                                          'sleepy', 'en_US.UTF-8', keyboard, 'UTC', ''])
                 result = tui.collect_request(dialog, DISK)
                 self.assertEqual(result['keyboard'], keyboard)
-                menu = next(call for call in dialog.calls if 'Installed keyboard layout' in call[2])
+                menu = next(call for call in dialog.calls if 'Installed desktop keyboard layout' in call[2])
                 self.assertIn('Alt+Shift', menu[2])
                 self.assertIn('US', menu[2])
                 self.assertIn('Recovery consoles always use US', menu[2])
@@ -142,7 +142,7 @@ tui.main()
                 ('Welcome home', '\r'), ('Disposable VM', '\r'), ('Username', '\x15alice\r'),
                 ('Choose your login password', 'test-password-123\r'),
                 ('Type your password again', 'test-password-123\r'), ('Computer name', '\r'),
-                ('Language', '\r'), ('Installed keyboard layout', '\r'), ('Timezone', '\r'),
+                ('Language', '\r'), ('Installed desktop keyboard layout', '\r'), ('Timezone', '\r'),
                 ('Only what you need', '\r'), ('ERASE ALL DATA', '/dev/vda\r'),
                 ('Your new home is ready', '\x1b'),
             ]:
