@@ -313,6 +313,10 @@ def install(data):
         emit('configure', 'Generating hardware configuration and selected features', 20)
         run(['nixos-generate-config', '--root', str(ROOT)])
         write_configuration(data, source)
+        # nixos-install resolves a hash-pinned URL via flake metadata before its
+        # build. Creating the lock during that resolution changes the source NAR.
+        # Write it first so metadata and the subsequent build see identical files.
+        run(['nix', 'flake', 'lock', str(ROOT / 'etc/nixos')])
         emit('install', 'Downloading and installing Sleepy; this can take a while', 30)
         run(['nixos-install', '--root', str(ROOT), '--no-root-passwd', '--flake', str(ROOT / 'etc/nixos') + '#installed'])
         emit('account', 'Setting your account password', 90)

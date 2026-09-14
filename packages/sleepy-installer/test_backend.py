@@ -201,6 +201,9 @@ class InstallationSequenceTests(unittest.TestCase):
         commands = [argv[0] for argv, _ in calls]
         self.assertLess(commands.index('wipefs'), commands.index('mkfs.btrfs'))
         self.assertLess(commands.index('nixos-install'), commands.index('chpasswd'))
+        lock = next((argv for argv, _ in calls if argv[:3] == ['nix', 'flake', 'lock']), None)
+        self.assertIsNotNone(lock, 'Target flake must be locked before nixos-install resolves its NAR hash')
+        self.assertLess(commands.index('nix'), commands.index('nixos-install'))
         self.assertEqual(commands[-1], 'umount')
         for argv, secret in calls:
             self.assertNotIn(request()['password'], str(argv))
