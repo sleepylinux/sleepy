@@ -1,4 +1,23 @@
-{pkgs, ...}: {
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}: let
+  # Keep the raw entry available for UWSM's desktop-file lookup, but don't
+  # offer a login path which bypasses the graphical session's services.
+  loginSessions =
+    pkgs.runCommand "sleepy-login-sessions" {
+      passthru.providedSessions = ["hyprland-uwsm"];
+    } ''
+      mkdir -p "$out/share/wayland-sessions"
+      cp ${config.programs.hyprland.package}/share/wayland-sessions/hyprland{,-uwsm}.desktop \
+        "$out/share/wayland-sessions/"
+      chmod u+w "$out/share/wayland-sessions/hyprland.desktop"
+      substituteInPlace "$out/share/wayland-sessions/hyprland.desktop" \
+        --replace-fail '[Desktop Entry]' $'[Desktop Entry]\nNoDisplay=true'
+    '';
+in {
   imports = [./pam.nix];
 
   programs.hyprland = {
@@ -19,6 +38,9 @@
 
   services = {
     displayManager.regreet.enable = true;
+    # The standard session-data directory comes first in XDG_DATA_DIRS.
+    # ReGreet honors NoDisplay there, including duplicate package entries.
+    displayManager.sessionPackages = lib.mkForce [loginSessions];
     gnome.gnome-keyring.enable = true;
     greetd.enable = true;
   };
