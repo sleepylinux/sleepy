@@ -6,22 +6,31 @@ The root integration pins this exact reviewed public component graph:
 
 | Component | Reviewed revision |
 |---|---|
-| `sleepy-sdk` | `1ee5b424887eb6f7acfe3b931b37a2c610ff6498` |
-| `sleepy-session` | `6c31e392f96de4e03997580fdcb02eaaed590eb6` |
+| `sleepy-sdk` | `dff28bb596950d862ae5d219e478460dfa13e8f4` |
+| `sleepy-session` | `6d5dd064f2f98e93105ca8fa8fa76672fc14330e` |
 | `sleepy-artwork` | `175314b9c236c1b412e8e1ebc54bbe3937b0c90d` |
 | `sleepy-desktop` | `22f1cbe617e59b1d27e155c38c9a8e0bf5e7a3ac` |
 
 The generated `flake.lock` SHA-256 is
-`e45a0777f7aed401685d741ef37942c5b3922ad7b3371ee9cf2120374669d8d6`. This section records
-only the immutable source graph and automated build gate. Real ReGreet/PAM,
-rollback, downgrade, framebuffer, and protected-VM results remain `PENDING` in
-`docs/acceptance/hyprland-sleepy-desktop.md` until fresh target evidence exists.
+`0aebf687575f56ac81a773371d44a0b381f997d141d6a734345681908fc1fbe4`. This current candidate includes the SDK UTF-8 validation fix and the session
+real-child startup regression fix. Component CI is recorded in
+[SDK PR #8](https://github.com/sleepylinux/sleepy-sdk/pull/8) and
+[session PR #9](https://github.com/sleepylinux/sleepy-session/pull/9).
 
-The 2026-09-04 local baseline and the subsequent CI-only interpreter correction
-are recorded separately in `docs/acceptance/hyprland-sleepy-desktop.md`.
-The required checks on [root PR #7](https://github.com/sleepylinux/sleepy/pull/7)
-record automated results for this exact current graph; earlier local artifacts
-are not evidence for the changed source pin.
+The 2026-09-14 disposable installable-alpha VM run at root revision
+`e944e7b2d762a1e836d59151efd715c6bb31d02c` completed the real TUI installation,
+boot from the installed disk with the ISO detached, ReGreet/PAM password login,
+UWSM desktop startup, application launches, and shell/session crash recovery.
+A failed update preserved the active system and boot entries. The subsequent
+successful-update/previous-generation boot gate remains pending: this run
+exposed a missing Git runtime dependency in Nix. See the current
+[installer runbook](../runbooks/installable-alpha.md) for reproduction and scope.
+Root [PR #8](https://github.com/sleepylinux/sleepy/pull/8) must pass its checks
+against this graph before integration.
+
+The older 2026-09-04 baseline, CI interpreter correction, and protected-VM
+acceptance remain historical records in
+`docs/acceptance/hyprland-sleepy-desktop.md`; they do not certify this installer.
 
 ## Desktop Milestone 3 integration candidate
 
