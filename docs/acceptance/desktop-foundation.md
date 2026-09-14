@@ -7,27 +7,28 @@ The root integration pins this exact reviewed public component graph:
 | Component | Reviewed revision |
 |---|---|
 | `sleepy-sdk` | `dff28bb596950d862ae5d219e478460dfa13e8f4` |
-| `sleepy-session` | `8edee2ed946efb45f1e2f978025681b977f495e6` |
+| `sleepy-session` | `8e6e1dbf408e46e4bfb547ce812a9dbed8c5f025` |
 | `sleepy-artwork` | `175314b9c236c1b412e8e1ebc54bbe3937b0c90d` |
 | `sleepy-desktop` | `008d8bc662c6b10045a24a4bd05f0852837fa5e9` |
 
 The generated `flake.lock` SHA-256 is
-`668f111bc3aed02eb561f87043264b92c2e83751e7093a5ddc933837d124eca7`. This candidate includes the SDK UTF-8 fix, deterministic session process tests,
+`32d28e9da2339920373b313c27acf5b5aac73aceb9d3a946eb01d179ccce5cfb`. This candidate includes the SDK UTF-8 fix, deterministic session process tests,
 consistent Hyprland command readback deadlines, and the native locker unlock fix.
 Component review and CI are tracked in
 [SDK PR #8](https://github.com/sleepylinux/sleepy-sdk/pull/8),
 [session PR #9](https://github.com/sleepylinux/sleepy-session/pull/9), and
 [desktop PR #7](https://github.com/sleepylinux/sleepy-desktop/pull/7).
 
-The disposable installer VM has completed installation, password login, desktop
-startup, crash recovery, failed-update preservation, a second-generation boot,
-and a previous-generation boot without networking. A public-source run also
-passed without a local cache override. The final keyboard/locker gate passed
-against this graph on all three installed-disk boots. Exact revisions and remaining limitations are in
-[Installable Sleepy acceptance](installable-alpha.md); reproduction is in the
+The installer acceptance remains bound to root `9bca73c` and session `8edee2e`:
+installation, real password login, desktop startup, crash recovery, failed-update
+preservation and three installed-disk boots passed. See the immutable
+[Installable Sleepy acceptance](installable-alpha.md) and
 [installer runbook](../runbooks/installable-alpha.md).
-Root [PR #8](https://github.com/sleepylinux/sleepy/pull/8) must pass its checks
-against this graph before integration.
+
+The current graph adds the read-only doctor from
+[session PR #10](https://github.com/sleepylinux/sleepy-session/pull/10).
+Its package and installed-VM diagnostics are being verified separately; the
+previous installer ISO does not contain this command.
 
 The older 2026-09-04 baseline, CI interpreter correction, and protected-VM
 acceptance remain historical records in

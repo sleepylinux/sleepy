@@ -23,3 +23,10 @@ instead of introducing a graphical installer or a second provisioning framework.
 The media carries the pinned source; target packages require network access.
 The installer never promises to restore data after disk erasure. The installed
 system retains its configuration and boot generations for recovery.
+
+Next increment: read-only desktop diagnostics and cleanup.
+
+- [x] Remove obsolete VM disks, intermediate images, build outputs and Nix cache.
+- [x] Implement bounded, privacy-preserving `sleepyctl doctor`; review and unit test.
+- [ ] Verify the Nix package in the installed disposable VM, including offline and daemon recovery.
+- [ ] Integrate reviewed pins, complete CI, merge and remove the remaining temporary VM/build files.
