@@ -37,10 +37,10 @@ in {
           PartOf = ["graphical-session.target"];
           Wants = lib.optionals (config.sleepy.lockerPackage != null) ["sleepy-locker.service"];
           After =
-            ["graphical-session.target" "dbus.socket"]
+            ["graphical-session.target" "dbus.socket" "sleepy-runtime.service"]
             ++ lib.optionals (config.sleepy.lockerPackage != null) ["sleepy-locker.service"];
           Requisite = ["graphical-session.target"];
-          Requires = ["dbus.socket"];
+          Requires = ["dbus.socket" "sleepy-runtime.service"];
           StartLimitIntervalSec = 30;
           StartLimitBurst = 5;
         };
@@ -58,6 +58,7 @@ in {
           RestartSec = 2;
           RuntimeDirectory = "sleepy";
           RuntimeDirectoryMode = "0700";
+          RuntimeDirectoryPreserve = "yes";
           KillSignal = "SIGINT";
           TimeoutStopSec = 20;
         };

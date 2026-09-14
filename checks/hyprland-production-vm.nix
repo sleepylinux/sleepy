@@ -348,7 +348,25 @@ in
           assert peer_pid.isdigit()
           return peer_pid
 
+        def assert_locker_responds(wait_for_startup=False):
+          probe = """import socket, sys
+        with socket.socket(socket.AF_UNIX) as peer:
+            peer.settimeout(2)
+            peer.connect(sys.argv[1])
+            peer.sendall(b'status\\n')
+            assert peer.makefile('rb').readline(32) == b'unlocked\\n'
+        """
+          command = f"{user_env} ${pkgs.python3}/bin/python3 -c {shlex.quote(probe)} /run/user/{uid}/sleepy/locker.sock"
+          if wait_for_startup:
+            machine.wait_until_succeeds(command, timeout=timedelta(seconds=30))
+          else:
+            machine.succeed(command)
+
         initial_snapshot = read_snapshot("/tmp/desktop-initial.json")
+        assert_locker_responds(wait_for_startup=True)
+        locker_socket_inode = machine.succeed(f"stat -c %i /run/user/{uid}/sleepy/locker.sock").strip()
+        locker_pid = machine.succeed(f"{user_env} systemctl --user show sleepy-locker.service -P MainPID").strip()
+
 
         for surface in [
           "shell.qml",
@@ -382,6 +400,11 @@ in
         machine.wait_until_succeeds(f"{user_env} systemctl --user is-active sleepy-shell.service", timeout=timedelta(seconds=30))
         reconnected_shell_peer_pid = wait_for_shell_stream(shell_pid, shell_control_group, daemon_pid)
         assert reconnected_shell_peer_pid == shell_peer_pid
+        # Restarting the daemon must preserve the independently supervised
+        # locker's listening endpoint, not only its still-running process.
+        assert machine.succeed(f"{user_env} systemctl --user show sleepy-locker.service -P MainPID").strip() == locker_pid
+        assert machine.succeed(f"stat -c %i /run/user/{uid}/sleepy/locker.sock").strip() == locker_socket_inode
+        assert_locker_responds()
         post_daemon = read_snapshot("/tmp/desktop-post-daemon.json")
         assert post_daemon["eventId"] != initial_snapshot["eventId"]
         assert wait_for_shell_stream(shell_pid, shell_control_group, daemon_pid) == shell_peer_pid
@@ -405,9 +428,24 @@ in
         machine.succeed("test ! -e /home/lazy/.local/state/sleepy/welcome-seen")
         machine.succeed(f"{user_env} systemctl --user show sleepy-welcome.service -P SubState | grep -Fx running")
         assert machine.succeed(f"{user_env} systemctl --user show sleepy-welcome.service -P Job").strip() == ""
+        machine.succeed(f"{user_env} systemctl --user stop sleepy-session.service")
+        assert machine.succeed(f"stat -c %i /run/user/{uid}/sleepy/locker.sock").strip() == locker_socket_inode
+        machine.succeed(f"test $(stat -c %a /run/user/{uid}/sleepy) = 700")
+        assert_locker_responds()
+        machine.succeed(f"{user_env} systemctl --user start sleepy-session.service")
+        daemon_pid = machine.succeed(f"{user_env} systemctl --user show sleepy-session.service -P MainPID").strip()
+        # A crash follows a different shutdown path from systemctl restart.
+        # Neither path may remove the live locker's socket from the shared dir.
+        previous_daemon_pid = daemon_pid
+        machine.succeed(f"{user_env} systemctl --user kill --kill-whom=main --signal=KILL sleepy-session.service")
+        machine.wait_until_succeeds(f"{user_env} systemctl --user is-active sleepy-session.service && test $({user_env} systemctl --user show sleepy-session.service -P MainPID) != {previous_daemon_pid}", timeout=timedelta(seconds=30))
+        assert machine.succeed(f"{user_env} systemctl --user show sleepy-locker.service -P MainPID").strip() == locker_pid
+        assert machine.succeed(f"stat -c %i /run/user/{uid}/sleepy/locker.sock").strip() == locker_socket_inode
+        assert_locker_responds()
         machine.succeed(f"{user_env} /run/current-system/sw/bin/uwsm stop")
         for unit in ["sleepy-welcome.service", "sleepy-locker.service", "sleepy-session.service", "sleepy-shell.service"]:
           machine.wait_until_fails(f"{user_env} systemctl --user is-active {unit}", timeout=timedelta(seconds=30))
+        machine.wait_until_succeeds(f"test ! -e /run/user/{uid}/sleepy", timeout=timedelta(seconds=30))
         machine.wait_until_succeeds("systemctl is-active greetd.service", timeout=timedelta(seconds=30))
         machine.wait_until_succeeds(regreet_ready, timeout=timedelta(seconds=30))
         machine.wait_until_succeeds("test $(grep -Fc 'Loaded TOML file' /var/log/regreet/log) -ge 2", timeout=timedelta(seconds=30))
