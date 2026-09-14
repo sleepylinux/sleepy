@@ -384,7 +384,14 @@ def guest_report(machine, password, stage, after_reboot=False, update_phase=None
     script = r'''#!/usr/bin/env bash
 set -eu
 exec > /dev/virtio-ports/org.sleepy.test 2>&1
-trap 'printf "SLEEPY_REPORT_FAILED line=%s\n" "$LINENO"' ERR
+audit_failure() {
+  status=$?
+  printf 'GUEST_AUDIT_ERROR line=%s command=%s status=%s\n' "$1" "$2" "$status"
+  if test -f /var/lib/sleepy-alpha/generation2-build.log; then tail -n 100 /var/lib/sleepy-alpha/generation2-build.log; fi
+  sync
+  printf 'SLEEPY_REPORT_FAILED line=%s\n' "$1"
+}
+trap 'audit_failure "$LINENO" "$BASH_COMMAND"' ERR
 printf 'SLEEPY_REPORT_START\n'
 uid=$(cat /tmp/sleepy-alpha-uid)
 test "$uid" -ge 1000
@@ -449,6 +456,7 @@ cp -p /var/lib/sleepy-alpha/hypr-user.before /home/sleepy/.config/hypr/sleepy-us
 hypr reload
 printf 'USER_SETTING_FIXTURE_RESTORED_OK\n'
 ''' if final else '') + r'''
+sync
 printf 'SLEEPY_REPORT_COMPLETE\n'
 '''
     # Transfer the fixed audit only AFTER normal password authentication and sudo.
@@ -461,16 +469,18 @@ printf 'SLEEPY_REPORT_COMPLETE\n'
     channel.sendall(script.encode())
     report = b''
     deadline = time.monotonic() + audit_timeout
+    report_file = (machine.output / f'{stage}-guest-report.txt').open('wb')
     try:
         while b'SLEEPY_REPORT_COMPLETE' not in report and b'SLEEPY_REPORT_FAILED' not in report:
             if time.monotonic() > deadline: raise RuntimeError('Guest audit did not complete')
             chunk = channel.recv(65536)
             if not chunk: break
             report += chunk
+            report_file.write(chunk); report_file.flush()
             if len(report) > 1024 * 1024: raise RuntimeError('Guest audit exceeded 1 MiB output bound')
     finally:
         channel.close()
-        (machine.output / f'{stage}-guest-report.txt').write_bytes(report)
+        report_file.close()
     if b'SLEEPY_REPORT_COMPLETE' not in report:
         raise RuntimeError(f'Installed guest audit failed; inspect {stage}-guest-report.txt')
     machine.qmp.text('exit\n')
@@ -481,7 +491,7 @@ printf 'SLEEPY_REPORT_COMPLETE\n'
 
 
 def login_desktop(machine, password, name):
-    machine.wait_screen('Sleepy', f'{name}-greeter', timeout=300)
+    machine.wait_screen(('Welcome back', 'User:', 'Session:'), f'{name}-greeter', timeout=300)
     if getattr(machine, 'pause_at_greeter', False):
         continuation = machine.output / 'continue-greeter'
         machine.qmp.close()
@@ -584,10 +594,46 @@ def main():
         if machine.process is not None and machine.process.poll() is None:
             try: machine.screen('failure')
             except Exception: pass
+            # Give the installed filesystem time to commit diagnostics before a
+            # forced QMP quit. Serial must be drained so a full console socket
+            # cannot stall shutdown logging.
+            try:
+                machine.qmp.call('system_powerdown')
+                serial = socket.socket(socket.AF_UNIX)
+                serial.settimeout(1)
+                serial.connect(str(output / 'serial.sock'))
+                deadline = time.monotonic() + 60
+                while machine.process.poll() is None and time.monotonic() < deadline:
+                    try: serial.recv(65536)
+                    except socket.timeout: pass
+                serial.close()
+            except (OSError, RuntimeError): pass
         print(f'VM check stopped: {result["error"]}', file=sys.stderr)
     finally:
         for check in getattr(machine, 'safety_completed', []):
             if check not in result['completed']: result['completed'].append(check)
+        # Preserve verified substeps even if a later update or reboot gate fails.
+        markers = {
+            'REAL_USER_LOGIN_OK': 'real-password-login',
+            'INSTALLED_DISK_BOOT_OK': 'installed-disk-boot',
+            'DESKTOP_UNITS_AND_SOCKET_OK': 'desktop-units-and-socket',
+            'TERMINAL_AND_FILE_MANAGER_WINDOWS_OK': 'terminal-and-file-manager-windows',
+            'CRASH_RECOVERY_OK sleepy-shell.service': 'shell-SIGKILL-recovery',
+            'CRASH_RECOVERY_OK sleepy-session.service': 'session-daemon-SIGKILL-recovery',
+            'REAL_HYPRLAND_SETTING_APPLIED_OK': 'real-Hyprland-setting-applied',
+            'FAILED_UPDATE_PRESERVED_SYSTEM_AND_BOOT_OK': 'failed-update-preserved-boot',
+            'SECOND_GENERATION_PREPARED_OK': 'second-generation-prepared',
+            'SECOND_GENERATION_REAL_BOOT_OK': 'second-generation-real-boot',
+            'PREVIOUS_GENERATION_SELECTED_FOR_BOOT_OK': 'previous-generation-selected',
+            'PREVIOUS_GENERATION_REAL_BOOT_OK': 'previous-generation-real-boot',
+            'PERSISTENCE_AFTER_REBOOT_OK': 'user-state-persistence',
+            'REAL_HYPRLAND_SETTING_PERSISTED_OK': 'real-Hyprland-setting-persistence',
+        }
+        for report_path in output.glob('*-guest-report.txt'):
+            lines = set(report_path.read_text().splitlines())
+            for marker, check in markers.items():
+                if marker in lines and check not in result['completed']:
+                    result['completed'].append(check)
         machine.stop()
         (output / 'result.json').write_text(json.dumps(result, indent=2) + '\n')
     print(f'Result and evidence: {output}', flush=True)
