@@ -5,8 +5,8 @@ Sleepy TUI, GPT / 512 MiB ESP / Btrfs, real user credentials. No live desktop.
 Additional drivers, gaming, development and Flatpak are opt-in. Encryption follows
 the verified unencrypted path. Never operate on the development host's disks.
 
-- [ ] Restore component build reliability; preserve locked source revisions.
-- [ ] Integrate a small `dialog` frontend and a structured Python backend using
+- [x] Restore component build reliability; preserve locked source revisions.
+- [x] Integrate a small `dialog` frontend and a structured Python backend using
   the existing NixOS installation tools. Validate disk identity and occupancy at
   the destructive boundary; keep passwords out of arguments, logs and the store.
 - [ ] Build and boot installer media, install to a disposable UEFI VM disk,

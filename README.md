@@ -14,6 +14,7 @@ providers; protected session transitions go through `sleepy-sessiond`.
 
 Start with:
 
+- [TUI installation and VM validation](docs/runbooks/installable-alpha.md);
 - [runtime ownership and failure semantics](docs/architecture/shell-runtime-integrations.md);
 - [real VM runbook](docs/runbooks/sleepy-vm-hyprland.md);
 - [acceptance record](docs/acceptance/hyprland-sleepy-desktop.md);
