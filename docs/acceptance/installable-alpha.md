@@ -1,87 +1,104 @@
 # Installable Sleepy alpha acceptance
 
-## Candidate and scope
+## Accepted artifact
 
-This is an x86_64 UEFI network installer with a console TUI, a 512 MiB ESP and
-compressed Btrfs root. It includes no live desktop. NVIDIA, gaming, development,
-Flatpak and Bluetooth are opt-in. Acceptance below distinguishes installed-disk runs from build checks. A final
-image with the additional locker fixes is undergoing validation.
+The x86_64 UEFI TUI installation path passed on a newly created disposable VM
+disk at root **`9bca73cdc125bbf7704e8038dc46cc383cd36fd3`**. This is a network
+installer without a live desktop. NVIDIA, gaming, development, Flatpak and
+Bluetooth are unchecked options. Layout: GPT, 512 MiB FAT32 ESP, compressed
+Btrfs root. Encryption is not implemented.
 
-The initial end-to-end installed-disk run passed at root
-`40632d4286be6c39e5a133a598c3efdb62f1f1b9`, using a separately signed local binary
-cache with signature verification enabled. A second full run at
-`c6f95ef872fe19ea5577d59eda2552af305e2471` passed using public sources and public
-substituters only, without a local cache override. The additional-keyboard/locker
-run found defects described below; the final candidate must repeat that gate.
+Artifact: `sleepy-alpha-9bca73c.iso`, **856,686,592 bytes (817 MiB)**.
+SHA-256: `343afd66349ad64406784be1ee861d74e0888973781bdea37d2cc13e66231e41`.
+The [artifact manifest](assets/installable-alpha/current-run/artifact-manifest.json)
+records the source tree, generated lock hash and all component revisions.
+The local artifact and checksum file are under `work/artifacts/`; no release
+has been published.
 
-## Verified behavior
+## Actual installed-disk verification
 
-The first complete run (`work/vm-alpha-7/result.json`) used QEMU 11.1.0/KVM,
-OVMF, four vCPUs, 8 GiB RAM, plain virtio-vga and a newly created 40 GiB disk.
-It performed the actual visible TUI installation, shut down, detached the ISO,
-and booted the installed disk. No installed test PAM, autologin or injected user
-account was used. It passed:
+[VM11 result](assets/installable-alpha/current-run/result.json): **25 recorded
+stages passed**. Image and runner used the exact revision above with a clean
+tree. QEMU 11.1.0/KVM, OVMF, four vCPUs, 8 GiB RAM, ordinary virtio-vga and a new
+40 GiB virtual disk were used. The runner drove the visible TUI, selected US+RU,
+shut down, detached the ISO and booted the installed disk. No installed test PAM,
+autologin, injected account or replacement locker executable was used.
 
-- Real password authentication in ReGreet and a console, plus passworded sudo.
-- UWSM/Hyprland startup, the Sleepy shell/session socket and real terminal/file
-  manager windows.
-- First-login welcome completion and its persistent suppression after reboot.
-- Shell and session daemon recovery after actual SIGKILL.
-- A changed Hyprland setting and user state surviving two subsequent boots.
-- An invalid update leaving the active system, profile and boot entries intact.
-- Building and booting a second generation, selecting the original generation,
-  then booting it and authenticating with the network disconnected.
-- Refusing an invalid install target and an offline install without disk writes;
-  SIGTERM after formatting/mounting cleaned up mounts and released the lock.
+The installation used a separately signed local binary cache with signature
+verification enabled. This override affected only the running installation
+media; the installed system retained its normal substituters. A separate
+[public-source run](assets/installable-alpha/public-source-run/result.json)
+at `c6f95ef872fe19ea5577d59eda2552af305e2471` passed the complete installation,
+update and rollback path with no local cache override. It predates the final
+keyboard/locker fixes and is recorded separately, not as current-image proof.
 
-A separate fresh production VM found and then verified the fix for logout with
-an open first-login welcome. The successful run took 77.52 seconds. It kept the
-welcome open, verified no pending start job, stopped the UWSM session, checked all
-managed services stopped and returned to ReGreet. Its existing test-only PAM is
-not evidence of password authentication; that is covered by the installed-disk
-runs above.
+The current run verified:
 
-The public-source run (`work/vm-alpha-8/result.json`) repeated the complete path
-and clean final shutdown: 23 recorded stages passed. Its image SHA-256 is
-`8d7c4e9a53eb8ef3c5fd9a72bdb46a939d1cf08d6d444852d6386a56d70f2744`;
-runner revision was `0df3a163e4efc23b4a91f5f1e3fd2482826f5d63` with a clean tree.
+- Invalid target and offline-install rejection without disk writes; actual
+  SIGTERM after formatting/mounting, followed by unmounting and lock release.
+- Real password login through ReGreet/PAM, console login and passworded sudo.
+- UWSM/Hyprland, shell/session sockets and real Ghostty/Thunar windows.
+- First-login welcome completion and its suppression after subsequent boots.
+- SIGKILL recovery of both shell and session daemon; a working independent
+  locker afterwards, with native password authentication and RU → US switching.
+- An actual Hyprland setting and user state surviving both subsequent boots.
+- A rejected update preserving the current system, profile and boot entries.
+- Building and booting generation 2, selecting generation 1, then booting it
+  with the NIC disconnected and authenticating again.
+- Native lock/unlock on all three disk boots, fixture restoration and a clean
+  final shutdown.
 
-The subsequent RU run found that restarting the session daemon deleted the
-independent locker socket. A demand-driven runtime owner now preserves both
-clients’ sockets until they stop. Fresh production VM checks verified the same
-locker PID and socket inode across daemon restarts and SIGKILL, and directory
-cleanup after logout (87.09 seconds); the update-safety VM also passed (49.36
-seconds). A real-password diagnostic then exposed a separate obsolete QML
-unlock call. Its correction and the complete lock roundtrip are still pending.
+Compact guest reports are retained for the
+[first disk boot](assets/installable-alpha/current-run/installed-guest-report.txt),
+[second generation](assets/installable-alpha/current-run/generation2-guest-report.txt)
+and [offline rollback](assets/installable-alpha/current-run/offline-reboot-guest-report.txt).
+Screenshots show the [optional TUI choices](assets/installable-alpha/current-run/installer-options.png),
+[disk confirmation](assets/installable-alpha/current-run/installer-confirmation.png),
+[locker](assets/installable-alpha/current-run/installed-locked.png) and
+[unlocked desktop](assets/installable-alpha/current-run/installed-unlocked.png).
+[Evidence checksums](assets/installable-alpha/SHA256SUMS) cover the saved files.
+Passwords, virtual disks and the private cache signing key are excluded.
 
 ## Build and regression checks
 
-All 25 root flake checks passed at `f3866fc` before the runtime ownership fix. Unchanged check
-outputs were reused from the Nix store; this is separate from the fresh boots.
-Installer/backend tests cover identity/occupancy checks, secret handling,
-cleanup, default-disabled options, generated keyboard configuration and real
-80×24 dialog interaction. The private Nix Git dependency has a red-to-green
-fetchGit/fetchTree test with no Git in the caller PATH. SDK UTF-8 validation and
-the real-child session regression have their own component PR checks.
+All [25 root flake checks](assets/installable-alpha/current-run/flake-check-result.json)
+passed at the accepted revision. Changed production and migration/update-safety
+VMs ran freshly in 88.81 and 44.56 seconds respectively; unchanged derivations
+were reused. Those NixOS VM tests retain their existing test authentication and
+are separate from the real-password installed-disk proof above.
+
+Installer tests cover disk identity/occupancy, secret handling, interruption,
+opt-in defaults, generated keyboard configuration and real 80×24 dialog input.
+The private Nix Git dependency has a red-to-green fetchGit/fetchTree regression
+with no Git in the caller PATH. SDK UTF-8 parsing, session child startup and
+post-dispatch timeouts, and native locker authentication have component
+regressions. [Component CI](assets/installable-alpha/current-run/component-ci.json)
+is green for the exact SDK/session/desktop pins. The complete
+[root CI run](https://github.com/sleepylinux/sleepy/actions/runs/34901792384)
+also passed at the accepted revision, including fresh-clone reproducibility,
+all checks and both NixOS/Home Manager builds; its
+[result metadata](assets/installable-alpha/current-run/root-ci.json) is retained.
+
+Earlier fresh VMs reproduced and verified fixes for logout with an open welcome
+and deletion of the independent locker socket during a session restart. A
+separate real-password clone verified the native unlock correction. Thunar
+rendered a real file; its initially empty HOME view contained only hidden
+entries, which Ctrl+H displayed correctly. These diagnostics did not modify the
+accepted image or a permanent host OS.
 
 ## Limits and next work
 
-The tested hardware is disposable QEMU hardware. Physical AMD/Intel/NVIDIA,
-hybrid graphics, Wi-Fi radios, suspend and gaming are not accepted by these
-runs. Optional profiles were evaluated, not exercised on physical hardware.
-Encryption, Secure Boot and a fully offline installation are not implemented.
-The installer UI is English; additional desktop layouts retain US for password
-entry and use Alt+Shift. Recovery consoles remain US.
+Only disposable QEMU hardware is accepted. Physical AMD/Intel/NVIDIA, hybrid
+graphics, Wi-Fi radios, suspend, controllers and gaming remain unverified.
+Optional profiles were evaluated; they were not exercised on physical hardware.
+Secure Boot, encryption, a fully offline installer, promoted update channels
+and a published release cache are not implemented. The TUI is English; US stays
+available alongside selected desktop layouts through Alt+Shift, and recovery
+consoles always use US. Source compilation can make installation take longer.
 
-The alpha has saved source, local generations and rollback, but no promoted
-update channels or published release cache. Build-time source compilation may
-make a public-source installation slower than a cached one. Use the documented
-40 GiB/8 GiB VM configuration. No protected permanent VM or installed host OS was
-modified. PRs remain drafts; no merge or release was performed.
+The next product priority is read-only `sleepyctl doctor` using existing desktop
+capability diagnostics, followed by the physical hardware matrix. PRs remain
+drafts: no merge, public release or permanent host installation was performed.
 
-The next product priority is a read-only `sleepyctl doctor` built on the existing
-v3 desktop capability stream, followed by the physical hardware matrix.
-
-Reproduction commands and keyboard behavior are in the
-[installation runbook](../runbooks/installable-alpha.md); retained-generation
-and installation-media recovery are in [recovery](../recovery.md).
+See the [installation runbook](../runbooks/installable-alpha.md) for reproduction
+and [recovery](../recovery.md) for generations and installation-media recovery.

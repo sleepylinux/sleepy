@@ -9,10 +9,10 @@ the verified unencrypted path. Never operate on the development host's disks.
 - [x] Integrate a small `dialog` frontend and a structured Python backend using
   the existing NixOS installation tools. Validate disk identity and occupancy at
   the destructive boundary; keep passwords out of arguments, logs and the store.
-- [ ] Build and boot installer media, install to a disposable UEFI VM disk,
+- [x] Build and boot installer media, install to a disposable UEFI VM disk,
   detach media, boot installed disk, authenticate and exercise desktop/reboots.
-- [ ] Verify refusal/error paths, session recovery and previous generations.
-- [ ] Record actual evidence and reproduction commands; prepare draft changes.
+- [x] Verify refusal/error paths, session recovery and previous generations.
+- [x] Record actual evidence and reproduction commands; prepare draft changes.
 
 Initial state: root f09d320, last CI 33927986599 failed in sleepy-session's child
 startup test. QEMU/KVM and OVMF available; Nix absent. Docker is available, so

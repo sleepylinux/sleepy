@@ -1,0 +1,17 @@
+{
+  "sdk": {
+    "revision": "dff28bb596950d862ae5d219e478460dfa13e8f4",
+    "run": 34886593028,
+    "status": "passed"
+  },
+  "session": {
+    "revision": "8edee2ed946efb45f1e2f978025681b977f495e6",
+    "run": 34901674448,
+    "status": "passed"
+  },
+  "desktop": {
+    "revision": "008d8bc662c6b10045a24a4bd05f0852837fa5e9",
+    "run": 34901602942,
+    "status": "passed"
+  }
+}

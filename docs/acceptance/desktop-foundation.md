@@ -22,8 +22,8 @@ Component review and CI are tracked in
 The disposable installer VM has completed installation, password login, desktop
 startup, crash recovery, failed-update preservation, a second-generation boot,
 and a previous-generation boot without networking. A public-source run also
-passed without a local cache override. The final keyboard/locker gate is being
-repeated against this graph. Exact revisions and remaining limitations are in
+passed without a local cache override. The final keyboard/locker gate passed
+against this graph on all three installed-disk boots. Exact revisions and remaining limitations are in
 [Installable Sleepy acceptance](installable-alpha.md); reproduction is in the
 [installer runbook](../runbooks/installable-alpha.md).
 Root [PR #8](https://github.com/sleepylinux/sleepy/pull/8) must pass its checks

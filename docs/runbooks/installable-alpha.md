@@ -16,6 +16,16 @@ ls -lh result-installer/iso/
 sha256sum result-installer/iso/*.iso
 ```
 
+To reproduce the accepted artifact from its public source revision:
+
+```sh
+nix build github:sleepylinux/sleepy/9bca73cdc125bbf7704e8038dc46cc383cd36fd3#installer-iso \
+  --out-link result-installer
+```
+
+That public flake evaluates to the same ISO derivation as the clean source used
+for VM acceptance. A later checkout may produce a different artifact checksum.
+
 Boot the ISO in a UEFI VM with a new disposable disk. Secure Boot is not supported
 by this alpha. Connect Ethernet, or choose Network in the TUI to configure Wi-Fi.
 Choose Install, identify the target disk, enter account and regional settings,
@@ -83,5 +93,7 @@ For repeated local validation, the runner accepts `--cache-url` and
 the disposable image's running Nix daemon configuration, retains signature checks,
 and avoids downloading already built components again. It is not a release cache.
 
-Status: implementation and configuration checks completed; fresh installed-disk
-acceptance remains pending until the real VM evidence is recorded.
+Status: the complete installed-disk gate passed at
+`9bca73cdc125bbf7704e8038dc46cc383cd36fd3`, including native password lock/unlock
+and offline rollback. See the [acceptance record](../acceptance/installable-alpha.md)
+for the ISO checksum, exact revisions, screenshots and remaining limitations.

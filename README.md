@@ -1,6 +1,7 @@
 # Sleepy Linux
 
-Sleepy Linux is a pre-alpha NixOS desktop. Its primary session is a UWSM-managed
+Sleepy Linux is an experimental NixOS desktop with a VM-verified TUI installer.
+Its primary session is a UWSM-managed
 Hyprland session with a modular Quickshell desktop installed by
 `sleepy-desktop`, typed session services from `sleepy-session`, shared schemas
 from `sleepy-sdk`, and immutable artwork from `sleepy-artwork`.
@@ -15,6 +16,7 @@ providers; protected session transitions go through `sleepy-sessiond`.
 Start with:
 
 - [TUI installation and VM validation](docs/runbooks/installable-alpha.md);
+- [installable alpha evidence and limitations](docs/acceptance/installable-alpha.md);
 - [runtime ownership and failure semantics](docs/architecture/shell-runtime-integrations.md);
 - [real VM runbook](docs/runbooks/sleepy-vm-hyprland.md);
 - [acceptance record](docs/acceptance/hyprland-sleepy-desktop.md);
