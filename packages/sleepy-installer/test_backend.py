@@ -121,6 +121,7 @@ class ValidationTests(unittest.TestCase):
                 config = backend.render_configuration(data)
                 layout = 'us' if keyboard == 'us' else 'us,' + keyboard
                 options = '' if keyboard == 'us' else 'grp:alt_shift_toggle'
+                self.assertIn('console.keyMap = "us";', config)
                 self.assertIn(f'services.xserver.xkb.layout = "{layout}";', config)
                 self.assertIn(f'services.xserver.xkb.options = "{options}";', config)
 

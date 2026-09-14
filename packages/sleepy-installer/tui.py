@@ -169,7 +169,7 @@ def collect_request(dialog, disk):
                 ('locale', 'Language', locale_choices, 'en_US.UTF-8') if index == 4 else
                 ('keyboard', 'Installed keyboard layout', keyboard_choices, 'us'))
             if key == 'keyboard':
-                label += '\n\nUS stays available for passwords. Additional layouts use Alt+Shift.'
+                label += '\n\nDesktop: US stays available; Alt+Shift switches added layouts.\nRecovery consoles always use US, like this installer.'
             answer = dialog.ask('3 / 5   Make it feel familiar', 'menu', label + '\n\n' + FOOTER,
                                 *choices, default=request.get(key, default))
         elif index == 6:

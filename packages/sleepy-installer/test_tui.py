@@ -44,6 +44,7 @@ class WizardTests(unittest.TestCase):
                 menu = next(call for call in dialog.calls if 'Installed keyboard layout' in call[2])
                 self.assertIn('Alt+Shift', menu[2])
                 self.assertIn('US', menu[2])
+                self.assertIn('Recovery consoles always use US', menu[2])
                 self.assertIn('US + Russian', menu)
                 self.assertIn('US + German', menu)
                 self.assertIn('US + Czech', menu)

@@ -215,7 +215,7 @@ def render_configuration(data):
   users.users.root.hashedPassword = "!";
   system.stateVersion = "26.05";
 ''' + f'''  i18n.defaultLocale = {nix_string(data['locale'])};
-  console.keyMap = {nix_string(data['keyboard'])};
+  console.keyMap = "us";
   services.xserver.xkb.layout = {nix_string(layout)};
   services.xserver.xkb.options = {nix_string(keyboard_options)};
   time.timeZone = {nix_string(data['timezone'])};
