@@ -7,16 +7,16 @@
       "revision": "dff28bb596950d862ae5d219e478460dfa13e8f4"
     },
     "sleepy-session": {
-      "url": "github:sleepylinux/sleepy-session/6d5dd064f2f98e93105ca8fa8fa76672fc14330e",
-      "revision": "6d5dd064f2f98e93105ca8fa8fa76672fc14330e"
+      "url": "github:sleepylinux/sleepy-session/8edee2ed946efb45f1e2f978025681b977f495e6",
+      "revision": "8edee2ed946efb45f1e2f978025681b977f495e6"
     },
     "sleepy-artwork": {
       "url": "github:sleepylinux/sleepy-artwork/175314b9c236c1b412e8e1ebc54bbe3937b0c90d",
       "revision": "175314b9c236c1b412e8e1ebc54bbe3937b0c90d"
     },
     "sleepy-desktop": {
-      "url": "github:sleepylinux/sleepy-desktop/22f1cbe617e59b1d27e155c38c9a8e0bf5e7a3ac",
-      "revision": "22f1cbe617e59b1d27e155c38c9a8e0bf5e7a3ac"
+      "url": "github:sleepylinux/sleepy-desktop/008d8bc662c6b10045a24a4bd05f0852837fa5e9",
+      "revision": "008d8bc662c6b10045a24a4bd05f0852837fa5e9"
     }
   },
   "rootPackages": {
