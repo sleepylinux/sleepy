@@ -46,7 +46,7 @@ assert_contains modules/home/hyprland/settings.nix 'gesture = ["3, horizontal, w
 assert_contains modules/home/hyprland/rules.nix 'match:class'
 assert_contains modules/home/hyprland/rules.nix 'match:namespace'
 
-assert_contains modules/nixos/base/default.nix 'hardware.bluetooth.enable = true'
+assert_contains modules/nixos/hardware/default.nix 'hardware.bluetooth.enable = lib.mkDefault cfg.features.bluetooth.enable'
 assert_contains modules/nixos/base/default.nix 'power-profiles-daemon.enable = true'
 assert_not_contains modules/nixos/base/default.nix 'niri-version'
 assert_contains modules/nixos/session/default.nix 'programs.hyprland = {'

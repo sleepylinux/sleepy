@@ -4,5 +4,7 @@
     ./base
     ./branding
     ./session
+    ./hardware
+    ./welcome
   ];
 }

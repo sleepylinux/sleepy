@@ -3,12 +3,12 @@
   "milestone": "hyprland-sleepy-desktop",
   "inputs": {
     "sleepy-sdk": {
-      "url": "github:sleepylinux/sleepy-sdk/1ee5b424887eb6f7acfe3b931b37a2c610ff6498",
-      "revision": "1ee5b424887eb6f7acfe3b931b37a2c610ff6498"
+      "url": "github:sleepylinux/sleepy-sdk/dff28bb596950d862ae5d219e478460dfa13e8f4",
+      "revision": "dff28bb596950d862ae5d219e478460dfa13e8f4"
     },
     "sleepy-session": {
-      "url": "github:sleepylinux/sleepy-session/6c31e392f96de4e03997580fdcb02eaaed590eb6",
-      "revision": "6c31e392f96de4e03997580fdcb02eaaed590eb6"
+      "url": "github:sleepylinux/sleepy-session/6d5dd064f2f98e93105ca8fa8fa76672fc14330e",
+      "revision": "6d5dd064f2f98e93105ca8fa8fa76672fc14330e"
     },
     "sleepy-artwork": {
       "url": "github:sleepylinux/sleepy-artwork/175314b9c236c1b412e8e1ebc54bbe3937b0c90d",

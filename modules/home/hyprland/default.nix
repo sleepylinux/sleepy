@@ -18,7 +18,7 @@ in {
       systemd.enable = false;
 
       settings = lib.mkMerge [
-        (import ./settings.nix)
+        (lib.mkDefault (import ./settings.nix))
         (import ./appearance.nix)
         (import ./rules.nix {inherit config;})
         (import ./binds.nix {inherit config;})

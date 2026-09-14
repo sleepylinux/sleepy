@@ -9,12 +9,12 @@
     };
 
     sleepy-sdk = {
-      url = "github:sleepylinux/sleepy-sdk/1ee5b424887eb6f7acfe3b931b37a2c610ff6498";
+      url = "github:sleepylinux/sleepy-sdk/dff28bb596950d862ae5d219e478460dfa13e8f4";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
     sleepy-session = {
-      url = "github:sleepylinux/sleepy-session/6c31e392f96de4e03997580fdcb02eaaed590eb6";
+      url = "github:sleepylinux/sleepy-session/6d5dd064f2f98e93105ca8fa8fa76672fc14330e";
       inputs = {
         nixpkgs.follows = "nixpkgs";
         sleepy-sdk.follows = "sleepy-sdk";
@@ -65,6 +65,8 @@
     packages = forAllSystems (system: let
       pkgs = mkPkgs system;
     in {
+      sleepy-installer = pkgs.callPackage ./packages/sleepy-installer {source = self;};
+      installer-iso = self.nixosConfigurations.sleepy-installer.config.system.build.isoImage;
       inherit
         (pkgs)
         sleepy-artwork
@@ -82,8 +84,10 @@
 
     formatter = forAllSystems (system: (mkPkgs system).alejandra);
 
-    checks = forAllSystems (system:
-      import ./checks {
+    checks = forAllSystems (system: let
+      baselineChecks = import ./lib/baseline-check-packages.nix {inherit inputs system;};
+    in
+      (import ./checks {
         pkgs = mkPkgs system;
         source = self;
         inherit componentContract inputs nixpkgs;
@@ -91,8 +95,11 @@
         nixosModule = self.nixosModules.sleepy;
         nixosConfiguration = self.nixosConfigurations.sleepy-vm;
         homeConfiguration = self.homeConfigurations."lazy@sleepy-vm";
-        baselineActivationPackage = inputs.sleepy-m2-baseline.homeConfigurations."lazy@sleepy-vm".activationPackage;
-        baselineSessionPackage = inputs.sleepy-m2-baseline.packages.${system}.sleepy-session;
+        baselineActivationPackage = baselineChecks.activationPackage;
+        baselineSessionPackage = baselineChecks.sessionPackage;
+      })
+      // {
+        installer = (mkPkgs system).callPackage ./checks/installer.nix {};
       });
 
     devShells = forAllSystems (system: let
@@ -128,11 +135,21 @@
 
     overlays.default = overlay;
 
+    lib = {inherit mkSleepyHost;};
+
     nixosModules.sleepy = import ./modules/nixos;
     homeManagerModules.sleepy = import ./modules/home;
 
     nixosConfigurations.sleepy-vm = import ./hosts/sleepy-vm {
       inherit mkSleepyHost;
+    };
+
+    nixosConfigurations.sleepy-installer = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        ./hosts/sleepy-installer
+        {environment.systemPackages = [self.packages.x86_64-linux.sleepy-installer];}
+      ];
     };
 
     homeConfigurations."lazy@sleepy-vm" = home-manager.lib.homeManagerConfiguration {

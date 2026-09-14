@@ -1,6 +1,7 @@
 {
   config,
   pkgs,
+  lib,
   ...
 }: let
   cfg = config.sleepy;
@@ -12,12 +13,10 @@ in {
   };
 
   networking.networkmanager.enable = true;
-  hardware.bluetooth.enable = true;
-
-  i18n.defaultLocale = "en_US.UTF-8";
+  i18n.defaultLocale = lib.mkDefault "en_US.UTF-8";
   services.xserver.xkb = {
-    layout = "us,ru";
-    options = "grp:alt_shift_toggle";
+    layout = lib.mkDefault "us";
+    options = lib.mkDefault "";
   };
 
   programs = {
