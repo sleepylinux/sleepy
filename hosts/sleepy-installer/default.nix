@@ -34,6 +34,7 @@
       sleepy-install
     fi
   '';
+  nix.package = lib.mkDefault (import ../../packages/vendor/nix-with-git {inherit pkgs;});
   nix.settings.experimental-features = ["nix-command" "flakes"];
   isoImage = {
     volumeID = "SLEEPY_INSTALL";

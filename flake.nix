@@ -65,7 +65,10 @@
     packages = forAllSystems (system: let
       pkgs = mkPkgs system;
     in {
-      sleepy-installer = pkgs.callPackage ./packages/sleepy-installer {source = self;};
+      sleepy-installer = pkgs.callPackage ./packages/sleepy-installer {
+        source = self;
+        nix = import ./packages/vendor/nix-with-git {inherit pkgs;};
+      };
       installer-iso = self.nixosConfigurations.sleepy-installer.config.system.build.isoImage;
       inherit
         (pkgs)

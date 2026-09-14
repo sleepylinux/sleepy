@@ -198,6 +198,7 @@ in
     control-center-contract = controlCenterContract;
     nixos = nixosConfiguration.config.system.build.toplevel;
     home = homeConfiguration.activationPackage;
+    nix-private-git = import ./nix-private-git.nix {inherit pkgs;};
     greetd-sessions = import ./greetd-sessions.nix {
       inherit pkgs;
       inherit (nixosConfiguration) config;

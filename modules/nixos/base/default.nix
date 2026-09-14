@@ -12,6 +12,9 @@ in {
     shell = pkgs.fish;
   };
 
+  # Nix's Git fetchers are system-update dependencies, not a dev-profile toggle.
+  nix.package = lib.mkDefault (import ../../../packages/vendor/nix-with-git {inherit pkgs;});
+
   networking.networkmanager.enable = true;
   i18n.defaultLocale = lib.mkDefault "en_US.UTF-8";
   services.xserver.xkb = {

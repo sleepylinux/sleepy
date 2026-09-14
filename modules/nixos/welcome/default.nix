@@ -1,8 +1,13 @@
-{pkgs, ...}: let
+{
+  config,
+  pkgs,
+  ...
+}: let
   welcome = pkgs.writeShellApplication {
     name = "sleepy-welcome";
     runtimeInputs = [pkgs.dialog pkgs.coreutils];
     text = ''
+      export DIALOGRC=${../../../packages/sleepy-installer/dialogrc}
       state="''${XDG_STATE_HOME:-$HOME/.local/state}/sleepy"
       mkdir -p "$state"
       if dialog --title ' Welcome to Sleepy ' --msgbox \
@@ -13,12 +18,12 @@
   };
   systemTools = pkgs.writeShellApplication {
     name = "sleepy-system";
-    runtimeInputs = [pkgs.nix pkgs.nixos-rebuild pkgs.coreutils];
+    runtimeInputs = [config.nix.package config.system.build.nixos-rebuild pkgs.coreutils];
     text = ''
       case "''${1:-help}" in
         generations) exec nix-env --list-generations -p /nix/var/nix/profiles/system ;;
-        rebuild) exec sudo nixos-rebuild switch --flake /etc/nixos#installed ;;
-        rollback) exec sudo nixos-rebuild switch --rollback ;;
+        rebuild) exec sudo ${config.system.build.nixos-rebuild}/bin/nixos-rebuild switch --flake /etc/nixos#installed ;;
+        rollback) exec sudo ${config.system.build.nixos-rebuild}/bin/nixos-rebuild switch --rollback ;;
         *) printf '%s\n' 'sleepy-system generations | rebuild | rollback' ;;
       esac
     '';
