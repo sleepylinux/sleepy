@@ -19,7 +19,9 @@ by this alpha. Connect Ethernet, or choose Network in the TUI to configure Wi-Fi
 Choose Install, identify the target disk, enter account and regional settings,
 and select optional software. NVIDIA (Turing or newer), gaming, development,
 Flatpak and Bluetooth are all unchecked by default. NVIDIA and Steam require
-accepting their upstream licenses through the selected configuration.
+accepting their upstream licenses through the selected configuration. Use Space
+to toggle an option and Enter to continue. Leaving every option unchecked is a
+supported minimal desktop installation.
 
 Review the disk identity and type its complete device path to confirm erasure.
 Wait for completion, shut down, detach the ISO, then boot the disk. Sign in with
@@ -46,14 +48,21 @@ vary by distribution; override `--firmware` and `--vars` as needed.
 ```sh
 python3 scripts/vm/installable-alpha.py \
   --iso "$PWD/result-installer/iso/sleepy-0.1.0-alpha-x86_64-linux.iso" \
-  --output "$PWD/work/vm-alpha-run-1" --pause-at-greeter
+  --output "$PWD/work/vm-alpha-run-1" \
+  --image-source-revision "$(git rev-parse HEAD)" \
+  --interrupt-install --update-safety --pause-at-greeter
 ```
 
 The output directory must not exist. The runner creates its own disk and firmware
 variables, uses KVM when accessible and otherwise TCG, drives the actual visible
 TUI, and detaches the ISO before disk boot. `--pause-at-greeter` is an inspection
-gate for the first run; its printed instructions allow the engineer to select
-the account and verify the password field before credentials are entered.
+gate for the first run; inspect the default UWSM session, press Enter to select
+the account, and verify the password field before allowing credentials to be
+entered. The update gate deliberately rejects an invalid configuration, builds
+a second generation, boots it, selects the original generation, and boots that
+generation with the virtual network disconnected. It also checks real password
+authentication, applications, first-boot completion, persistent settings and
+recovery after killing the shell and session daemon.
 
 Results, screenshots and logs remain in the private output directory. A random
 test password is stored only in its mode-0600 `test-credential` file; do not publish
