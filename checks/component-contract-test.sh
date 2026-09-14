@@ -247,19 +247,34 @@ jq -n \
       shellExecStart: [($desktop + "/bin/sleepy-shell")],
       artworkPackage: $artwork,
       sessionPackage: $session,
+      runtime: {
+        unit: "sleepy-runtime.service", wantedBy: [],
+        partOf: ["graphical-session.target"],
+        before: ["sleepy-session.service", "sleepy-locker.service"],
+        after: ["graphical-session.target"], stopWhenUnneeded: true,
+        type: "oneshot", remainAfterExit: true,
+        runtimeDirectory: "sleepy", runtimeDirectoryMode: "0700", runtimeDirectoryPreserve: "no"
+      },
+      locker: {
+        unit: "sleepy-locker.service",
+        after: ["graphical-session.target", "sleepy-runtime.service"],
+        requires: ["sleepy-runtime.service"],
+        runtimeDirectory: "sleepy", runtimeDirectoryMode: "0700", runtimeDirectoryPreserve: "yes"
+      },
       service: {
         unit: "sleepy-session.service",
         wantedBy: ["graphical-session.target"],
         partOf: ["graphical-session.target"],
         wants: ["sleepy-locker.service"],
-        after: ["graphical-session.target", "dbus.socket", "sleepy-locker.service"],
+        after: ["graphical-session.target", "dbus.socket", "sleepy-runtime.service", "sleepy-locker.service"],
         requisite: ["graphical-session.target"],
-        requires: ["dbus.socket"],
+        requires: ["dbus.socket", "sleepy-runtime.service"],
         type: "notify",
         notifyAccess: "main",
         restart: "on-failure",
         runtimeDirectory: "sleepy",
         runtimeDirectoryMode: "0700",
+        runtimeDirectoryPreserve: "yes",
         killSignal: "SIGINT",
         timeoutStopSec: 20,
         environment: ["PATH=/nix/store/fake-session-runtime/bin", "SLEEPY_LOCKER_SOCKET=%t/sleepy/locker.sock", "SLEEPY_NOTIFICATION_BUS_OWNER=shell"],
@@ -314,6 +329,23 @@ assert_rejected unbounded-session-path \
   '.homeManager.service.environment = ["PATH=/run/current-system/sw/bin"]'
 assert_rejected wrong-runtime-mode \
   '.homeManager.service.runtimeDirectoryMode = "0755"'
+assert_rejected missing-runtime-owner 'del(.homeManager.runtime)'
+assert_rejected missing-session-runtime-dependency '.homeManager.service.requires = ["dbus.socket"]'
+assert_rejected missing-session-runtime-ordering '.homeManager.service.after -= ["sleepy-runtime.service"]'
+assert_rejected missing-locker-runtime-dependency '.homeManager.locker.requires = []'
+assert_rejected missing-locker-runtime-ordering '.homeManager.locker.after = ["graphical-session.target"]'
+assert_rejected missing-session-preserve 'del(.homeManager.service.runtimeDirectoryPreserve)'
+assert_rejected missing-locker-preserve 'del(.homeManager.locker.runtimeDirectoryPreserve)'
+assert_rejected premature-session-cleanup '.homeManager.service.runtimeDirectoryPreserve = "no"'
+assert_rejected premature-locker-cleanup '.homeManager.locker.runtimeDirectoryPreserve = "no"'
+assert_rejected missing-runtime-last-client-cleanup '.homeManager.runtime.stopWhenUnneeded = false'
+assert_rejected runtime-held-unconditionally '.homeManager.runtime.wantedBy = ["graphical-session.target"]'
+assert_rejected missing-runtime-shutdown-ordering '.homeManager.runtime.before = []'
+assert_rejected missing-runtime-graphical-lifecycle '.homeManager.runtime.partOf = []'
+assert_rejected runtime-owner-exits-early '.homeManager.runtime.remainAfterExit = false'
+assert_rejected runtime-owner-preserves-stale-state '.homeManager.runtime.runtimeDirectoryPreserve = "yes"'
+assert_rejected insecure-runtime-owner-mode '.homeManager.runtime.runtimeDirectoryMode = "0755"'
+assert_rejected insecure-locker-runtime-mode '.homeManager.locker.runtimeDirectoryMode = "0755"'
 assert_rejected generic-quickshell-runner \
   '.homeManager.shellExecStart = ["/nix/store/fake-quickshell/bin/quickshell"]'
 assert_rejected generic-quickshell-unit \
