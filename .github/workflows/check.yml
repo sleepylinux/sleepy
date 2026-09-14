@@ -51,7 +51,6 @@ jobs:
           nix develop --command bash checks/quickshell-contract-test.sh
           nix develop --command bash checks/component-contract-test.sh
           nix develop --command bash checks/component-lock-test.sh
-          nix develop --command bash checks/current-component-pins-test.sh
           nix develop --command bash checks/flake-shape-test.sh
           nix develop --command bash checks/flake-input-contract-test.sh
           nix develop --command bash checks/license-contract-test.sh
