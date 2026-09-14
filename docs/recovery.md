@@ -9,7 +9,9 @@ its first successful system rebuild. Do not delete generations or run garbage
 collection while investigating a failure.
 
 If the desktop cannot start, press Ctrl+Alt+F2, log in with the account created
-during installation, and run:
+during installation. Recovery consoles use the same US keyboard as the installer,
+including when an additional desktop layout was selected. Then run:
+
 
 ```sh
 systemctl status greetd

@@ -2,8 +2,10 @@
 
 The installer is a network installation image for x86_64 UEFI machines. It uses
 `dialog` in a console, with no live desktop. The whole selected disk is erased:
-GPT, a 512 MiB FAT32 EFI partition, and a compressed Btrfs root. The minimum disk
-size is 16 GiB; use 40 GiB for development VMs. Encryption is not implemented.
+GPT, a 512 MiB FAT32 EFI partition, and a compressed Btrfs root. The validated VM
+configuration uses a 40 GiB disk and 8 GiB RAM. Use that configuration for alpha
+testing; smaller systems are not validated.
+Encryption is not implemented.
 
 Build the pinned source with Nix and flakes enabled:
 
@@ -22,6 +24,10 @@ Flatpak and Bluetooth are all unchecked by default. NVIDIA and Steam require
 accepting their upstream licenses through the selected configuration. Use Space
 to toggle an option and Enter to continue. Leaving every option unchecked is a
 supported minimal desktop installation.
+
+The installer and recovery consoles use US keys. Selecting Russian, German or
+Czech adds that desktop layout alongside US; Alt+Shift switches between them.
+US remains first so the password entered during installation stays usable.
 
 Review the disk identity and type its complete device path to confirm erasure.
 Wait for completion, shut down, detach the ISO, then boot the disk. Sign in with
@@ -50,7 +56,7 @@ python3 scripts/vm/installable-alpha.py \
   --iso "$PWD/result-installer/iso/sleepy-0.1.0-alpha-x86_64-linux.iso" \
   --output "$PWD/work/vm-alpha-run-1" \
   --image-source-revision "$(git rev-parse HEAD)" \
-  --interrupt-install --update-safety --pause-at-greeter
+  --interrupt-install --update-safety --keyboard ru --pause-at-greeter
 ```
 
 The output directory must not exist. The runner creates its own disk and firmware
@@ -62,7 +68,10 @@ entered. The update gate deliberately rejects an invalid configuration, builds
 a second generation, boots it, selects the original generation, and boots that
 generation with the virtual network disconnected. It also checks real password
 authentication, applications, first-boot completion, persistent settings and
-recovery after killing the shell and session daemon.
+recovery after killing the shell and session daemon. The selected keyboard is
+checked in Hyprland, followed by a real Sleepy locker password roundtrip; with
+an additional layout selected, the test switches back to US on the lock screen.
+Omit `--keyboard ru` to exercise the default US-only installation.
 
 Results, screenshots and logs remain in the private output directory. A random
 test password is stored only in its mode-0600 `test-credential` file; do not publish
