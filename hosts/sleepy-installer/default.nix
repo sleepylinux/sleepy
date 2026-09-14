@@ -38,7 +38,7 @@
     volumeID = "SLEEPY_INSTALL";
     squashfsCompression = "zstd -Xcompression-level 15";
   };
-  image.fileName = "sleepy-0.1.0-alpha-x86_64-linux.iso";
+  image.baseName = lib.mkForce "sleepy-0.1.0-alpha-x86_64-linux";
   boot.supportedFilesystems = lib.mkForce ["btrfs" "vfat" "ext4"];
   boot.kernelParams = ["console=tty0" "console=ttyS0,115200n8"];
   documentation = {

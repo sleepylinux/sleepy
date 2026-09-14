@@ -120,7 +120,8 @@ def disk_sequence(path):
 def describe_disk(node, swaps):
     path = node.get('path', '')
     reason = ''
-    if node.get('type') != 'disk': reason = 'Not a whole disk'
+    if re.fullmatch(r'(?:zram|ram|loop)[0-9]+', Path(path).name): reason = 'Memory and loop devices are not persistent installation disks'
+    elif node.get('type') != 'disk': reason = 'Not a whole disk'
     elif node.get('ro'): reason = 'Read-only device'
     elif node.get('rm'): reason = 'Removable media is protected'
     elif int(node.get('size') or 0) < 16 * 1024**3: reason = 'At least 16 GiB required'

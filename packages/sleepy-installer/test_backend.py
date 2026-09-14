@@ -74,6 +74,11 @@ class ValidationTests(unittest.TestCase):
             self.assertFalse(backend.describe_disk(disk(children=[child]), set())['eligible'])
         self.assertFalse(backend.describe_disk(disk(), {'/dev/vda'})['eligible'])
 
+    def test_memory_disks_are_never_installation_targets(self):
+        for path in ['/dev/zram0', '/dev/ram0']:
+            with self.subTest(path=path):
+                self.assertFalse(backend.describe_disk(disk(path=path, size=64*1024**3), set())['eligible'])
+
     def test_readonly_removable_and_small_rejected(self):
         for changes in [{'ro': True}, {'rm': True}, {'size': 1024}, {'type': 'part'}]:
             self.assertFalse(backend.describe_disk(disk(**changes), set())['eligible'])
