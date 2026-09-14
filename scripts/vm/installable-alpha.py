@@ -416,10 +416,23 @@ with socket.socket(socket.AF_UNIX) as peer:
  print(reply.decode().strip())' "/run/user/$uid/sleepy/locker.sock"
 }
 test "$(locker_state)" = unlocked
-hypr switchxkblayout all __GROUP__
-hypr devices -j | jq -e '[.keyboards[] | select(.main) | .active_keymap] | length == 1 and (.[0] __LAYOUT_COMPARISON__ "English (US)")'
-printf 'KEYBOARD_LAYOUT_SELECTED_OK\n'
 printf 'LOCK_RETURN_TO_DESKTOP\n'
+# VT2 is the authenticated audit console. Hyprland's keyboards become usable
+# only after the runner returns to its real graphical VT and input resumes.
+desktop_active=false
+for attempt in $(seq 1 30); do
+  if test "$(cat /sys/class/tty/tty0/active)" = tty1; then desktop_active=true; break; fi
+  sleep 1
+done
+test "$desktop_active" = true
+layout_selected=false
+for attempt in $(seq 1 30); do
+  hypr switchxkblayout all __GROUP__
+  if hypr devices -j | jq -e '[.keyboards[] | select(.main) | .active_keymap] | length == 1 and (.[0] __LAYOUT_COMPARISON__ "English (US)")'; then layout_selected=true; break; fi
+  sleep 1
+done
+test "$layout_selected" = true
+printf 'KEYBOARD_LAYOUT_SELECTED_OK\n'
 hypr dispatch exec 'sleepy-shell-ipc call sleepy lock'
 locked=false
 for attempt in $(seq 1 40); do
