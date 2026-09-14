@@ -1,0 +1,9 @@
+{
+  "source": "8e6e1dbf408e46e4bfb547ce812a9dbed8c5f025",
+  "derivation": "/nix/store/ii49bi5wcc6cm16z8ha19s49f4daj8rg-sleepy-session-0.1.0.drv",
+  "package": "/nix/store/m92vdxk75sxrl63pg7ndpxhsh1s78l27-sleepy-session-0.1.0",
+  "passed": 483,
+  "failed": 0,
+  "ignored": 2,
+  "suites": 27
+}

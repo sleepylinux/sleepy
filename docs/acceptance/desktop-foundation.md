@@ -7,12 +7,12 @@ The root integration pins this exact reviewed public component graph:
 | Component | Reviewed revision |
 |---|---|
 | `sleepy-sdk` | `dff28bb596950d862ae5d219e478460dfa13e8f4` |
-| `sleepy-session` | `8e6e1dbf408e46e4bfb547ce812a9dbed8c5f025` |
+| `sleepy-session` | `3980ea94547ff42b590e6c96b8ae3b987d7a2dcc` |
 | `sleepy-artwork` | `175314b9c236c1b412e8e1ebc54bbe3937b0c90d` |
 | `sleepy-desktop` | `008d8bc662c6b10045a24a4bd05f0852837fa5e9` |
 
 The generated `flake.lock` SHA-256 is
-`32d28e9da2339920373b313c27acf5b5aac73aceb9d3a946eb01d179ccce5cfb`. This candidate includes the SDK UTF-8 fix, deterministic session process tests,
+`f162411efef85c9fb7423e427783eef306fb71c273f17b46187c3ed2b5e87aab`. This candidate includes the SDK UTF-8 fix, deterministic session process tests,
 consistent Hyprland command readback deadlines, and the native locker unlock fix.
 Component review and CI are tracked in
 [SDK PR #8](https://github.com/sleepylinux/sleepy-sdk/pull/8),
@@ -27,8 +27,9 @@ preservation and three installed-disk boots passed. See the immutable
 
 The current graph adds the read-only doctor from
 [session PR #10](https://github.com/sleepylinux/sleepy-session/pull/10).
-Its package and installed-VM diagnostics are being verified separately; the
-previous installer ISO does not contain this command.
+Its package and installed-VM diagnostics are recorded separately in
+[doctor acceptance](doctor.md); the previous installer ISO does not contain
+this command. Existing audio/battery/Bluetooth provider errors remain visible.
 
 The older 2026-09-04 baseline, CI interpreter correction, and protected-VM
 acceptance remain historical records in

@@ -28,5 +28,10 @@ Next increment: read-only desktop diagnostics and cleanup.
 
 - [x] Remove obsolete VM disks, intermediate images, build outputs and Nix cache.
 - [x] Implement bounded, privacy-preserving `sleepyctl doctor`; review and unit test.
-- [ ] Verify the Nix package in the installed disposable VM, including offline and daemon recovery.
-- [ ] Integrate reviewed pins, complete CI, merge and remove the remaining temporary VM/build files.
+- [x] Verify the Nix package in the installed disposable VM, including offline and daemon recovery.
+- [x] Integrate reviewed pins and remove the remaining temporary VM/build files.
+
+Merge gate: exact-head CI and independent review for session PR #10 and root
+PR #9. Installer/root PR #8 and its three component PRs are merged.
+Next product priority: audio/battery parse errors and Bluetooth timeout reported
+by doctor; then physical hardware profiles and suspend acceptance.

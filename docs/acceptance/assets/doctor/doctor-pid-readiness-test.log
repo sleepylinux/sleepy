@@ -1,0 +1,62 @@
+   Compiling libc v0.2.189
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.24
+   Compiling version_check v0.9.5
+   Compiling typenum v1.20.1
+   Compiling getrandom v0.4.3
+   Compiling serde_core v1.0.229
+   Compiling cfg-if v1.0.4
+   Compiling autocfg v1.5.1
+   Compiling pkg-config v0.3.34
+   Compiling zmij v1.0.23
+   Compiling serde_json v1.0.151
+   Compiling serde v1.0.229
+   Compiling bytes v1.12.1
+   Compiling memchr v2.8.3
+   Compiling itoa v1.0.18
+   Compiling pin-project-lite v0.2.17
+   Compiling semver v1.0.28
+   Compiling futures-core v0.3.34
+   Compiling futures-sink v0.3.34
+   Compiling cpufeatures v0.2.17
+   Compiling zeroize v1.9.0
+   Compiling rustix v1.1.4
+   Compiling bitflags v2.13.1
+   Compiling linux-raw-sys v0.12.1
+   Compiling once_cell v1.21.4
+   Compiling fastrand v2.5.0
+   Compiling generic-array v0.14.7
+   Compiling num-traits v0.2.19
+   Compiling libdbus-sys v0.2.7
+   Compiling syn v3.0.3
+   Compiling syn v2.0.119
+   Compiling chrono v0.4.45
+   Compiling block-buffer v0.10.4
+   Compiling crypto-common v0.1.7
+   Compiling errno v0.3.14
+   Compiling socket2 v0.5.8
+   Compiling mio v1.2.2
+   Compiling fs2 v0.4.3
+   Compiling dbus v0.9.12
+   Compiling sd-notify v0.4.5
+   Compiling digest v0.10.7
+   Compiling signal-hook-registry v1.4.8
+   Compiling uuid v1.25.0
+   Compiling sha2 v0.10.9
+   Compiling tempfile v3.27.0
+   Compiling tokio-macros v2.5.0
+   Compiling serde_derive v1.0.229
+   Compiling async-trait v0.1.92
+   Compiling tokio v1.43.0
+   Compiling sleepy-sdk v0.1.0 (https://github.com/sleepylinux/sleepy-sdk?rev=dff28bb596950d862ae5d219e478460dfa13e8f4#dff28bb5)
+   Compiling tokio-util v0.7.17
+   Compiling sleepy-session v0.1.0 (/home/lazy/orca/workspaces/sleepy/session-fixes)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 15.73s
+     Running tests/desktop_services.rs (work/build/session/debug/deps/desktop_services-449a174d56a6900c)
+
+running 1 test
+test child_pid_readiness_requires_a_complete_positive_record ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 51 filtered out; finished in 0.00s
+
