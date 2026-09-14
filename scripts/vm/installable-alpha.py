@@ -37,7 +37,20 @@ def ocr_image(path):
         enhanced.save(target)
         enlarged = '\n'.join(subprocess.run(['tesseract', str(target), 'stdout', '--psm', str(psm)],
                                   capture_output=True, text=True, check=True).stdout for psm in (6, 11))
-    return original + '\n' + enlarged
+    text = original + '\n' + enlarged
+    if 'your desktop is ready to explore' in ' '.join(text.lower().split()):
+        # Older alpha welcome dialogs used blue text on gray; preserve exact
+        # title recognition in recovery runs without weakening string matching.
+        with Image.open(path) as frame, tempfile.TemporaryDirectory(prefix='sleepy-welcome-ocr-') as directory:
+            frame = frame.convert('RGB')
+            mask = Image.new('L', frame.size)
+            mask.putdata([0 if b - r > 25 and b - g > 10 else 255
+                          for r, g, b in frame.getdata()])
+            target = Path(directory) / 'title.png'
+            mask.resize((frame.width * 3, frame.height * 3)).save(target)
+            text += '\n' + subprocess.run(['tesseract', str(target), 'stdout', '--psm', '11'],
+                                           capture_output=True, text=True, check=True).stdout
+    return text
 
 
 class QMP:
@@ -409,6 +422,15 @@ for unit in graphical-session.target wayland-wm@hyprland.desktop.service sleepy-
 test -S /run/user/$uid/sleepy/desktop.sock
 test "$(stat -c %a /run/user/$uid/sleepy/desktop.sock)" = 600
 printf 'DESKTOP_UNITS_AND_SOCKET_OK\n'
+test -f /home/sleepy/.local/state/sleepy/welcome-seen
+test "$(stat -c %u /home/sleepy/.local/state/sleepy/welcome-seen)" = "$uid"
+test "$(usystem show sleepy-welcome.service -P ActiveState)" = inactive
+test "$(usystem show sleepy-welcome.service -P MainPID)" = 0
+printf 'FIRST_BOOT_WELCOME_DISMISSED_AND_INACTIVE_OK\n'
+''' + (r'''
+test "$(usystem show sleepy-welcome.service -P ConditionResult)" = no
+printf 'FIRST_BOOT_WELCOME_STATE_PERSISTED_OK\n'
+''' if after_reboot else '') + r'''
 hypr() { runuser -u sleepy -- env XDG_RUNTIME_DIR=/run/user/$uid hyprctl -i 0 "$@"; }
 hypr dispatch exec ghostty
 hypr dispatch exec thunar
@@ -511,6 +533,11 @@ def login_desktop(machine, password, name):
     machine.qmp.text(password + '\n')
     time.sleep(20)
     machine.screen(f'{name}-desktop')
+    if name == 'installed':
+        machine.wait_screen('Welcome to Sleepy', f'{name}-welcome')
+        machine.qmp.keys('ret')
+        time.sleep(3)
+        machine.screen(f'{name}-welcome-dismissed')
 
 
 def main():
@@ -615,6 +642,8 @@ def main():
         # Preserve verified substeps even if a later update or reboot gate fails.
         markers = {
             'REAL_USER_LOGIN_OK': 'real-password-login',
+            'FIRST_BOOT_WELCOME_DISMISSED_AND_INACTIVE_OK': 'first-boot-welcome-dismissed',
+            'FIRST_BOOT_WELCOME_STATE_PERSISTED_OK': 'first-boot-welcome-state-persistence',
             'INSTALLED_DISK_BOOT_OK': 'installed-disk-boot',
             'DESKTOP_UNITS_AND_SOCKET_OK': 'desktop-units-and-socket',
             'TERMINAL_AND_FILE_MANAGER_WINDOWS_OK': 'terminal-and-file-manager-windows',
