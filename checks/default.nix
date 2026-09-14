@@ -199,6 +199,9 @@ in
     nixos = nixosConfiguration.config.system.build.toplevel;
     home = homeConfiguration.activationPackage;
     hyprland-config = hyprlandConfig;
+    hyprland-defaults = import ./hyprland-defaults.nix {
+      inherit homeConfiguration pkgs;
+    };
     hyprland-production-vm = hyprlandProductionVm;
     public-module = publicModule;
     session-contract = sessionContract;
