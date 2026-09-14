@@ -129,7 +129,7 @@ class ValidationTests(unittest.TestCase):
             self.assertNotIn(request()['password'], str(run.call_args.args))
 
 class InstallationSequenceTests(unittest.TestCase):
-    def exercise_install(self, fail_command=None, offline=False, invalid_config=False):
+    def exercise_install(self, fail_command=None, offline=False, invalid_config=False, invalid_target=False):
         from contextlib import ExitStack
         calls = []
         with tempfile.TemporaryDirectory() as temp, ExitStack() as stack:
@@ -161,10 +161,10 @@ class InstallationSequenceTests(unittest.TestCase):
             stack.enter_context(patch.object(backend.os, 'fstat', return_value=type('Stat', (), {'st_mode': 0, 'st_rdev': 0})()))
             real_stat = backend.os.stat
             stack.enter_context(patch.object(backend.os, 'stat', side_effect=lambda p, *a, **kw: type('Stat', (), {'st_rdev': 0})() if p == '/dev/vda' else real_stat(p, *a, **kw)))
-            verify = stack.enter_context(patch.object(backend, 'verify_target', return_value=backend.describe_disk(disk(), set())))
+            verify = stack.enter_context(patch.object(backend, 'verify_target', return_value=backend.describe_disk(disk(), set()), side_effect=backend.InstallError('invalid target') if invalid_target else None))
             stack.enter_context(patch.object(backend, 'list_disks', return_value=[backend.describe_disk(disk(), set())]))
-            stack.enter_context(patch.object(backend, 'check_network', side_effect=backend.InstallError('offline') if offline else None))
-            stack.enter_context(patch.object(backend, 'preflight_configuration', side_effect=backend.InstallError('invalid configuration') if invalid_config else None))
+            network = stack.enter_context(patch.object(backend, 'check_network', side_effect=backend.InstallError('offline') if offline else None))
+            preflight = stack.enter_context(patch.object(backend, 'preflight_configuration', side_effect=backend.InstallError('invalid configuration') if invalid_config else None))
             stack.enter_context(patch.object(backend, 'write_configuration'))
             stack.enter_context(patch.object(backend, 'emit'))
             def command(argv, secret=None):
@@ -177,12 +177,18 @@ class InstallationSequenceTests(unittest.TestCase):
                 if argv[0] == fail_command: raise backend.InstallError('simulated command failure')
                 return ''
             stack.enter_context(patch.object(backend, 'run', side_effect=command))
-            if fail_command or offline or invalid_config:
+            if fail_command or offline or invalid_config or invalid_target:
                 with self.assertRaises(backend.InstallError): backend.install(request())
             else:
                 backend.install(request())
-            self.assertEqual(verify.call_count, 0 if offline or invalid_config else 2)
+            self.assertEqual(verify.call_count, 1 if offline or invalid_config or invalid_target else 3)
+            if invalid_target:
+                network.assert_not_called()
+                preflight.assert_not_called()
         return calls
+
+    def test_invalid_target_never_starts_network_or_configuration_preflight(self):
+        self.assertEqual(self.exercise_install(invalid_target=True), [])
 
     def test_invalid_config_never_touches_disk(self):
         self.assertEqual(self.exercise_install(invalid_config=True), [])

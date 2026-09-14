@@ -272,6 +272,9 @@ def install(data):
     try:
         try: fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError: raise InstallError('Another installation is running') from None
+        # Reject invalid/busy selections without downloads or configuration work.
+        # Identity is still rechecked after preflight and under the exclusive claim.
+        verify_target(data)
         emit('network', 'Checking network access before erasing the disk', 1)
         check_network()
         emit('preflight', 'Checking selected system configuration before erasing the disk', 2)

@@ -141,6 +141,18 @@ class Machine:
         raise RuntimeError(f'Screen did not show {fragment!r}; inspect {name}.png')
 
 
+SHELL_PROMPT = r'[$#](?:\x1b\[[0-9;]*m)* '
+
+
+def serial_line(terminal, command, marker=None, timeout=300):
+    terminal.sendline(command)
+    if marker is not None:
+        terminal.expect(marker, timeout=timeout)
+    # sudo/login restore terminal modes on exit. Wait until bash owns the TTY
+    # again; sending after a progress marker alone can be lost by TCSAFLUSH.
+    terminal.expect(SHELL_PROMPT, timeout=timeout)
+
+
 def safety_checks(machine, terminal, interrupt_install=False):
     script = r'''import fcntl, json, os, secrets, shutil, signal, subprocess, sys
 backend = shutil.which("sleepy-install-backend")
@@ -193,18 +205,16 @@ print("SLEEPY_SAFETY_" + mode.upper() + "_OK", flush=True)
     # Discover the interpreter already bundled in the immutable package wrapper.
     setup = ("sleepy_python=$(grep -oE '/nix/store/[a-z0-9]+-python3-[^/]+/bin/python3' "
              '\"$(readlink -f \"$(command -v sleepy-install-backend)\")\" | head -n1); : > /tmp/sleepy-safety.b64')
-    terminal.sendline(setup)
+    serial_line(terminal, setup)
     # Stay well below the canonical terminal's input-line bound.
     for offset in range(0, len(encoded), 512):
-        terminal.sendline('printf %s ' + shlex.quote(encoded[offset:offset + 512]) + ' >> /tmp/sleepy-safety.b64')
-    terminal.sendline('base64 -d /tmp/sleepy-safety.b64 > /tmp/sleepy-safety.py')
-    terminal.sendline('sudo -n "$sleepy_python" /tmp/sleepy-safety.py invalid')
-    terminal.expect('SLEEPY_SAFETY_INVALID_OK', timeout=240)
+        serial_line(terminal, 'printf %s ' + shlex.quote(encoded[offset:offset + 512]) + ' >> /tmp/sleepy-safety.b64')
+    serial_line(terminal, 'base64 -d /tmp/sleepy-safety.b64 > /tmp/sleepy-safety.py')
+    serial_line(terminal, 'sudo -n "$sleepy_python" /tmp/sleepy-safety.py invalid', 'SLEEPY_SAFETY_INVALID_OK', timeout=240)
     machine.safety_completed = ['invalid-target-rejected-without-disk-writes']
     machine.qmp.call('set_link', name='nic0', up=False)
     try:
-        terminal.sendline('sudo -n "$sleepy_python" /tmp/sleepy-safety.py offline')
-        terminal.expect('SLEEPY_SAFETY_OFFLINE_OK', timeout=240)
+        serial_line(terminal, 'sudo -n "$sleepy_python" /tmp/sleepy-safety.py offline', 'SLEEPY_SAFETY_OFFLINE_OK', timeout=240)
         machine.safety_completed.append('offline-install-rejected-without-disk-writes')
     except Exception:
         # Do not restore connectivity while an unexpected backend may still run.
@@ -213,8 +223,7 @@ print("SLEEPY_SAFETY_" + mode.upper() + "_OK", flush=True)
     else:
         machine.qmp.call('set_link', name='nic0', up=True)
     if interrupt_install:
-        terminal.sendline('sudo -n "$sleepy_python" /tmp/sleepy-safety.py interrupt')
-        terminal.expect('SLEEPY_SAFETY_INTERRUPT_OK', timeout=300)
+        serial_line(terminal, 'sudo -n "$sleepy_python" /tmp/sleepy-safety.py interrupt', 'SLEEPY_SAFETY_INTERRUPT_OK', timeout=300)
         machine.safety_completed.append('real-install-SIGTERM-cleanup-and-lock-release')
 
 
@@ -227,7 +236,7 @@ def install(machine, password, timeout, cache_url=None, cache_public_key=None, i
     terminal = pexpect.fdpexpect.fdspawn(channel, encoding='utf-8', codec_errors='replace', timeout=300)
     boot_log = (machine.output / 'installer-serial-bootstrap.log').open('w')
     terminal.logfile_read = boot_log
-    terminal.expect(r'\$ |# ')
+    terminal.expect(SHELL_PROMPT)
     if cache_url:
         # Public transport hints only, supplied through the normal installer shell.
         # Signature verification stays enabled; the private signing key never enters VM.
@@ -241,8 +250,7 @@ def install(machine, password, timeout, cache_url=None, cache_public_key=None, i
                       + ' >> /run/sleepy-cache-nix.conf; rm /etc/nix/nix.conf; '
                       + 'cp /run/sleepy-cache-nix.conf /etc/nix/nix.conf; '
                       + 'systemctl restart nix-daemon; printf \'SLEEPY_CACHE_%s\\n\' READY')
-            terminal.sendline('sudo -n sh -c ' + shlex.quote(script))
-            terminal.expect('SLEEPY_CACHE_READY')
+            serial_line(terminal, 'sudo -n sh -c ' + shlex.quote(script), 'SLEEPY_CACHE_READY')
             terminal.logfile_read = None
     with (machine.output / 'installer-safety.log').open('w') as safety_log:
         terminal.logfile_read = safety_log
@@ -364,7 +372,9 @@ def guest_report(machine, password, stage, after_reboot=False, update_phase=None
     machine.qmp.text('sleepy\n')
     machine.wait_screen('Password:', f'{stage}-password-prompt')
     machine.qmp.text(password + '\n')
-    machine.wait_screen('sleepy@', f'{stage}-authenticated')
+    time.sleep(3)
+    machine.qmp.text("printf 'SLEEPY_AUTH_%s\\n' OK\n")
+    machine.wait_screen('SLEEPY_AUTH_OK', f'{stage}-authenticated')
     channel = socket.socket(socket.AF_UNIX)
     audit_timeout = 1800 if update_phase else 180
     channel.settimeout(audit_timeout)
@@ -494,6 +504,7 @@ def login_desktop(machine, password, name):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--iso', required=True, type=Path)
+    parser.add_argument('--image-source-revision', help='Source commit recorded by the ISO build (separate from runner checkout revision)')
     parser.add_argument('--output', required=True, type=Path)
     parser.add_argument('--firmware', type=Path, default=Path('/usr/share/edk2/x64/OVMF_CODE.4m.fd'))
     parser.add_argument('--vars', type=Path, default=Path('/usr/share/edk2/x64/OVMF_VARS.4m.fd'))
@@ -526,9 +537,9 @@ def main():
     with os.fdopen(fd, 'w') as secret_file: secret_file.write(password + '\n')
     acceleration = 'kvm' if os.access('/dev/kvm', os.R_OK | os.W_OK) else 'tcg'
     result = {'status': 'running', 'iso': str(iso), 'iso_sha256': hashlib.file_digest(iso.open('rb'), 'sha256').hexdigest(),
-              'acceleration': acceleration, 'cache_transport': args.cache_url, 'cache_public_key': args.cache_public_key, 'completed': [], 'source_revision': subprocess.run(
+              'acceleration': acceleration, 'cache_transport': args.cache_url, 'cache_public_key': args.cache_public_key, 'image_source_revision': args.image_source_revision, 'completed': [], 'runner_source_revision': subprocess.run(
                   ['git', 'rev-parse', 'HEAD'], capture_output=True, text=True).stdout.strip(),
-              'source_dirty': bool(subprocess.run(['git', 'status', '--porcelain'], capture_output=True, text=True).stdout)}
+              'runner_source_dirty': bool(subprocess.run(['git', 'status', '--porcelain'], capture_output=True, text=True).stdout)}
     machine = Machine(output, args.firmware.resolve(), args.memory, acceleration)
     machine.pause_at_greeter = args.pause_at_greeter
     try:
@@ -565,13 +576,13 @@ def main():
         result['completed'] += ['offline-disk-reboot', 'offline-password-login', 'user-state-persistence', 'real-Hyprland-setting-persistence']
         if args.update_safety: result['completed'].append('previous-generation-real-boot')
         result['status'] = 'passed'
-    except Exception as error:
-        result['status'] = 'failed'
-        result['error'] = str(error)
+    except (Exception, KeyboardInterrupt) as error:
+        result['status'] = 'interrupted' if isinstance(error, KeyboardInterrupt) else 'failed'
+        result['error'] = 'Runner interrupted by operator' if isinstance(error, KeyboardInterrupt) else str(error)
         if machine.process is not None and machine.process.poll() is None:
             try: machine.screen('failure')
             except Exception: pass
-        print(f'VM check failed: {error}', file=sys.stderr)
+        print(f'VM check stopped: {result["error"]}', file=sys.stderr)
     finally:
         machine.stop()
         (output / 'result.json').write_text(json.dumps(result, indent=2) + '\n')
