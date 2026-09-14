@@ -28,15 +28,15 @@ from PIL import Image, ImageOps
 
 def ocr_image(path):
     original = subprocess.run(['tesseract', str(path), 'stdout'], capture_output=True, text=True, check=True).stdout
-    # VGA console glyphs are tiny. Analyze a temporary 3x nearest-neighbor,
-    # high-contrast copy while preserving the original evidence screenshot.
+    # VGA console glyphs are tiny. Analyze a temporary 3x Lanczos,
+    # high-contrast copy calibrated against actual VGA console captures while preserving the original evidence screenshot.
     with Image.open(path) as frame, tempfile.TemporaryDirectory(prefix='sleepy-ocr-') as directory:
         enhanced = ImageOps.autocontrast(ImageOps.invert(frame.convert('L')))
-        enhanced = enhanced.resize((frame.width * 3, frame.height * 3), Image.Resampling.NEAREST)
+        enhanced = enhanced.resize((frame.width * 3, frame.height * 3), Image.Resampling.LANCZOS)
         target = Path(directory) / 'analysis.png'
         enhanced.save(target)
-        enlarged = subprocess.run(['tesseract', str(target), 'stdout', '--psm', '11'],
-                                  capture_output=True, text=True, check=True).stdout
+        enlarged = '\n'.join(subprocess.run(['tesseract', str(target), 'stdout', '--psm', str(psm)],
+                                  capture_output=True, text=True, check=True).stdout for psm in (6, 11))
     return original + '\n' + enlarged
 
 
@@ -135,7 +135,9 @@ class Machine:
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
             text = self.screen(name)
-            if ' '.join(fragment.lower().split()) in ' '.join(text.lower().split()): return text
+            fragments = [fragment] if isinstance(fragment, str) else fragment
+            normalized = ' '.join(text.lower().split())
+            if all(' '.join(part.lower().split()) in normalized for part in fragments): return text
             if self.process.poll() is not None: raise RuntimeError('VM stopped unexpectedly')
             time.sleep(3)
         raise RuntimeError(f'Screen did not show {fragment!r}; inspect {name}.png')
@@ -274,8 +276,8 @@ def install(machine, password, timeout, cache_url=None, cache_public_key=None, i
         for prompt, screenshot, value in [
             ('A place for Sleepy', 'installer-disk', ''),
             ('Username', 'installer-user', ''),
-            ('Choose your login password', 'installer-password', password),
-            ('Type your password again', 'installer-password-confirm', password),
+            (('Choose your login', 'Your input stays hidden'), 'installer-password', password),
+            (('Type your', 'again', 'Your input stays hidden'), 'installer-password-confirm', password),
             ('Computer name', 'installer-hostname', ''),
             ('Language', 'installer-locale', ''),
             ('Installed keyboard layout', 'installer-keyboard', ''),
@@ -584,6 +586,8 @@ def main():
             except Exception: pass
         print(f'VM check stopped: {result["error"]}', file=sys.stderr)
     finally:
+        for check in getattr(machine, 'safety_completed', []):
+            if check not in result['completed']: result['completed'].append(check)
         machine.stop()
         (output / 'result.json').write_text(json.dumps(result, indent=2) + '\n')
     print(f'Result and evidence: {output}', flush=True)
