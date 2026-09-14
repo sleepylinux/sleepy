@@ -396,12 +396,22 @@ read -r python_shebang < "$(dirname "$rebuild")/.nixos-rebuild-wrapped"
 python=${python_shebang#\#!}
 test -x "$python"
 locker_state() {
-  runuser -u sleepy -- "$python" -c 'import socket,sys
+  runuser -u sleepy -- "$python" -c 'import socket,sys,time
 with socket.socket(socket.AF_UNIX) as peer:
+ deadline=time.monotonic()+2
  peer.settimeout(2)
  peer.connect(sys.argv[1])
  peer.sendall(b"status\n")
- reply=peer.recv(32)
+ reply=b""
+ while b"\n" not in reply:
+  remaining=deadline-time.monotonic()
+  if remaining <= 0 or len(reply) >= 32:
+   raise RuntimeError("locker status exceeded time or frame bound")
+  peer.settimeout(remaining)
+  chunk=peer.recv(32-len(reply))
+  if not chunk:
+   raise RuntimeError("locker status closed before newline")
+  reply+=chunk
  assert reply in (b"locked\n",b"unlocked\n"), repr(reply)
  print(reply.decode().strip())' "/run/user/$uid/sleepy/locker.sock"
 }
