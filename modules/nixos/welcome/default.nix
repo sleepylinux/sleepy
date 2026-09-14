@@ -39,7 +39,9 @@ in {
     partOf = ["graphical-session.target"];
     unitConfig.ConditionPathExists = "!%h/.local/state/sleepy/welcome-seen";
     serviceConfig = {
-      Type = "oneshot";
+      # The interactive dialog may remain open for the whole session. Complete
+      # its start job after exec so UWSM can stop the session while it is open.
+      Type = "exec";
       ExecStart = "${pkgs.ghostty}/bin/ghostty -e ${welcome}/bin/sleepy-welcome";
     };
   };

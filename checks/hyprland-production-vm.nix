@@ -399,8 +399,14 @@ in
         post_shell = read_snapshot("/tmp/desktop-post-shell.json")
         assert post_shell["generation"] >= post_daemon["generation"]
 
+        # Logout must also work while the first-login dialog remains open.
+        # Type=oneshot leaves a start job pending and UWSM rejects its stop
+        # transaction as destructive; never dismiss or disable this dialog here.
+        machine.succeed("test ! -e /home/lazy/.local/state/sleepy/welcome-seen")
+        machine.succeed(f"{user_env} systemctl --user show sleepy-welcome.service -P SubState | grep -Fx running")
+        assert machine.succeed(f"{user_env} systemctl --user show sleepy-welcome.service -P Job").strip() == ""
         machine.succeed(f"{user_env} /run/current-system/sw/bin/uwsm stop")
-        for unit in ["sleepy-locker.service", "sleepy-session.service", "sleepy-shell.service"]:
+        for unit in ["sleepy-welcome.service", "sleepy-locker.service", "sleepy-session.service", "sleepy-shell.service"]:
           machine.wait_until_fails(f"{user_env} systemctl --user is-active {unit}", timeout=timedelta(seconds=30))
         machine.wait_until_succeeds("systemctl is-active greetd.service", timeout=timedelta(seconds=30))
         machine.wait_until_succeeds(regreet_ready, timeout=timedelta(seconds=30))
