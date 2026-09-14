@@ -129,7 +129,7 @@ def describe_disk(node, swaps):
             reason = 'Disk or descendant is mounted or used as swap'
         holders = Path('/sys/class/block') / Path(child.get('path', 'missing')).name / 'holders'
         if holders.is_dir() and any(holders.iterdir()): reason = 'Device is held by another block device'
-    fingerprint = [{k: child.get(k) for k in ('path', 'maj:min', 'size', 'serial', 'wwn', 'type')}
+    fingerprint = [{k: child.get(k) for k in ('path', 'maj:min', 'size', 'serial', 'wwn', 'type', 'uuid', 'partuuid', 'ptuuid', 'fstype')}
                    for child in descendants(node)]
     sequence = disk_sequence(path)
     identity = hashlib.sha256(json.dumps({'devices': fingerprint, 'diskseq': sequence}, sort_keys=True).encode()).hexdigest()
@@ -139,13 +139,15 @@ def describe_disk(node, swaps):
 
 
 def list_disks():
-    payload = json.loads(run(['lsblk', '--json', '--bytes', '--paths', '--output',
-                            'PATH,TYPE,SIZE,RO,RM,MAJ:MIN,MODEL,SERIAL,WWN,MOUNTPOINTS']))
+    payload = json.loads(run(['lsblk', '--json', '--bytes', '--paths', '--properties-by', 'blkid', '--output',
+                            'PATH,TYPE,SIZE,RO,RM,MAJ:MIN,MODEL,SERIAL,WWN,MOUNTPOINTS,UUID,PARTUUID,PTUUID,FSTYPE']))
     swaps = set()
     for line in Path('/proc/swaps').read_text().splitlines()[1:]:
         swaps.add(os.path.realpath(line.split()[0]))
     disks = [describe_disk(node, swaps) for node in payload['blockdevices'] if node.get('type') == 'disk']
     for disk in disks:
+        if not Path('/etc/sleepy-installer-image').is_file():
+            disk.update(eligible=False, reason='Boot the dedicated Sleepy installer image to select installation targets')
         try:
             if not stat.S_ISBLK(os.stat(disk['path'], follow_symlinks=False).st_mode):
                 raise OSError('not a block device')

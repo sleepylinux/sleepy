@@ -78,6 +78,17 @@ class ValidationTests(unittest.TestCase):
         for changes in [{'ro': True}, {'rm': True}, {'size': 1024}, {'type': 'part'}]:
             self.assertFalse(backend.describe_disk(disk(**changes), set())['eligible'])
 
+    def test_same_geometry_reformat_changes_identity(self):
+        child = {'path': '/dev/vda1', 'maj:min': '252:1', 'size': 1024**3,
+                 'type': 'part', 'uuid': 'old-filesystem', 'partuuid': 'partition-id',
+                 'ptuuid': 'table-id', 'fstype': 'btrfs'}
+        before = backend.describe_disk(disk(children=[child]), set())
+        after = backend.describe_disk(disk(children=[dict(child, uuid='new-filesystem')]), set())
+        self.assertNotEqual(before['identity'], after['identity'])
+        data = request(); data['identity'] = before['identity']
+        with patch.object(backend, 'list_disks', return_value=[after]):
+            with self.assertRaises(backend.InstallError): backend.verify_target(data)
+
     def test_diskseq_changes_identity_for_same_device_name(self):
         with patch.object(backend, 'disk_sequence', return_value='100'):
             before = backend.describe_disk(disk(serial=''), set())
