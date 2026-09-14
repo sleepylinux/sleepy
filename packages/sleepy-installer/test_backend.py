@@ -114,6 +114,16 @@ class ValidationTests(unittest.TestCase):
         self.assertNotIn('nvidia', config)
         self.assertIn('systemd-boot.enable = true', config)
 
+    def test_selected_keyboard_keeps_ascii_password_layout_available(self):
+        for keyboard in ('us', 'ru', 'de', 'cz'):
+            with self.subTest(keyboard=keyboard):
+                data = request(); data['keyboard'] = keyboard
+                config = backend.render_configuration(data)
+                layout = 'us' if keyboard == 'us' else 'us,' + keyboard
+                options = '' if keyboard == 'us' else 'grp:alt_shift_toggle'
+                self.assertIn(f'services.xserver.xkb.layout = "{layout}";', config)
+                self.assertIn(f'services.xserver.xkb.options = "{options}";', config)
+
     def test_optional_features_are_explicit(self):
         data = request(); data['options'] = {name: True for name in backend.OPTIONS}
         config = backend.render_configuration(data)

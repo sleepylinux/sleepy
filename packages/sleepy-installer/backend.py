@@ -198,6 +198,10 @@ def nix_string(value):
 
 
 def render_configuration(data):
+    # Keep the installer US password layout available after login and on lock.
+    keyboard = data['keyboard']
+    layout = 'us' if keyboard == 'us' else 'us,' + keyboard
+    keyboard_options = '' if keyboard == 'us' else 'grp:alt_shift_toggle'
     features = []
     for name in sorted(OPTIONS):
         if data['options'].get(name, False):
@@ -212,7 +216,8 @@ def render_configuration(data):
   system.stateVersion = "26.05";
 ''' + f'''  i18n.defaultLocale = {nix_string(data['locale'])};
   console.keyMap = {nix_string(data['keyboard'])};
-  services.xserver.xkb.layout = {nix_string(data['keyboard'])};
+  services.xserver.xkb.layout = {nix_string(layout)};
+  services.xserver.xkb.options = {nix_string(keyboard_options)};
   time.timeZone = {nix_string(data['timezone'])};
 ''' + '\n'.join(features) + '\n}\n'
 

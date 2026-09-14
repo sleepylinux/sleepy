@@ -13,8 +13,10 @@ class ScriptedDialog:
     def __init__(self, answers):
         self.answers = iter(answers)
         self.messages = []
+        self.calls = []
 
     def ask(self, *args, **kwargs):
+        self.calls.append(args)
         return next(self.answers)
 
     def message(self, title, message):
@@ -31,6 +33,22 @@ class WizardTests(unittest.TestCase):
         dialog = ScriptedDialog(['rtkit', None])
         self.assertIsNone(tui.collect_request(dialog, DISK))
         self.assertTrue(dialog.messages)
+
+    def test_keyboard_choice_explains_us_fallback_and_switching(self):
+        for keyboard in ('us', 'ru', 'de', 'cz'):
+            with self.subTest(keyboard=keyboard):
+                dialog = ScriptedDialog(['alice', 'ascii-password', 'ascii-password',
+                                         'sleepy', 'en_US.UTF-8', keyboard, 'UTC', ''])
+                result = tui.collect_request(dialog, DISK)
+                self.assertEqual(result['keyboard'], keyboard)
+                menu = next(call for call in dialog.calls if 'Installed keyboard layout' in call[2])
+                self.assertIn('Alt+Shift', menu[2])
+                self.assertIn('US', menu[2])
+                self.assertIn('US + Russian', menu)
+                self.assertIn('US + German', menu)
+                self.assertIn('US + Czech', menu)
+                password = next(call for call in dialog.calls if 'Choose your login' in call[2])
+                self.assertIn('US keyboard', password[2])
 
     def test_cancel_at_welcome_never_invokes_backend(self):
         with patch.object(tui, 'list_disks') as listing, patch.object(tui, 'install') as install:

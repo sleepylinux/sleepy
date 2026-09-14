@@ -151,14 +151,14 @@ def collect_request(dialog, disk):
     steps = [
         ('username', '2 / 5   Your account', 'Username\n\nLowercase letters, numbers, hyphens and underscores; start with a letter.', 'sleepy',
          lambda v: re.fullmatch('[a-z][a-z0-9_-]{0,30}', v) is not None and v not in RESERVED_USERS, False),
-        ('password', '2 / 5   Your account', 'Choose your login password.\n\nAt least 8 characters. Your input stays hidden.', '', lambda v: len(v) >= 8, True),
+        ('password', '2 / 5   Your account', 'Choose your login password.\n\nAt least 8 characters. Your input stays hidden.\nThe installer uses the US keyboard for your password.', '', lambda v: len(v) >= 8, True),
         ('password_confirm', '2 / 5   Your account', 'Type your password again.\n\nYour input stays hidden.', '', lambda v: v == request.get('password'), True),
         ('hostname', '2 / 5   Your account', 'Computer name\n\nA short name for this machine on your network.', 'sleepy',
          lambda v: re.fullmatch('[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?', v) is not None, False),
     ]
     locale_choices = ['en_US.UTF-8', 'English (United States)', 'ru_RU.UTF-8', 'Русский',
                       'de_DE.UTF-8', 'Deutsch', 'cs_CZ.UTF-8', 'Čeština']
-    keyboard_choices = ['us', 'English (US)', 'ru', 'Русская', 'de', 'Deutsch', 'cz', 'Česká']
+    keyboard_choices = ['us', 'English (US)', 'ru', 'US + Russian', 'de', 'US + German', 'cz', 'US + Czech']
     index = 0
     while index < 8:
         if index < len(steps):
@@ -168,6 +168,8 @@ def collect_request(dialog, disk):
             key, label, choices, default = (
                 ('locale', 'Language', locale_choices, 'en_US.UTF-8') if index == 4 else
                 ('keyboard', 'Installed keyboard layout', keyboard_choices, 'us'))
+            if key == 'keyboard':
+                label += '\n\nUS stays available for passwords. Additional layouts use Alt+Shift.'
             answer = dialog.ask('3 / 5   Make it feel familiar', 'menu', label + '\n\n' + FOOTER,
                                 *choices, default=request.get(key, default))
         elif index == 6:
@@ -238,8 +240,10 @@ def wizard(dialog):
             selected = ', '.join(key for key, enabled in request['options'].items() if enabled) or 'none'
             summary = (f"ERASE ALL DATA on {clean(choice)}\n{disk_description(disk)}\n\n"
                        f"Account: {request['username']} @ {request['hostname']}\n"
-                       f"Region: {request['locale']} / {request['keyboard']} / {request['timezone']}\n"
-                       f"Optional software: {selected}\n\n"
+                       f"Region: {request['locale']} / {request['timezone']}\n"
+                       + ("Keyboard: US\n" if request['keyboard'] == 'us' else
+                          f"Keyboard: US + {request['keyboard']} (Alt+Shift)\n")
+                       + f"Optional software: {selected}\n\n"
                        'All existing partitions and files on this disk will be destroyed.\n'
                        'There is no undo. Check the disk identity above.\n\n'
                        f'Type the full disk path {choice} to begin:')
