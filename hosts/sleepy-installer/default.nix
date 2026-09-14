@@ -8,9 +8,11 @@
   system.stateVersion = "26.05";
   environment.etc."sleepy-installer-image".text = "Sleepy installer 0.1.0-alpha\n";
   environment.extraOutputsToInstall = lib.mkForce [];
-  networking.hostName = "sleepy-installer";
-  networking.networkmanager.enable = true;
-  networking.wireless.enable = lib.mkForce false;
+  networking = {
+    hostName = "sleepy-installer";
+    networkmanager.enable = true;
+    wireless.enable = lib.mkForce false;
+  };
   services.openssh.enable = lib.mkForce false;
   services.getty.helpLine = lib.mkForce "Sleepy installation and recovery · run sleepy-install";
   programs.bash.interactiveShellInit = ''

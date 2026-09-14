@@ -40,8 +40,10 @@ stdenvNoCC.mkDerivation {
       --prefix PATH : ${lib.makeBinPath [dialog]}
     runHook postInstall
   '';
-  meta.description = "Sleepy minimal terminal installer";
-  meta.license = lib.licenses.gpl3Only;
-  meta.platforms = ["x86_64-linux"];
-  meta.mainProgram = "sleepy-install";
+  meta = {
+    description = "Sleepy minimal terminal installer";
+    license = lib.licenses.gpl3Only;
+    platforms = ["x86_64-linux"];
+    mainProgram = "sleepy-install";
+  };
 }

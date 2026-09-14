@@ -37,8 +37,8 @@ if test -d "$repo_root/packages"; then
   while IFS= read -r -d '' package_dir; do
     package_file="$package_dir/default.nix"
     if test ! -f "$package_file" || \
-      ! rg -q -- \
-        'meta\.license[[:space:]]*=[[:space:]]*lib\.licenses\.gpl3Only[[:space:]]*;' \
+      ! rg -U -q -- \
+        '(meta\.license|meta[[:space:]]*=[[:space:]]*\{[^{}]*\blicense)[[:space:]]*=[[:space:]]*lib\.licenses\.gpl3Only[[:space:]]*;' \
         "$package_file"; then
       printf 'license contract: Sleepy package must declare GPL-3.0-only: %s\n' \
         "${package_dir#"$repo_root/"}" >&2

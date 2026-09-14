@@ -28,5 +28,5 @@
   };
 in {
   inherit sessionPackage;
-  activationPackage = home.activationPackage;
+  inherit (home) activationPackage;
 }

@@ -6,6 +6,7 @@ Only disks created in a NEW output directory are used. Never attach a host disk.
 This is an integration runner, not a replacement for a successful VM result.
 """
 import argparse
+import base64
 import hashlib
 import json
 import os
@@ -123,18 +124,67 @@ class Machine:
         raise RuntimeError(f'Screen did not show {fragment!r}; inspect {name}.png')
 
 
+def safety_checks(machine, terminal):
+    script = r'''import json, secrets, shutil, subprocess, sys
+backend = shutil.which("sleepy-install-backend")
+disks = json.loads(subprocess.check_output(["sudo", "-n", backend, "--list"], text=True))
+disk = next(d for d in disks if d["path"] == "/dev/vda")
+assert disk["eligible"], disk["reason"]
+assert not any(d["eligible"] for d in disks if d["path"] == "/dev/sr0")
+def no_partitions():
+    value = json.loads(subprocess.check_output(["lsblk", "--json", "/dev/vda"], text=True))
+    assert not value["blockdevices"][0].get("children"), "Disposable disk was modified"
+no_partitions()
+mode = sys.argv[1]
+data = dict(disk="/dev/vda", identity=disk["identity"], confirm_erase="/dev/vda", username="sleepy", password=secrets.token_hex(16), hostname="sleepy", locale="en_US.UTF-8", keyboard="us", timezone="UTC", options={})
+if mode == "invalid":
+    data.update(disk="/dev/sr0", confirm_erase="/dev/sr0", identity="0"*64)
+result = subprocess.run(["sudo", "-n", backend, "--install"], input=json.dumps(data), capture_output=True, text=True, timeout=180)
+data.clear()
+assert result.returncode != 0, "Unsafe request unexpectedly succeeded"
+event = json.loads(result.stdout.splitlines()[-1])
+assert event["stage"] == "error", event
+assert ("identity changed" if mode == "invalid" else "Connect the network") in event["message"], event
+no_partitions()
+print("SLEEPY_SAFETY_" + mode.upper() + "_OK", flush=True)
+'''
+    encoded = base64.b64encode(script.encode()).decode()
+    # Discover the interpreter already bundled in the immutable package wrapper.
+    setup = ("sleepy_python=$(grep -oE '/nix/store/[a-z0-9]+-python3-[^/]+/bin/python3' "
+             '\"$(readlink -f \"$(command -v sleepy-install-backend)\")\" | head -n1); '
+             + 'echo ' + encoded + ' | base64 -d > /tmp/sleepy-safety.py')
+    terminal.sendline(setup)
+    terminal.sendline('"$sleepy_python" /tmp/sleepy-safety.py invalid')
+    terminal.expect('SLEEPY_SAFETY_INVALID_OK', timeout=240)
+    machine.safety_completed = ['invalid-target-rejected-without-disk-writes']
+    machine.qmp.call('set_link', name='nic0', up=False)
+    try:
+        terminal.sendline('"$sleepy_python" /tmp/sleepy-safety.py offline')
+        terminal.expect('SLEEPY_SAFETY_OFFLINE_OK', timeout=240)
+        machine.safety_completed.append('offline-install-rejected-without-disk-writes')
+    except Exception:
+        # Do not restore connectivity while an unexpected backend may still run.
+        # main() stops the disposable VM on this failure.
+        raise
+    else:
+        machine.qmp.call('set_link', name='nic0', up=True)
+
+
+
 def install(machine, password, timeout, cache_url=None, cache_public_key=None):
     # tty1 is the visible, automatically launched production TUI. Serial carries
     # boot diagnostics only: no parallel hidden installer or injected request.
     channel = socket.socket(socket.AF_UNIX)
     channel.connect(str(machine.output / 'serial.sock'))
+    terminal = pexpect.fdpexpect.fdspawn(channel, encoding='utf-8', codec_errors='replace', timeout=300)
+    boot_log = (machine.output / 'installer-serial-bootstrap.log').open('w')
+    terminal.logfile_read = boot_log
+    terminal.expect(r'\$ |# ')
     if cache_url:
         # Public transport hints only, supplied through the normal installer shell.
         # Signature verification stays enabled; the private signing key never enters VM.
-        terminal = pexpect.fdpexpect.fdspawn(channel, encoding='utf-8', codec_errors='replace', timeout=300)
         with (machine.output / 'cache-transport.log').open('w') as cache_log:
             terminal.logfile_read = cache_log
-            terminal.expect(r'\$ |# ')
             settings = ['extra-substituters = ' + cache_url,
                         'extra-trusted-public-keys = ' + cache_public_key,
                         'require-sigs = true']
@@ -146,6 +196,11 @@ def install(machine, password, timeout, cache_url=None, cache_public_key=None):
             terminal.sendline('sudo -n sh -c ' + shlex.quote(script))
             terminal.expect('SLEEPY_CACHE_READY')
             terminal.logfile_read = None
+    with (machine.output / 'installer-safety.log').open('w') as safety_log:
+        terminal.logfile_read = safety_log
+        safety_checks(machine, terminal)
+        terminal.logfile_read = None
+    boot_log.close()
     def record_serial():
         with (machine.output / 'installer-serial.log').open('wb') as log:
             try:
@@ -311,6 +366,8 @@ def main():
     if bool(args.cache_url) != bool(args.cache_public_key): parser.error('--cache-url and --cache-public-key must be supplied together')
     if args.cache_url and not re.fullmatch(r'https?://[A-Za-z0-9.:/_-]+', args.cache_url): parser.error('Invalid cache URL')
     if args.cache_public_key and not re.fullmatch(r'[A-Za-z0-9._-]+:[A-Za-z0-9+/]+=*', args.cache_public_key): parser.error('Invalid public signing key')
+    if any(',' in str(path) or '\n' in str(path) for path in (output, iso, args.firmware, args.vars)):
+        parser.error('QEMU artifact paths must not contain commas or line breaks')
     if not iso.is_file(): parser.error('ISO does not exist')
     if output.exists(): parser.error('Output directory must not already exist; existing disks are never reused')
     for tool in ['qemu-system-x86_64', 'qemu-img', 'tesseract']:
@@ -327,12 +384,14 @@ def main():
     acceleration = 'kvm' if os.access('/dev/kvm', os.R_OK | os.W_OK) else 'tcg'
     result = {'status': 'running', 'iso': str(iso), 'iso_sha256': hashlib.file_digest(iso.open('rb'), 'sha256').hexdigest(),
               'acceleration': acceleration, 'cache_transport': args.cache_url, 'cache_public_key': args.cache_public_key, 'completed': [], 'source_revision': subprocess.run(
-                  ['git', 'rev-parse', 'HEAD'], capture_output=True, text=True).stdout.strip()}
+                  ['git', 'rev-parse', 'HEAD'], capture_output=True, text=True).stdout.strip(),
+              'source_dirty': bool(subprocess.run(['git', 'status', '--porcelain'], capture_output=True, text=True).stdout)}
     machine = Machine(output, args.firmware.resolve(), args.memory, acceleration)
     try:
         print('Booting installer and driving the visible tty1 TUI.', flush=True)
         machine.boot('installer', iso)
         install(machine, password, args.install_timeout, args.cache_url, args.cache_public_key)
+        result['completed'] += getattr(machine, 'safety_completed', [])
         result['completed'].append('tui-install-and-shutdown')
         machine.stop()
         print('Booting installed disk without installer media.', flush=True)

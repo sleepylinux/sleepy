@@ -34,9 +34,11 @@ in {
     (lib.mkIf cfg.features.gaming.enable {
       nixpkgs.config.allowUnfree = true;
       hardware.graphics.enable32Bit = true;
-      programs.steam.enable = true;
-      programs.gamemode.enable = true;
-      programs.gamescope.enable = true;
+      programs = {
+        steam.enable = true;
+        gamemode.enable = true;
+        gamescope.enable = true;
+      };
       environment.systemPackages = [pkgs.mangohud];
     })
     (lib.mkIf cfg.features.development.enable {
