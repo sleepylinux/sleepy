@@ -5,7 +5,9 @@ host profile prevents AMD, Intel and NVIDIA GPU modules from loading. The
 installed desktop keeps its normal hardware profile and firmware selection.
 
 This package filters the **pinned, already compressed** Nixpkgs linux-firmware
-output. It keeps Intel iwlwifi; Qualcomm/Atheros ath6k/9k/10k/11k/12k; Broadcom and
+output. The redistributed blobs retain the upstream firmware licensing inherited
+from Nixpkgs; placing them under `packages/vendor` distinguishes those assets
+from Sleepy-authored application packages. It keeps Intel iwlwifi; Qualcomm/Atheros ath6k/9k/10k/11k/12k; Broadcom and
 Cypress; Marvell client Wi-Fi; MediaTek mt76/mt79/WIFI; Realtek rtlwifi/rtw88/rtw89;
 RSI, TI and Silicon Labs Wi-Fi. Wired groups cover Intel e100/ice, Realtek rtl_nic,
 Broadcom bnx2/bnx2x/tigon, Chelsio cxgb3/4, 3Com, AceNIC, Kawasaki and Tehuti.
@@ -23,7 +25,7 @@ NAR size 218,872,584 bytes, down from 819,681,744 bytes (73% smaller). These are
 package sizes, not a measured final ISO size. Source derivations still need the
 complete cached firmware to build the filtered result.
 
-Run `python3 packages/sleepy-installer-firmware/test_filter.py` for the focused
+Run `python3 packages/vendor/installer-network-firmware/test_filter.py` for the focused
 filter tests. Actual package-build and Nix option-matrix evidence is recorded in
 `work/evidence/installer-firmware-*` and `installer-options-eval.json`; physical
 Wi-Fi/GPU coverage requires hardware testing beyond VM boot.

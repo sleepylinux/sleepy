@@ -20,7 +20,7 @@
   hardware.enableRedistributableFirmware = lib.mkForce false;
   hardware.wirelessRegulatoryDatabase = true;
   hardware.firmware = [
-    (import ../../packages/sleepy-installer-firmware {inherit pkgs;})
+    (import ../../packages/vendor/installer-network-firmware {inherit pkgs;})
     pkgs.ipw2200-firmware
     pkgs.rtl8192su-firmware
     pkgs.zd1211fw
