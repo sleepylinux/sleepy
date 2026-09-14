@@ -20,6 +20,11 @@ printf '%s\n' '{lib, ...}: {meta.license = lib.licenses.gpl3Only;}' \
 
 bash "$contract" "$fixture"
 
+# Both ordinary Nix metadata spellings must enforce the same license.
+printf '%s\n' '{lib, ...}: {meta = {description = "Example"; license = lib.licenses.gpl3Only;};}' \
+  >"$fixture/packages/sleepy-fallback/default.nix"
+bash "$contract" "$fixture"
+
 assert_rejected() {
   local name=$1
   local relative_path=$2
@@ -65,6 +70,9 @@ mkdir -p "$fixture/packages/sleepy-wrong" "$fixture/packages/sleepy-missing"
 assert_rejected sleepy-package-wrong-license \
   packages/sleepy-wrong/default.nix \
   '{lib, ...}: {meta.license = lib.licenses.mit;}'
+assert_rejected sleepy-package-wrong-grouped-license \
+  packages/sleepy-wrong/default.nix \
+  '{lib, ...}: {meta = {license = lib.licenses.mit;};}'
 assert_rejected sleepy-package-missing-license \
   packages/sleepy-missing/default.nix \
   '{...}: {pname = "sleepy-missing";}'

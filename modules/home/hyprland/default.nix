@@ -18,7 +18,9 @@ in {
       systemd.enable = false;
 
       settings = lib.mkMerge [
-        (import ./settings.nix)
+        # Apply priorities at leaves: an outer mkDefault would discard all
+        # settings when appearance, bindings or a host defines another key.
+        (lib.mapAttrsRecursive (_path: lib.mkDefault) (import ./settings.nix))
         (import ./appearance.nix)
         (import ./rules.nix {inherit config;})
         (import ./binds.nix {inherit config;})

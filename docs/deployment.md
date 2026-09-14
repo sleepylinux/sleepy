@@ -6,14 +6,14 @@ The Hyprland integration consumes only these exact reviewed, publicly
 fetchable component commits:
 
 ```text
-sleepy-sdk      1ee5b424887eb6f7acfe3b931b37a2c610ff6498
-sleepy-session  6c31e392f96de4e03997580fdcb02eaaed590eb6
+sleepy-sdk      dff28bb596950d862ae5d219e478460dfa13e8f4
+sleepy-session  8edee2ed946efb45f1e2f978025681b977f495e6
 sleepy-artwork  175314b9c236c1b412e8e1ebc54bbe3937b0c90d
-sleepy-desktop  22f1cbe617e59b1d27e155c38c9a8e0bf5e7a3ac
+sleepy-desktop  008d8bc662c6b10045a24a4bd05f0852837fa5e9
 ```
 
 The generated candidate lock SHA-256 is
-`e45a0777f7aed401685d741ef37942c5b3922ad7b3371ee9cf2120374669d8d6`.
+`668f111bc3aed02eb561f87043264b92c2e83751e7093a5ddc933837d124eca7`.
 Regenerate it only with Nix and validate both the current graph and immutable
 historical M2/M1 graphs. A derivation build is not real-VM acceptance; the
 protected `Sleepy` domain stays off until rollback capture and restore drill.

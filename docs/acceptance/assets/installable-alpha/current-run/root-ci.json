@@ -1,0 +1,1 @@
+{"conclusion":"success","databaseId":34901792384,"headSha":"9bca73cdc125bbf7704e8038dc46cc383cd36fd3","jobs":[{"conclusion":"success","name":"Fast checks","status":"completed"},{"conclusion":"success","name":"Build checks and configurations","status":"completed"}],"status":"completed","url":"https://github.com/sleepylinux/sleepy/actions/runs/34901792384"}

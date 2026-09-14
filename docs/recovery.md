@@ -1,5 +1,57 @@
 # Recovering the Sleepy desktop
 
+## Installed Hyprland alpha
+
+Hold Space while booting to show systemd-boot and select a retained generation.
+Generation numbers are local to each installation; inspect them with
+`sleepy-system generations`. A new installation has no older generation until
+its first successful system rebuild. Do not delete generations or run garbage
+collection while investigating a failure.
+
+If the desktop cannot start, press Ctrl+Alt+F2, log in with the account created
+during installation. Recovery consoles use the same US keyboard as the installer,
+including when an additional desktop layout was selected. Then run:
+
+
+```sh
+systemctl status greetd
+systemctl --user status graphical-session.target sleepy-session.service sleepy-shell.service
+journalctl --user -b -u sleepy-session.service -u sleepy-shell.service
+sleepy-system generations
+```
+
+After correcting the cause of a shell failure, restart its managed unit:
+
+```sh
+systemctl --user reset-failed sleepy-shell.service
+systemctl --user restart sleepy-shell.service
+```
+
+Use `sleepy-system rollback` to activate the previous generation, then reboot to
+verify its boot path. This restores system packages and configuration, not user
+documents, passwords, or erased disk contents. Keep independent backups.
+
+If the installed bootloader is unavailable, boot the installation ISO, choose
+Leave installer, and identify the installed partitions using `lsblk -f`. For the
+default layout, mount the Btrfs partition at `/mnt`, then its FAT32 ESP at
+`/mnt/boot`. Use the paths you actually identified; never format either partition
+during recovery. Enter the installation with `sudo nixos-enter --root /mnt`.
+There, inspect `/nix/var/nix/profiles/system` and its generations. To regenerate
+boot entries from the retained system profile, run:
+
+```sh
+/nix/var/nix/profiles/system/bin/switch-to-configuration boot
+```
+
+Exit the installed shell, unmount `/mnt/boot` and `/mnt`, shut down, detach the
+ISO, and boot the disk. Installed source remains under `/etc/nixos`; the installer
+log exists only on the installation image unless copied before shutdown.
+
+## Historical Niri deployment record
+
+The remaining sections document one earlier developer deployment. Its absolute
+paths, generation numbers, and Niri commands do not describe new Hyprland installs.
+
 ## Boot a previous generation
 
 At the systemd-boot menu, choose an older NixOS generation. The generation

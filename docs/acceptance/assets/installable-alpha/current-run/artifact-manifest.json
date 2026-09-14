@@ -1,0 +1,21 @@
+{
+  "artifact": "sleepy-alpha-9bca73c.iso",
+  "size_bytes": 856686592,
+  "sha256": "343afd66349ad64406784be1ee861d74e0888973781bdea37d2cc13e66231e41",
+  "source_revision": "9bca73cdc125bbf7704e8038dc46cc383cd36fd3",
+  "source_tree": "bfc6dd8fb4d075c4c2422dceaca2da1a37479d6e",
+  "flake_lock_sha256": "668f111bc3aed02eb561f87043264b92c2e83751e7093a5ddc933837d124eca7",
+  "components": {
+    "sleepy-sdk": "dff28bb596950d862ae5d219e478460dfa13e8f4",
+    "sleepy-session": "8edee2ed946efb45f1e2f978025681b977f495e6",
+    "sleepy-desktop": "008d8bc662c6b10045a24a4bd05f0852837fa5e9",
+    "sleepy-artwork": "175314b9c236c1b412e8e1ebc54bbe3937b0c90d"
+  },
+  "build_command": "nix build .#installer-iso",
+  "architecture": "x86_64-linux",
+  "firmware": "UEFI, Secure Boot disabled",
+  "layout": "GPT;512MiB ESP(vfat);remaining Btrfs(compress=zstd)",
+  "optional_profiles_default": false,
+  "installation_requires_network": true,
+  "release_published": false
+}

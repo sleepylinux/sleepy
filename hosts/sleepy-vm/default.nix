@@ -11,6 +11,12 @@ in
       ./ghostty.nix
       ./ssh.nix
       {
+        services.xserver.xkb = {
+          layout = "us,ru";
+          options = "grp:alt_shift_toggle";
+        };
+        sleepy.features.bluetooth.enable = true;
+        sleepy.features.development.enable = true;
         services.qemuGuest.enable = true;
         system.stateVersion = baseline.systemStateVersion;
       }

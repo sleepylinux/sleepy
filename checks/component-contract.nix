@@ -18,6 +18,8 @@
   integratedSessionService = integratedHomeConfig.systemd.user.services.sleepy-session;
   shellService = standaloneHomeConfig.systemd.user.services.sleepy-shell;
   integratedShellService = integratedHomeConfig.systemd.user.services.sleepy-shell;
+  runtimeService = standaloneHomeConfig.systemd.user.services.sleepy-runtime;
+  lockerService = standaloneHomeConfig.systemd.user.services.sleepy-locker;
   expectedSessionExec = ["${componentPackages.sleepy-session}/bin/sleepy-sessiond"];
   expectedShellExec = ["${componentPackages.sleepy-shell}/bin/sleepy-shell"];
   actualContract = pkgs.writeText "sleepy-component-contract.json" (builtins.toJSON {
@@ -37,6 +39,27 @@
       shellExecStart = pkgs.lib.toList shellService.Service.ExecStart;
       artworkPackage = toString standaloneHomeConfig.sleepy.brandingPackage;
       sessionPackage = toString standaloneHomeConfig.sleepy.sessionPackage;
+      runtime = {
+        unit = "sleepy-runtime.service";
+        wantedBy = runtimeService.Install.WantedBy or [];
+        partOf = runtimeService.Unit.PartOf;
+        before = runtimeService.Unit.Before;
+        after = runtimeService.Unit.After;
+        stopWhenUnneeded = runtimeService.Unit.StopWhenUnneeded;
+        type = runtimeService.Service.Type;
+        remainAfterExit = runtimeService.Service.RemainAfterExit;
+        runtimeDirectory = runtimeService.Service.RuntimeDirectory;
+        runtimeDirectoryMode = runtimeService.Service.RuntimeDirectoryMode;
+        runtimeDirectoryPreserve = runtimeService.Service.RuntimeDirectoryPreserve or "no";
+      };
+      locker = {
+        unit = "sleepy-locker.service";
+        after = lockerService.Unit.After;
+        requires = lockerService.Unit.Requires;
+        runtimeDirectory = lockerService.Service.RuntimeDirectory;
+        runtimeDirectoryMode = lockerService.Service.RuntimeDirectoryMode;
+        runtimeDirectoryPreserve = lockerService.Service.RuntimeDirectoryPreserve;
+      };
       service = {
         unit = "sleepy-session.service";
         wantedBy = sessionService.Install.WantedBy;
@@ -50,6 +73,7 @@
         restart = sessionService.Service.Restart;
         runtimeDirectory = sessionService.Service.RuntimeDirectory;
         runtimeDirectoryMode = sessionService.Service.RuntimeDirectoryMode;
+        runtimeDirectoryPreserve = sessionService.Service.RuntimeDirectoryPreserve;
         killSignal = sessionService.Service.KillSignal;
         timeoutStopSec = sessionService.Service.TimeoutStopSec;
         environment = sessionService.Service.Environment;
@@ -98,6 +122,14 @@ in
   assert pkgs.lib.assertMsg
   (sessionService == integratedSessionService)
   "standalone and integrated Home Manager must share the session service contract";
+  assert pkgs.lib.assertMsg
+  (runtimeService
+    == integratedHomeConfig.systemd.user.services.sleepy-runtime
+    && lockerService == integratedHomeConfig.systemd.user.services.sleepy-locker)
+  "standalone and integrated Home Manager must share runtime ownership and locker lifecycle";
+  assert pkgs.lib.assertMsg
+  (pkgs.lib.toList runtimeService.Service.ExecStart == ["${pkgs.coreutils}/bin/true"])
+  "the shared runtime owner must only hold the directory, not start another process";
   assert pkgs.lib.assertMsg
   (shellService == integratedShellService)
   "standalone and integrated Home Manager must share the shell service contract";

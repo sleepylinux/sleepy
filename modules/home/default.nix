@@ -5,6 +5,7 @@
     ./hyprland
     ./locker
     ./quickshell
+    ./runtime
     ./session
   ];
 }

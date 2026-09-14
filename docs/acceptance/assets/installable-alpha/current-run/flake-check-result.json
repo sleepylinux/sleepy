@@ -1,0 +1,33 @@
+{
+  "status": "passed",
+  "command": "nix flake check path:/source-alpha-v11 -L",
+  "source_revision": "9bca73cdc125bbf7704e8038dc46cc383cd36fd3",
+  "checks": [
+    "installer",
+    "quickshell",
+    "home",
+    "nixos",
+    "hyprland-config",
+    "apps-contract",
+    "component-contract",
+    "control-center-contract",
+    "nix-private-git",
+    "greetd-sessions",
+    "hyprland-defaults",
+    "hyprland-production-vm",
+    "public-module",
+    "session-contract",
+    "update-safety",
+    "update-safety-vm",
+    "pristine-login-vm",
+    "source-contracts",
+    "journal-fault-runner",
+    "locker-lifecycle",
+    "fresh-clone-source",
+    "sleepy-artwork-assets",
+    "sleepy-desktop-qml",
+    "sleepy-desktop-package",
+    "sleepy-desktop-preview"
+  ],
+  "note": "Unchanged derivations reused. Changed production VM gate executed freshly in88.81s; actual ISO/disk/password acceptance recorded separately."
+}

@@ -1,6 +1,7 @@
 {
   config,
   pkgs,
+  lib,
   ...
 }: let
   cfg = config.sleepy;
@@ -11,13 +12,14 @@ in {
     shell = pkgs.fish;
   };
 
-  networking.networkmanager.enable = true;
-  hardware.bluetooth.enable = true;
+  # Nix's Git fetchers are system-update dependencies, not a dev-profile toggle.
+  nix.package = lib.mkDefault (import ../../../packages/vendor/nix-with-git {inherit pkgs;});
 
-  i18n.defaultLocale = "en_US.UTF-8";
+  networking.networkmanager.enable = true;
+  i18n.defaultLocale = lib.mkDefault "en_US.UTF-8";
   services.xserver.xkb = {
-    layout = "us,ru";
-    options = "grp:alt_shift_toggle";
+    layout = lib.mkDefault "us";
+    options = lib.mkDefault "";
   };
 
   programs = {

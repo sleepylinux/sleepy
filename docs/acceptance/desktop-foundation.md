@@ -6,22 +6,32 @@ The root integration pins this exact reviewed public component graph:
 
 | Component | Reviewed revision |
 |---|---|
-| `sleepy-sdk` | `1ee5b424887eb6f7acfe3b931b37a2c610ff6498` |
-| `sleepy-session` | `6c31e392f96de4e03997580fdcb02eaaed590eb6` |
+| `sleepy-sdk` | `dff28bb596950d862ae5d219e478460dfa13e8f4` |
+| `sleepy-session` | `8edee2ed946efb45f1e2f978025681b977f495e6` |
 | `sleepy-artwork` | `175314b9c236c1b412e8e1ebc54bbe3937b0c90d` |
-| `sleepy-desktop` | `22f1cbe617e59b1d27e155c38c9a8e0bf5e7a3ac` |
+| `sleepy-desktop` | `008d8bc662c6b10045a24a4bd05f0852837fa5e9` |
 
 The generated `flake.lock` SHA-256 is
-`e45a0777f7aed401685d741ef37942c5b3922ad7b3371ee9cf2120374669d8d6`. This section records
-only the immutable source graph and automated build gate. Real ReGreet/PAM,
-rollback, downgrade, framebuffer, and protected-VM results remain `PENDING` in
-`docs/acceptance/hyprland-sleepy-desktop.md` until fresh target evidence exists.
+`668f111bc3aed02eb561f87043264b92c2e83751e7093a5ddc933837d124eca7`. This candidate includes the SDK UTF-8 fix, deterministic session process tests,
+consistent Hyprland command readback deadlines, and the native locker unlock fix.
+Component review and CI are tracked in
+[SDK PR #8](https://github.com/sleepylinux/sleepy-sdk/pull/8),
+[session PR #9](https://github.com/sleepylinux/sleepy-session/pull/9), and
+[desktop PR #7](https://github.com/sleepylinux/sleepy-desktop/pull/7).
 
-The 2026-09-04 local baseline and the subsequent CI-only interpreter correction
-are recorded separately in `docs/acceptance/hyprland-sleepy-desktop.md`.
-The required checks on [root PR #7](https://github.com/sleepylinux/sleepy/pull/7)
-record automated results for this exact current graph; earlier local artifacts
-are not evidence for the changed source pin.
+The disposable installer VM has completed installation, password login, desktop
+startup, crash recovery, failed-update preservation, a second-generation boot,
+and a previous-generation boot without networking. A public-source run also
+passed without a local cache override. The final keyboard/locker gate passed
+against this graph on all three installed-disk boots. Exact revisions and remaining limitations are in
+[Installable Sleepy acceptance](installable-alpha.md); reproduction is in the
+[installer runbook](../runbooks/installable-alpha.md).
+Root [PR #8](https://github.com/sleepylinux/sleepy/pull/8) must pass its checks
+against this graph before integration.
+
+The older 2026-09-04 baseline, CI interpreter correction, and protected-VM
+acceptance remain historical records in
+`docs/acceptance/hyprland-sleepy-desktop.md`; they do not certify this installer.
 
 ## Desktop Milestone 3 integration candidate
 

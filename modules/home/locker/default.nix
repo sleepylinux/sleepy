@@ -10,7 +10,8 @@
         Unit = {
           Description = "Sleepy fail-secure session locker";
           PartOf = ["graphical-session.target"];
-          After = ["graphical-session.target"];
+          After = ["graphical-session.target" "sleepy-runtime.service"];
+          Requires = ["sleepy-runtime.service"];
           Requisite = ["graphical-session.target"];
           OnFailure = ["sleepy-locker-failsafe.service"];
         };
@@ -26,6 +27,7 @@
           Restart = "no";
           RuntimeDirectory = "sleepy";
           RuntimeDirectoryMode = "0700";
+          RuntimeDirectoryPreserve = "yes";
           UMask = "0077";
         };
 

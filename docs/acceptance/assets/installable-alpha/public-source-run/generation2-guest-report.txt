@@ -1,0 +1,29 @@
+SLEEPY_REPORT_START
+REAL_USER_LOGIN_OK
+/dev/vda2 btrfs
+/dev/vda1 vfat
+INSTALLED_DISK_BOOT_OK
+active
+active
+active
+active
+active
+DESKTOP_UNITS_AND_SOCKET_OK
+FIRST_BOOT_WELCOME_DISMISSED_AND_INACTIVE_OK
+FIRST_BOOT_WELCOME_STATE_PERSISTED_OK
+ok
+ok
+TERMINAL_AND_FILE_MANAGER_WINDOWS_OK
+CRASH_RECOVERY_OK sleepy-shell.service
+CRASH_RECOVERY_OK sleepy-session.service
+active
+true
+REAL_HYPRLAND_SETTING_PERSISTED_OK
+PERSISTENCE_AFTER_REBOOT_OK
+SECOND_GENERATION_REAL_BOOT_OK
+switching profile from version 2 to 1
+Not checking switch inhibitors (action = boot)
+Skipping "/boot/EFI/systemd/systemd-bootx64.efi", same boot loader version in place already.
+Skipping "/boot/EFI/BOOT/BOOTX64.EFI", same boot loader version in place already.
+PREVIOUS_GENERATION_SELECTED_FOR_BOOT_OK
+SLEEPY_REPORT_COMPLETE

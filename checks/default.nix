@@ -198,7 +198,15 @@ in
     control-center-contract = controlCenterContract;
     nixos = nixosConfiguration.config.system.build.toplevel;
     home = homeConfiguration.activationPackage;
+    nix-private-git = import ./nix-private-git.nix {inherit pkgs;};
+    greetd-sessions = import ./greetd-sessions.nix {
+      inherit pkgs;
+      inherit (nixosConfiguration) config;
+    };
     hyprland-config = hyprlandConfig;
+    hyprland-defaults = import ./hyprland-defaults.nix {
+      inherit homeConfiguration pkgs;
+    };
     hyprland-production-vm = hyprlandProductionVm;
     public-module = publicModule;
     session-contract = sessionContract;

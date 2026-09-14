@@ -53,14 +53,36 @@ jq -e --slurpfile reviewed "$manifest" '
   .homeManager.service.wantedBy == ["graphical-session.target"] and
   .homeManager.service.partOf == ["graphical-session.target"] and
   .homeManager.service.wants == ["sleepy-locker.service"] and
-  .homeManager.service.after == ["graphical-session.target", "dbus.socket", "sleepy-locker.service"] and
+  .homeManager.service.after == ["graphical-session.target", "dbus.socket", "sleepy-runtime.service", "sleepy-locker.service"] and
   .homeManager.service.requisite == ["graphical-session.target"] and
-  .homeManager.service.requires == ["dbus.socket"] and
+  .homeManager.service.requires == ["dbus.socket", "sleepy-runtime.service"] and
   .homeManager.service.type == "notify" and
   .homeManager.service.notifyAccess == "main" and
   .homeManager.service.restart == "on-failure" and
   .homeManager.service.runtimeDirectory == "sleepy" and
   .homeManager.service.runtimeDirectoryMode == "0700" and
+  .homeManager.service.runtimeDirectoryPreserve == "yes" and
+  .homeManager.runtime == {
+    unit: "sleepy-runtime.service",
+    wantedBy: [],
+    partOf: ["graphical-session.target"],
+    before: ["sleepy-session.service", "sleepy-locker.service"],
+    after: ["graphical-session.target"],
+    stopWhenUnneeded: true,
+    type: "oneshot",
+    remainAfterExit: true,
+    runtimeDirectory: "sleepy",
+    runtimeDirectoryMode: "0700",
+    runtimeDirectoryPreserve: "no"
+  } and
+  .homeManager.locker == {
+    unit: "sleepy-locker.service",
+    after: ["graphical-session.target", "sleepy-runtime.service"],
+    requires: ["sleepy-runtime.service"],
+    runtimeDirectory: "sleepy",
+    runtimeDirectoryMode: "0700",
+    runtimeDirectoryPreserve: "yes"
+  } and
   .homeManager.service.killSignal == "SIGINT" and
   .homeManager.service.timeoutStopSec == 20 and
   (.homeManager.service.environment | length == 3) and
