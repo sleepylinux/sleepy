@@ -16,7 +16,7 @@ Generic defaults stay overridable. No custom compositor or package manager.
   40 gates. Delete boot entries on the disposable disk, prove failed boot,
   inspect/cancel with unchanged GPT and full partition hashes, then restore
   through the offline TUI and retain configuration, profile and personal files.
-- [x] New recovery image also repairs the earlier public-only installed229
+- [x] Historical image `afd713c` also repairs the earlier public-only installed229
   disk. Historical failed/interrupted investigations keep their original status.
 - [x] Everyday desktop: terminal/file manager, PNG save/view/clipboard, dark GTK,
   original crescent Fastfetch, system status/menu, first-boot welcome and keyring.
@@ -47,22 +47,18 @@ remove disposable disks, credentials and the task-owned builder after validation
    assignable IOMMU group exposed; no repository self-hosted runner is registered.
    Do not unbind or alter that host OS. Configuration evaluation and virtual audio
    are useful evidence, not physical GPU or suspend acceptance.
-2. **Reviewed-candidate updates — final VM acceptance active.** Backend and TUI
-   now stage approved immutable sources while preserving installed settings and
-   the running system. Each generation retains its source; GC cleanup and the
-   ready/rollback lifecycle have behavioral regressions. Source d16 passed fresh
-   installation, two password boots, rejected hash/config, actual builder SIGTERM,
-   candidate selection, same-candidate cleanup and saved rebuild. It then exposed
-   rollback auto-reexec evaluating the wrong flake output. Fix8624092 bypasses
-   evaluation, with actual pinned-tool tests for absent/broken configuration;
-   the new862→d408 full installed/updated/offline-rollback VM is running.
-   Desktop lock reconnection and session PID-readiness fixes passed full component
-   CI and merged as desktop PR10/session PR14. Root CI independently found cleanup
-   permissions after its source-identity check passed; repair only the copied
-   fixture. Source7c75 also passed40 recovery gates with two disk password boots.
-   Keep failed/interrupted runs labelled. Do not promote this to a public channel:
-   a content hash proves identity, and signing/catalog/promotion policy remains
-   a separate decision.
+2. **Reviewed-candidate updates — verified, final integration pending.**
+   Image `8624092` → candidate `d40861d` passed 44 gates and three real-password disk boots,
+   including real builder interruption, candidate selection, saved rebuild,
+   repeated preparation/GC cleanup, offline rollback and future-update validation.
+   Those revisions share runtime code; the separate `88a87c5` → `d40861d`
+   changed-runtime test passed 43 gates and three password boots. The pinned rollback regression now proves absent/broken
+   saved configuration cannot block selecting a retained generation. Fastfetch
+   with the custom ASCII crescent passed actual 1280×800 desktop inspection.
+   Desktop PR #10/session PR #14 merged after full component CI and review. Root
+   PR #12 awaits final CI; its source-copy cleanup now has a non-root regression.
+   Keep failed/interrupted runs labelled. Do not promote a public channel:
+   signing/catalog/promotion policy remains a separate decision.
 3. **Complete the session capture provider.** Print already uses native
    Quickshell screencopy and Swappy. The separate SDK capture action expects an
    unimplemented helper; keep doctor honest until consent/output contracts and

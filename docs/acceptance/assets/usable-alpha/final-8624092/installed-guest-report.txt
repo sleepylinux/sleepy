@@ -1,0 +1,109 @@
+SLEEPY_REPORT_START
+REAL_USER_LOGIN_OK
+/dev/vda2 btrfs
+/dev/vda1 vfat
+INSTALLED_DISK_BOOT_OK
+active
+active
+active
+active
+active
+DESKTOP_UNITS_AND_SOCKET_OK
+FIRST_BOOT_WELCOME_DISMISSED_AND_INACTIVE_OK
+ok
+ok
+TERMINAL_AND_FILE_MANAGER_WINDOWS_OK
+CRASH_RECOVERY_OK sleepy-shell.service
+CRASH_RECOVERY_OK sleepy-session.service
+active
+ok
+true
+REAL_HYPRLAND_SETTING_APPLIED_OK
+PERSISTENCE_MARKER_WRITTEN
+true
+LOCK_RETURN_TO_DESKTOP
+LOCK_GRAPHICAL_VT_READY
+ok
+true
+KEYBOARD_LAYOUT_SELECTED_OK
+ok
+ok
+true
+LOCK_SHELL_CRASH_WAKE_READY
+true
+LOCK_SHELL_CRASH_INPUT_WAKE_OK
+LOCK_SWITCH_TO_CONSOLE
+LOCK_CONSOLE_VT_READY
+LOCK_RETURNED_GRAPHICAL_VT_READY
+ok
+true
+LOCK_VT_ROUNDTRIP_READY
+LOCK_READY_FOR_REAL_PASSWORD
+true
+LOCK_SCREEN_LAYOUT_SWITCH_OK
+REAL_PASSWORD_LOCK_UNLOCK_OK
+$2    S L E E P Y
+     S L E E P Y
+DAILY_FASTFETCH_ASSET_AND_EXECUTION_OK
+gtk-theme-name=adw-gtk3-dark
+gtk-icon-theme-name=Papirus-Dark
+DAILY_GTK_DARK_CONFIG_OK
+Current system: /nix/store/hs340m0kw9ia5li8cib2biz273c3r8ai-nixos-system-sleepy-26.11.20260822.2c423e0
+Booted system: /nix/store/hs340m0kw9ia5li8cib2biz273c3r8ai-nixos-system-sleepy-26.11.20260822.2c423e0
+Selected system profile: /nix/store/hs340m0kw9ia5li8cib2biz273c3r8ai-nixos-system-sleepy-26.11.20260822.2c423e0
+DAILY_SYSTEM_STATUS_OK
+{"ok":true,"generation":163,"checks":[{"capability":"hyprland","status":"available","required":true},{"capability":"lock","status":"available","required":true},{"capability":"network","status":"available","required":false},{"capability":"audio","status":"available","required":false},{"capability":"bluetooth","status":"unavailable","required":false},{"capability":"battery","status":"unsupported","required":false},{"capability":"brightness","status":"available","required":false},{"capability":"power","status":"available","required":false},{"capability":"media","status":"available","required":false},{"capability":"night-light","status":"available","required":false},{"capability":"resources","status":"available","required":false},{"capability":"screenshot","status":"unavailable","required":false},{"capability":"recording","status":"available","required":false}]}
+true
+DAILY_DOCTOR_HEALTHY_WITH_VIRTUAL_AUDIO_OK
+DAILY_KEYRING_STORE_LOOKUP_OK
+ok
+DAILY_SYSTEM_MENU_MAPPED
+DAILY_SYSTEM_MENU_VT_READY
+DAILY_SYSTEM_MENU_READY
+DAILY_SYSTEM_MENU_CANCEL_UNCHANGED_OK
+DAILY_PRESS_PRINT
+DAILY_SELECT_AREA
+DAILY_SAVE_SWAPPY
+DAILY_SCREENSHOT_SAVED_PNG_OK
+ok
+DAILY_SCREENSHOT_VIEWER_OPEN_OK
+DAILY_PRESS_CLIPBOARD
+DAILY_SELECT_CLIPBOARD_AREA
+DAILY_SCREENSHOT_CLIPBOARD_PNG_OK
+DAILY_IDLE_SAMPLE_READY
+DAILY_IDLE_SAMPLE {"cpu_seconds": 0.0, "cpu_ticks": 1010, "elapsed_seconds": 0.0, "pid": 20372, "rss_kib": 555688, "start_ticks": 10569, "threads": 33}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 0.42, "cpu_ticks": 1052, "elapsed_seconds": 10.0, "pid": 20372, "rss_kib": 545464, "start_ticks": 10569, "threads": 32}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 0.43, "cpu_ticks": 1053, "elapsed_seconds": 20.0, "pid": 20372, "rss_kib": 545136, "start_ticks": 10569, "threads": 31}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 0.44, "cpu_ticks": 1054, "elapsed_seconds": 30.0, "pid": 20372, "rss_kib": 545076, "start_ticks": 10569, "threads": 31}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 0.45, "cpu_ticks": 1055, "elapsed_seconds": 40.0, "pid": 20372, "rss_kib": 545128, "start_ticks": 10569, "threads": 31}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 0.46, "cpu_ticks": 1056, "elapsed_seconds": 50.0, "pid": 20372, "rss_kib": 545172, "start_ticks": 10569, "threads": 31}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 0.48, "cpu_ticks": 1058, "elapsed_seconds": 60.0, "pid": 20372, "rss_kib": 545000, "start_ticks": 10569, "threads": 30}
+active
+DAILY_IDLE_SHELL_STABLE_OK
+/nix/store/1i7ivay04simpqbhxqyl0im4f6k5wkdp-source
+{"schema": 1, "phase": "idle"}
+[]
+[{"schema": 1, "id": "vm-reviewed", "version": "VM fixture", "revision": "d40861dddf01018b4de7bb13a81012de57f23625", "nar_hash": "sha256-vTdwqyzrnTo0PihpWPUGu5ZSH+mVNU4HnKz82jl7qe0="}, {"schema": 1, "id": "vm-wrong-hash", "version": "VM fixture", "revision": "d40861dddf01018b4de7bb13a81012de57f23625", "nar_hash": "sha256-vDdwqyzrnTo0PihpWPUGu5ZSH+mVNU4HnKz82jl7qe0="}]
+{"stage": "fetch", "message": "Fetching approved immutable source", "progress": 10}
+{"stage": "error", "message": "Candidate revision or NAR hash does not match catalog", "progress": 0}
+{"schema": 1, "phase": "failed", "candidate": {"schema": 1, "id": "vm-wrong-hash", "version": "VM fixture", "revision": "d40861dddf01018b4de7bb13a81012de57f23625", "nar_hash": "sha256-vDdwqyzrnTo0PihpWPUGu5ZSH+mVNU4HnKz82jl7qe0="}, "old": {"generation": 1, "system": "/nix/store/hs340m0kw9ia5li8cib2biz273c3r8ai-nixos-system-sleepy-26.11.20260822.2c423e0"}, "configuration": "d0c1887973e723779bef95321ee46dadd8db16c4e0c1027eaae80bc635af473a", "gc_root": "/var/lib/sleepy-update/attempt-e2e6e49a35055a725e966daff52b52a0/built-system"}
+CANDIDATE_WRONG_HASH_PRESERVED_BOOT_CONFIG_OK
+{"stage": "fetch", "message": "Fetching approved immutable source", "progress": 10}
+{"stage": "build", "message": "Building candidate with saved installed settings", "progress": 30}
+{"stage": "error", "message": "Command failed (1); see /var/lib/sleepy-update/update.log", "progress": 0}
+{"schema": 1, "phase": "failed", "candidate": {"schema": 1, "id": "vm-reviewed", "version": "VM fixture", "revision": "d40861dddf01018b4de7bb13a81012de57f23625", "nar_hash": "sha256-vTdwqyzrnTo0PihpWPUGu5ZSH+mVNU4HnKz82jl7qe0="}, "old": {"generation": 1, "system": "/nix/store/hs340m0kw9ia5li8cib2biz273c3r8ai-nixos-system-sleepy-26.11.20260822.2c423e0"}, "configuration": "ceac86893ae783d7dcb5ffb2d6836d7a39d8a72b01137d8a3232d442479fcb43", "gc_root": "/var/lib/sleepy-update/attempt-ccafc078fb464d6e571be516d0c496fb/built-system"}
+CANDIDATE_INVALID_CONFIG_PRESERVED_BOOT_CONFIG_OK
+CANDIDATE_CONTROLLED_BUILD_STARTED
+{"stage": "fetch", "message": "Fetching approved immutable source", "progress": 10}
+{"stage": "build", "message": "Building candidate with saved installed settings", "progress": 30}
+{"stage": "build", "message": "Build running; diagnostics in /var/lib/sleepy-update/update.log", "progress": 30}
+{"stage": "error", "message": "Update interrupted", "progress": 0}
+{"schema": 1, "phase": "failed", "candidate": {"schema": 1, "id": "vm-reviewed", "version": "VM fixture", "revision": "d40861dddf01018b4de7bb13a81012de57f23625", "nar_hash": "sha256-vTdwqyzrnTo0PihpWPUGu5ZSH+mVNU4HnKz82jl7qe0="}, "old": {"generation": 1, "system": "/nix/store/hs340m0kw9ia5li8cib2biz273c3r8ai-nixos-system-sleepy-26.11.20260822.2c423e0"}, "configuration": "866cbc36179720a407ca13c64022cc00edd8d253cc59d5bafaa6e2672641ea62", "gc_root": "/var/lib/sleepy-update/attempt-2d7bc44b8577833647b70d5699524320/built-system"}
+CANDIDATE_SIGTERM_PRESERVED_BOOT_CONFIG_OK
+{"stage": "fetch", "message": "Fetching approved immutable source", "progress": 10}
+{"stage": "build", "message": "Building candidate with saved installed settings", "progress": 30}
+{"stage": "select", "message": "Selecting exact built system for next boot", "progress": 80}
+{"stage": "ready", "message": "Candidate prepared. Reboot to use it; the running desktop is unchanged.", "progress": 100}
+{"schema": 1, "phase": "ready", "candidate": {"schema": 1, "id": "vm-reviewed", "version": "VM fixture", "revision": "d40861dddf01018b4de7bb13a81012de57f23625", "nar_hash": "sha256-vTdwqyzrnTo0PihpWPUGu5ZSH+mVNU4HnKz82jl7qe0="}, "old": {"generation": 1, "system": "/nix/store/hs340m0kw9ia5li8cib2biz273c3r8ai-nixos-system-sleepy-26.11.20260822.2c423e0"}, "configuration": "d0c1887973e723779bef95321ee46dadd8db16c4e0c1027eaae80bc635af473a", "gc_root": "/var/lib/sleepy-update/attempt-ed48dc6b9d9c310091e74461c081fbb2/built-system", "built": "/nix/store/d5qrpm08gngchsyqdnplagmaq3i2vqh9-nixos-system-sleepy-26.11.20260822.2c423e0"}
+CANDIDATE_PREPARED_WITHOUT_LIVE_OR_CONFIG_CHANGE_OK
+SLEEPY_REPORT_COMPLETE

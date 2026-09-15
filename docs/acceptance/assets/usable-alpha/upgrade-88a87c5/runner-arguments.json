@@ -1,0 +1,27 @@
+{
+  "kind": "reconstructed reproduction arguments, not captured argv",
+  "runner_source_revision": "d40861dddf01018b4de7bb13a81012de57f23625",
+  "memory_mib_confirmation": "Reproduction setting; original allocation not independently captured in result.json",
+  "arguments": [
+    "--iso",
+    "PATH/TO/sleepy-upgrade-base-88a87c5.iso",
+    "--image-source-revision",
+    "88a87c599aca03c6612f6cf32ae0d3aa83fd358b",
+    "--output",
+    "NEW-DISPOSABLE-OUTPUT",
+    "--memory",
+    "6144",
+    "--keyboard",
+    "ru",
+    "--daily-usability",
+    "--candidate-revision",
+    "d40861dddf01018b4de7bb13a81012de57f23625",
+    "--candidate-nar-hash",
+    "sha256-vTdwqyzrnTo0PihpWPUGu5ZSH+mVNU4HnKz82jl7qe0=",
+    "--cache-url",
+    "http://10.0.2.2:8080",
+    "--cache-public-key",
+    "sleepy-local-75e6fa3:SwFBCGRii3DGc3jQoZXDxgNDzyAoW/aKOELIUSBGL2Y="
+  ],
+  "prerequisites": "KVM/QEMU/OVMF and signed cache served by host; public network/source availability still required. Candidate catalog is an explicit disposable VM fixture, not a promoted public channel."
+}

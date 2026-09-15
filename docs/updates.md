@@ -66,6 +66,24 @@ original saved-flake rebuild behavior.
 
 ## Verification status
 
-Implementation and regression checks are in progress. Candidate update VM
-acceptance is pending; the existing installation and offline repair evidence
-does not by itself verify this update path.
+Image `8624092` passed 44 gates and three real-password disk boots with clean
+runner/candidate `d40861d`: fresh TUI installation, rejected hash and invalid
+configuration, a real interrupted builder, candidate preparation and boot,
+repeated preparation/GC-root cleanup, saved rebuild, offline rollback and
+subsequent update validation. The two source revisions have identical runtime
+code; this run proves source tracking and lifecycle, not a runtime upgrade.
+[Exact results and limits](acceptance/assets/usable-alpha/final-8624092/README.md)
+retain the image hash and guest reports.
+
+Packaged regressions include 37 updater tests and 29 system-tool tests. Rollback
+also executes the pinned nixos-rebuild dispatcher against missing and malformed
+saved configuration: it must select the retained generation without evaluating
+or building that configuration. Earlier failed VM runs remain labelled failed.
+
+A separate **88a87c5 → d40861d** run passed **43 gates and three password boots**
+with actual runtime changes to rollback dispatch and Fastfetch formatting. The
+source also changes component pins and installer validation; the latter was not
+exercised by installing the older base image. It also completed the offline rollback, saved
+rebuild and subsequent validation gate. It did not request interrupted-install
+coverage; that gate belongs to the 44-gate final-image run above.
+[Changed-runtime upgrade proof](acceptance/assets/usable-alpha/upgrade-88a87c5/README.md).

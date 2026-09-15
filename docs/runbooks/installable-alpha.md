@@ -3,22 +3,23 @@
 The installer is a network installation image for x86_64 UEFI machines. It uses
 `dialog` in a console, with no live desktop. The whole selected disk is erased:
 GPT, a 512 MiB FAT32 EFI partition, and a compressed Btrfs root. The validated VM
-configuration uses a 40 GiB disk and 8 GiB RAM. Use that configuration for alpha
+configuration uses a 40 GiB disk and 6 GiB RAM. Use that configuration for alpha
 testing; smaller systems are not validated.
 Encryption is not implemented.
 
 Build the verified source with Nix and flakes enabled:
 
 ```sh
-nix build github:sleepylinux/sleepy/afd713c5098900061209a746742b5525acdbfbe8#installer-iso \
+nix build github:sleepylinux/sleepy/86240920109f37263c3260ea501c2a15fafa7dd8#installer-iso \
   --max-jobs 1 --cores 2 --out-link result-installer
 sha256sum result-installer/iso/*.iso
 ```
 
 The [current acceptance record](../acceptance/usable-alpha.md) records the
-820 MiB artifact, checksum, pins and clean runner. It passed 40 gates including
-fresh installation and offline boot repair. Earlier installer images are
-superseded because they missed mounted descendants during target validation.
+821 MiB artifact, checksum, pins and clean runner. It passed 44 gates including
+fresh installation, candidate boot and offline rollback. Separate source `7c75fa8`
+passed 40 offline boot-repair gates; its recovery implementation is unchanged.
+Images predating the mounted-descendant target validation fix are superseded.
 This is a tested local alpha artifact, not a published release.
 
 The final run used a separately supplied signed dependency cache. The earlier
@@ -33,14 +34,16 @@ python3 -m http.server 8080 --bind 127.0.0.1 \
   --directory work/artifacts/sleepy-cache-97830de
 ```
 
-Use runner `1087e519ab7494568bc2bb61dccd948c4a2b0d11` or a reviewed successor:
+Use runner `d40861dddf01018b4de7bb13a81012de57f23625` or a reviewed successor:
 
 ```sh
 python3 scripts/vm/installable-alpha.py \
-  --iso work/artifacts/sleepy-recovery-afd713c.iso \
-  --image-source-revision afd713c5098900061209a746742b5525acdbfbe8 \
-  --output work/fresh-acceptance --memory 8192 \
-  --keyboard ru --interrupt-install --daily-usability --boot-recovery \
+  --iso work/artifacts/sleepy-usable-8624092.iso \
+  --image-source-revision 86240920109f37263c3260ea501c2a15fafa7dd8 \
+  --output work/fresh-acceptance --memory 6144 \
+  --keyboard ru --interrupt-install --daily-usability \
+  --candidate-revision d40861dddf01018b4de7bb13a81012de57f23625 \
+  --candidate-nar-hash sha256-vTdwqyzrnTo0PihpWPUGu5ZSH+mVNU4HnKz82jl7qe0= \
   --cache-url http://10.0.2.2:8080 \
   --cache-public-key "$(cat work/artifacts/sleepy-cache-97830de/public-key)"
 ```
@@ -48,10 +51,13 @@ python3 scripts/vm/installable-alpha.py \
 Omit both cache arguments to use public sources only. The cache contains signed
 component/dependency closures, not the old installer or a complete offline
 system. Public network access remains necessary for installation. Its
-`verification.json` records 1177 verified signatures; no private signing key is
-distributed. The runner requires QEMU/OVMF, Python pexpect/Pillow and Tesseract;
+`verification.json` records the original 1177 signatures and later component
+extensions; no private signing key is distributed. The runner requires QEMU/OVMF, Python pexpect/Pillow and Tesseract;
 use `--help` for firmware paths. Choose a new output directory for its disposable
-disk. `--boot-recovery` and `--update-safety` are separate, incompatible scenarios.
+disk. To test guided boot repair instead, omit both candidate arguments and add
+`--boot-recovery`. Candidate updates, `--boot-recovery` and `--update-safety` are
+separate, incompatible scenarios. The candidate above is a tested source, not a
+published update channel.
 
 Boot the ISO in a UEFI VM with a new disposable disk. Secure Boot is not supported
 by this alpha. Connect Ethernet, or choose Network in the TUI to configure Wi-Fi.
@@ -85,8 +91,9 @@ activates the previous system generation. See [recovery](../recovery.md).
 
 ## Everyday desktop in the accepted snapshot
 
-These workflows are included in the `97830de` snapshot above. The acceptance
-record distinguishes its full installed-VM run from earlier diagnostic checks.
+The current image verifies the default desktop workflows below. Optional
+Flatpak and development acceptance belongs to the historical `97830de` run;
+the acceptance record keeps those scopes separate.
 
 Open a terminal with `Super+Return`, or the application launcher with `Super+D`.
 
@@ -98,9 +105,10 @@ Open a terminal with `Super+Return`, or the application launcher with `Super+D`.
   Escape cancels the main menu. Direct `rebuild` and `rollback` commands start
   the requested operation without that menu confirmation and may ask for your
   administrator password in the terminal.
-- `sleepy-system rebuild` applies `/etc/nixos#installed`. It may download or
-  build dependencies and restart services; it does not select a new Sleepy
-  release, advance a channel or update the saved source pin. Rollback switches
+- `sleepy-system rebuild` applies saved settings using the running generation's
+  retained source. It may download or build dependencies and restart services; it does not select a new Sleepy
+  release or advance a channel. The separate [approved update](../updates.md)
+  action selects a reviewed immutable source for the next boot. Rollback switches
   to the previous system generation; it does not restore personal files or
   application data. Progress and the diagnostic log path appear in the terminal.
   Logs use `$XDG_STATE_HOME/sleepy/system`, normally
