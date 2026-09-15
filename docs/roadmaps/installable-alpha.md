@@ -24,16 +24,17 @@ Generic defaults remain overridable. No custom compositor or package manager.
 
 [Revision-bound final proof and limitations](../acceptance/usable-alpha.md).
 Production source remains `97830de`; the keyboard-readiness runner is recorded
-separately. Final integration still requires exact PR checks and repository
-handoff. Remove disposable disks/build environments after retaining the verified
-image and compact evidence; keep any reproducibility cache explicitly labelled.
+separately. Production PR #10 passed exact CI (run 34934941532) and merged as `7bb26fd`.
+Runner/evidence PR #11 is a separately reviewed follow-up. Disposable acceptance
+disks, old ISOs and Rust build targets were removed; the verified image and
+explicitly labelled signed cache remain. Reuse the dedicated builder only for
+the next active stage, then remove that task-owned container and volume.
 
 ## Next work, in dependency order
 
-1. **Finish this handoff.** Merge the reviewed production candidate after exact
-   CI, retain checksum/source graph and compact evidence, finish temp cleanup.
-   Keep the earlier failed runs and distinguish the runner-only follow-up.
-2. **Make recovery guided.** Extend the existing TUI beyond instructions and a
+1. **Finish the evidence follow-up.** Merge PR #11 after its exact CI; preserve
+   the earlier failed runs and the distinction between image and runner revisions.
+2. **Make recovery guided — active.** Extend the existing TUI beyond instructions and a
    terminal: identify an installed system read-only, show diagnostics and boot
    generations, and require explicit confirmation for a bounded repair.
    Gate: wrong/busy targets rejected; disposable broken-boot recovery; no
