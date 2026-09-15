@@ -1,0 +1,46 @@
+SLEEPY_REPORT_START
+REAL_USER_LOGIN_OK
+/dev/vda2 btrfs
+/dev/vda1 vfat
+INSTALLED_DISK_BOOT_OK
+active
+active
+active
+active
+active
+DESKTOP_UNITS_AND_SOCKET_OK
+FIRST_BOOT_WELCOME_DISMISSED_AND_INACTIVE_OK
+ok
+ok
+TERMINAL_AND_FILE_MANAGER_WINDOWS_OK
+CRASH_RECOVERY_OK sleepy-shell.service
+CRASH_RECOVERY_OK sleepy-session.service
+active
+ok
+true
+REAL_HYPRLAND_SETTING_APPLIED_OK
+PERSISTENCE_MARKER_WRITTEN
+active
+active
+active
+active
+FLATPAK_OFFLINE_DESKTOP_AND_FAILED_REGISTRATION_OK
+FLATPAK_ENABLE_NETWORK
+Sep 15 04:36:01 sleepy systemd[1]: Starting Configure the selected Flathub application source...
+Sep 15 04:36:01 sleepy flatpak[8578]: error: Can't load uri https://flathub.org/repo/flathub.flatpakrepo: While fetching https://flathub.org/repo/flathub.flatpakrepo: [6] Could not resolve hostname
+Sep 15 04:36:01 sleepy systemd[1]: sleepy-flathub.service: Main process exited, code=exited, status=1/FAILURE
+Sep 15 04:36:01 sleepy systemd[1]: sleepy-flathub.service: Failed with result 'exit-code'.
+Sep 15 04:36:01 sleepy systemd[1]: Failed to start Configure the selected Flathub application source.
+Sep 15 04:36:01 sleepy systemd[1]: sleepy-flathub.service: Consumed 12ms CPU time over 35ms wall clock time, 7.2M memory peak, 1.6M read from disk, 40K written to disk.
+Sep 15 04:41:02 sleepy systemd[1]: Starting Configure the selected Flathub application source...
+Sep 15 04:41:03 sleepy flatpak[247271]: system: Added remote flathub to https://dl.flathub.org/repo/
+Sep 15 04:41:05 sleepy systemd[1]: Finished Configure the selected Flathub application source.
+FLATPAK_REAL_FLATHUB_TIMER_RECOVERY_OK
+ok
+FLATPAK_SOFTWARE_WINDOW_OK
+true
+LOCK_RETURN_TO_DESKTOP
+LOCK_GRAPHICAL_VT_READY
+ok
+true
+IDLE_LOCK_PASSWORD_READY

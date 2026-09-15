@@ -1,0 +1,41 @@
+{
+  "status": "failed",
+  "iso": "sleepy-usability-bfa319a.iso",
+  "iso_sha256": "dc6d39d5a23aa64994200d54c99ca6f3c07e2e45194cd1a36b8e847a6a0c75d7",
+  "acceleration": "kvm",
+  "cache_transport": "http://10.0.2.2:8080",
+  "cache_public_key": "sleepy-local-75e6fa3:SwFBCGRii3DGc3jQoZXDxgNDzyAoW/aKOELIUSBGL2Y=",
+  "image_source_revision": "bfa319a6fba977ebd61e172aabd7163c10faa9d5",
+  "completed": [
+    "invalid-target-rejected-without-disk-writes",
+    "offline-install-rejected-without-disk-writes",
+    "real-install-SIGTERM-cleanup-and-lock-release",
+    "tui-install-and-shutdown",
+    "flatpak-offline-first-desktop",
+    "flatpak-real-Flathub-timer-recovery",
+    "flatpak-Software-window",
+    "real-password-login",
+    "first-boot-welcome-dismissed",
+    "installed-disk-boot",
+    "desktop-units-and-socket",
+    "terminal-and-file-manager-windows",
+    "shell-SIGKILL-recovery",
+    "session-daemon-SIGKILL-recovery",
+    "real-Hyprland-setting-applied"
+  ],
+  "runner_source_revision": "090db4eb621fe5bdf30f153c0c09cef17f95508d",
+  "runner_source_dirty": false,
+  "flatpak_recovery": true,
+  "daily_usability": true,
+  "keyboard": "ru",
+  "error": "Screen did not show 'Password'; inspect installed-idle-locked.png",
+  "evidence_sha256": {
+    "bfa319a-installer-welcome.png": "0e9718d4edad20be2dfa6f372be6641f19a510a133a3ba1410464f5f6ffbf42c",
+    "bfa319a-installer-flatpak-selected.png": "b9d59d72647e52b16eacba9f6dee4c16654f30136578370d094ba15a41a12a63",
+    "bfa319a-installer-complete.png": "504ea50b77120506135a92017b34cb3ac8268a29cefa089ecbfd78d3b7da4fac",
+    "bfa319a-installed-welcome.png": "78b7c64ff4e8b86c777f773b2f822ea5c5224fe9cea37810b3c2ccfc44e2b234",
+    "bfa319a-installed-greeter.png": "8322ad0baeff87f90fa7b92b363b803a0b7820084d7bea536a06a0d7a82598b4",
+    "bfa319a-installed-idle-locked.png": "1d80a92c7a2dfec9005bed017361b5b3e809deb3f4f5f2b0fd80bd6dfeccdf7e",
+    "bfa319a-installed-guest-report.txt": "2ade470db103a05b31c1dd9b8b9fae6246e28a1cd6446e17a05d8e043ff80dce"
+  }
+}

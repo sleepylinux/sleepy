@@ -53,8 +53,11 @@ Shift+Print clipboard, generation-list/menu cancellation, and native dark-locker
 VT return/input/PAM unlock with the scoped Qt fix. These use temporary runtime
 overrides; Firefox FileChooser and real-password polkit authorization also pass.
 Desktop PR #8 is merged after exact CI and a 20-minute packaged-shell soak
-(121 samples, zero restarts). Final image `bfa319a` is built; clean installation,
-keyring persistence, crash/DPMS wake and update/rollback remain the active gate.
+(121 samples, zero restarts). Image `bfa319a` completed fresh TUI installation, disk-only boot, real login
+and Flathub retry, then failed to display an idle lock created on an inactive
+VT. Active blockers: recover the compositor activation frame and remove the
+PipeWire observation-client readback loop. Keyring persistence, crash/DPMS wake
+and update/rollback still require the corrected final image gate.
 [Revision-bound evidence](../acceptance/usable-alpha.md).
 
 ## Verification and limits

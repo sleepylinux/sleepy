@@ -213,3 +213,24 @@ and the native polkit dialog accepted the created password for a read-only
 authorization check. [Trace and screenshot provenance](assets/usable-alpha/candidate7231-network-loop-portal-provenance.json)
 records the earlier diagnostic shell used for those actions. The final image
 remains gated on a clean install, keyring persistence and update/rollback.
+
+### Fresh bfa319a installation: partial pass, lock-frame failure
+
+The unmodified final candidate completed TUI installation, invalid/offline target
+rejection, interrupted-install cleanup, shutdown, ISO detachment, installed-disk
+boot and real-password login. First-boot welcome, applications, shell/daemon
+SIGKILL recovery and real Flathub retry passed. The combined run then **failed**:
+the native locker reported locked after an inactive-VT idle period, but returning
+to the desktop left the previous framebuffer visible instead of the password
+view. No password bypass or successful combined acceptance is claimed.
+[Exact failed-run result, revisions and hashes](assets/usable-alpha/bfa319a-first-run-failed.json)
+and [guest report](assets/usable-alpha/bfa319a-installed-guest-report.txt) are retained.
+
+The subsequent read-only investigation confirmed the installed f91 shell and
+scoped Qt fix, with input-DPMS defaults enabled. An explicit diagnostic DPMS
+cycle restored the password view without unlocking. A downstream compositor
+activation-frame fix is under test; the failed run remains failed. Separately,
+real PipeWire client events exposed an audio readback feedback loop in session:
+pausing only its monitor reduced task creation from 1708 to 93 over two seconds.
+A typed event filter is under test. Both fixes require new runtime validation
+and a fresh combined image gate before promotion.
