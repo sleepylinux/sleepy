@@ -66,6 +66,37 @@ operation_output() {
           elif type == "string" then . else tostring end
         | gsub("[\u0000-\u001f\u007f]"; " ")'
       ;;
+    update-status)
+      # Display a fixed public-facing subset; raw journal facts remain in the
+      # private log. A ready transaction records preparation, never boot health.
+      jq --unbuffered -Rr '
+        def brief_system:
+          split("/")[-1] | capture("^(?<hash>[^-]+)-(?<name>.*)$")
+          | "\(.name) [\(.hash[0:8])]";
+        (fromjson? // .)
+        | if type == "string" then .
+          elif type != "object" then "Update status could not be read. See the diagnostic log."
+          else
+            ({idle: "No update transaction", preparing: "Preparing a candidate",
+              failed: "Preparation failed", selecting: "Selecting the next system",
+              selected: "System selected; boot setup pending", booting: "Writing boot configuration",
+              recovering: "Restoring the previous selection", recovered: "Previous selection restored",
+              "recovery-failed": "Recovery needs attention", ready: "Prepared for boot"}[.phase]
+              // "Unknown update state") as $label
+            | "Update: \($label)",
+              (if .candidate then "Candidate: \(.candidate.version) [\(.candidate.revision[0:12])]" else empty end),
+              (if .old then "Previous generation: \(.old.generation)" else empty end),
+              (if .built then "Prepared system: \(.built | brief_system)" else empty end),
+              (if .phase == "idle" then "Choose an approved candidate when you want to update."
+               elif .phase == "ready" then "Restart if this candidate is not running yet. Boot health is not confirmed by this status."
+               elif .phase == "failed" then "Preparation did not select a new system. Read the diagnostic log before retrying."
+               elif .phase == "recovery-failed" then "Recovery did not finish. Retain the log and use installer recovery if another attempt fails."
+               elif .phase == "recovered" then "The previous generation is selected for next boot. Personal files were not restored."
+               elif .phase == "preparing" then "Preparation may still be running or may have been interrupted. Read the log before retrying."
+               else "If the operation was interrupted, use Recover incomplete update before preparing another candidate." end)
+          end
+        | gsub("[\u0000-\u001f\u007f]"; " ")'
+      ;;
     *) cat ;;
   esac
 }

@@ -1,4 +1,6 @@
 import os
+import json
+import shlex
 from pathlib import Path
 import shutil
 import subprocess
@@ -206,6 +208,35 @@ esac''')
         log = next((self.root / 'state').rglob('*.log')).read_text()
         self.assertIn('"stage":"build"', log)
         self.assertIn('\\u001b', log)
+
+    def test_update_status_renders_human_phase_and_only_relevant_fields(self):
+        for phase, expected in [('idle', 'No update transaction'), ('ready', 'Prepared for boot'),
+                                ('recovery-failed', 'Recovery needs attention')]:
+            with self.subTest(phase=phase):
+                payload = dict(schema=1, phase=phase, password='PRIVATE_PASSWORD', configuration='PRIVATE_SNAPSHOT')
+                if phase != 'idle':
+                    payload.update(candidate=dict(id='alpha-2', version='Alpha 2', revision='abcdef123456' + '0'*28),
+                                   old=dict(generation=7, system='/nix/store/'+'a'*32+'-nixos-system-sleepy'),
+                                   built='/nix/store/'+'b'*32+'-nixos-system-sleepy')
+                self.command('sleepy-update', "printf '%s\\n' " + shlex.quote(json.dumps(payload)))
+                result = self.run_tool('update-status')
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn(expected, result.stdout)
+                self.assertNotIn('PRIVATE', result.stdout)
+                self.assertNotIn('"phase"', result.stdout)
+                if phase != 'idle':
+                    self.assertIn('Alpha 2 [abcdef123456]', result.stdout)
+                    self.assertIn('Previous generation: 7', result.stdout)
+                if phase == 'ready': self.assertIn('Boot health is not confirmed', result.stdout)
+                if phase == 'recovery-failed': self.assertIn('installer recovery', result.stdout)
+                logs = list((self.root / 'state').rglob('*.log'))
+                self.assertTrue(any('PRIVATE_SNAPSHOT' in log.read_text() for log in logs))
+
+    def test_update_status_preserves_plain_errors_and_exit_status(self):
+        self.command('sleepy-update', 'echo "Cannot read private update journal" >&2; exit 9')
+        result = self.run_tool('update-status')
+        self.assertEqual(result.returncode, 9)
+        self.assertIn('Cannot read private update journal', result.stdout)
 
     def test_formatter_failure_is_reported_as_failure(self):
         self.command('jq', 'cat >/dev/null; exit 24')
