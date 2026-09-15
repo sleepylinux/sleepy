@@ -61,6 +61,10 @@ activates the previous system generation. See [recovery](../recovery.md).
 The following additions are implemented in the usability branch; the immutable
 `9bca73c` ISO above predates them. Combined installed-VM acceptance is pending.
 
+- Run `sleepy-system` to open the system menu. Status and generation listing are
+  read-only; applying saved settings and rollback ask for confirmation.
+  `sleepy-system status` also works directly in a terminal. Failed operations
+  return an error and retain a private log in `~/.local/state/sleepy/system`.
 - `Print` selects a screen region and opens Swappy; press `Ctrl+S` to save in
   `~/Pictures/Screenshots`. `Shift+Print` copies a region as a PNG to the clipboard.
 - Open saved images from Thunar; imv is the default image viewer. Press `q` to

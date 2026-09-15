@@ -20,6 +20,7 @@ Start with:
 - [runtime ownership and failure semantics](docs/architecture/shell-runtime-integrations.md);
 - [real VM runbook](docs/runbooks/sleepy-vm-hyprland.md);
 - [acceptance record](docs/acceptance/hyprland-sleepy-desktop.md);
-- [full-parity implementation plan](docs/superpowers/plans/2026-09-01-caelestia-v2.4.0-full-parity.md).
+- [active usable-alpha roadmap](docs/roadmaps/installable-alpha.md);
+- [daily desktop validation in progress](docs/acceptance/usable-alpha.md).
 
 Sleepy Linux is licensed under `GPL-3.0-only`; see [LICENSE](LICENSE).
