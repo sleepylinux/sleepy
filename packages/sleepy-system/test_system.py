@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -36,7 +37,10 @@ esac''')
 
     def command(self, name, body):
         p = self.bin / name
-        p.write_text('#!/usr/bin/env bash\n' + body + '\n')
+        # Nix sandboxes provide Bash on PATH, without /usr/bin/env.
+        bash = shutil.which('bash')
+        self.assertIsNotNone(bash, 'Bash is required by the command fixtures')
+        p.write_text('#!' + bash + '\n' + body + '\n')
         p.chmod(0o755)
 
     def run_tool(self, *args, **env):
