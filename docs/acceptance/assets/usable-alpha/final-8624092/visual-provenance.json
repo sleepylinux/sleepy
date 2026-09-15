@@ -1,0 +1,46 @@
+{
+  "kind": "real-desktop-visual-supplement",
+  "status": "passed",
+  "base_result": "/home/lazy/orca/workspaces/sleepy/candidate-updates/work/vm-final-862-to-d408/result.json",
+  "base_result_sha256": "550491e859a39a9ea065ed7a21e15dbd66e1c1fc76793a47647bb0e6f6de70e0",
+  "base_image_source_revision": "86240920109f37263c3260ea501c2a15fafa7dd8",
+  "base_candidate_revision": "d40861dddf01018b4de7bb13a81012de57f23625",
+  "runner_revision": "5c218bfa92ea1705a111cf49b5532df1f9571d75",
+  "script_sha256": "a0b1e5e3025fd94aa046f3319d0566b879d2ced920d25ff369201bae6c1ecaca",
+  "guest_memory_mib": 6144,
+  "guest_configuration_patched": false,
+  "fixture_values": false,
+  "base_disk": "/home/lazy/orca/workspaces/sleepy/candidate-updates/work/vm-final-862-to-d408/installed.qcow2",
+  "screenshot_size": [
+    1280,
+    800
+  ],
+  "ocr_disk_and_btrfs_visible": true,
+  "base_disk_stat_unchanged": true,
+  "base_nvram_sha256_unchanged": true,
+  "qemu_stopped": true,
+  "visual_review": {
+    "reviewer": "assistant image inspection",
+    "ascii_logo": "fully visible; no missing glyphs",
+    "disk": "4.55 GiB / 39.50 GiB (btrfs), fully visible without clipping",
+    "contrast_and_legibility": "readable dark Ghostty palette at actual 1280x800",
+    "applications": "real Ghostty and Thunar opened via normal desktop input"
+  },
+  "scope": "Supplemental visual inspection of the retained disk after its verified candidate update and offline rollback; does not replace that full VM acceptance.",
+  "screenshots": {
+    "fastfetch-1280.png": "6c57e9831aa47146c20b8a9f9a453b4ea3e844d973b1e11b7bdd6f05b97fe639",
+    "visual-applications.png": "c71e5a823faae4999c41d00895f207b980321c24af03b4de4752cebeac2d58fb"
+  },
+  "own_overlay_cleanup": [
+    {
+      "path": "/home/lazy/orca/workspaces/sleepy/candidate-updates/work/visual-final-fastfetch/installed.qcow2",
+      "allocated_bytes_before": 76288000,
+      "apparent_bytes_before": 76349440
+    },
+    {
+      "path": "/home/lazy/orca/workspaces/sleepy/candidate-updates/work/visual-final-fastfetch/attempt-1/installed.qcow2",
+      "allocated_bytes_before": 71897088,
+      "apparent_bytes_before": 71958528
+    }
+  ]
+}

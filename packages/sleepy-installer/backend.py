@@ -157,6 +157,16 @@ def list_disks():
     return disks
 
 
+def username_valid(value):
+    return (re.fullmatch(r'[a-z][a-z0-9_-]{0,30}', value) is not None
+            and value not in RESERVED_USERS
+            and not value.startswith(('nixbld', 'systemd-')))
+
+
+def hostname_valid(value):
+    return re.fullmatch(r'[a-z0-9][a-z0-9-]{0,61}[a-z0-9]|[a-z0-9]', value) is not None
+
+
 def validate_request(data):
     required = {'disk', 'identity', 'confirm_erase', 'username', 'password', 'hostname',
                 'locale', 'keyboard', 'timezone', 'options'}
@@ -167,9 +177,9 @@ def validate_request(data):
     if not re.fullmatch(r'/dev/[A-Za-z0-9_-]+', data['disk']): raise InstallError('Invalid disk path')
     if not re.fullmatch(r'[0-9a-f]{64}', data['identity']): raise InstallError('Invalid disk identity')
     if data['confirm_erase'] != data['disk']: raise InstallError('Erase confirmation does not match selected disk')
-    if not re.fullmatch(r'[a-z][a-z0-9_-]{0,30}', data['username']) or data['username'] in RESERVED_USERS or data['username'].startswith(('nixbld', 'systemd-')):
+    if not username_valid(data['username']):
         raise InstallError('Invalid user name')
-    if not re.fullmatch(r'[a-z0-9][a-z0-9-]{0,61}[a-z0-9]|[a-z0-9]', data['hostname']):
+    if not hostname_valid(data['hostname']):
         raise InstallError('Invalid host name')
     if len(data['password']) < 8 or len(data['password'].encode()) > 1024 or any(c in data['password'] for c in '\n\r\x00'):
         raise InstallError('Password must contain 8 or more characters and no line breaks')

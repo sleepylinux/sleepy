@@ -1,0 +1,24 @@
+{
+  "status": "passed: fresh TUI install, candidate boot, offline rollback; 44 gates, 3 password boots",
+  "source_revision": "86240920109f37263c3260ea501c2a15fafa7dd8",
+  "sha256": "92f0f566b17e70dcf9d1eba79b4f6bb61c2d805157166c879069f0ddbb05d71c",
+  "bytes": 860880896,
+  "drv": "/nix/store/lqm0nghqrdyyhzqi8nl89i61n3slyfdy-sleepy-0.1.0-alpha-x86_64-linux.iso.drv",
+  "out": "/nix/store/mmvcl19ys1v14c905vxwaknj2vcbcq9y-sleepy-0.1.0-alpha-x86_64-linux.iso",
+  "flake_lock_sha256": "2fcc6168af4d79072e79bf08b68e56f9e2298597d8208c0d10f843e0032946af",
+  "components": {
+    "sleepy-sdk": "dff28bb596950d862ae5d219e478460dfa13e8f4",
+    "sleepy-session": "ca37debffa9d01f1d0c9369a31faf85e88a1198a",
+    "sleepy-desktop": "15b8dab9bd2534be7f054e62b6e36cb46fd74a1f",
+    "sleepy-artwork": "ac3feed1e81b4e74a84a326c1f53f3ddaf94aa3e"
+  },
+  "shell_store_path": "/nix/store/x291rc2nri0snhv8hrvv56xci6jklw98-sleepy-shell-0.2.0",
+  "acceptance_result": "docs/acceptance/assets/usable-alpha/final-8624092/result.json",
+  "runner_source_revision": "d40861dddf01018b4de7bb13a81012de57f23625",
+  "candidate_revision": "d40861dddf01018b4de7bb13a81012de57f23625",
+  "candidate_nar_hash": "sha256-vTdwqyzrnTo0PihpWPUGu5ZSH+mVNU4HnKz82jl7qe0=",
+  "runtime_transition": "same runtime, distinct source identities",
+  "completed_gates": 44,
+  "memory_mib": 6144,
+  "visual_supplement": "actual Fastfetch/Ghostty/Thunar at 1280x800; disposable overlay, guest unmodified"
+}

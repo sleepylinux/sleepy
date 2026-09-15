@@ -1,0 +1,44 @@
+{
+  "status": "fresh install and offline TUI recovery passed; separate candidate run found lock reconnect bug",
+  "source_revision": "25376439913bb80fd0cf317169c2626ae6776ce8",
+  "sha256": "0949e1c602f34dd52a98747b2c0f4853f69be6d6f36cf73e6c9c26d3d46e1d0e",
+  "bytes": 860880896,
+  "drv": "/nix/store/0q9h0629s26wi6csi10dx20lsq8nfs4a-sleepy-0.1.0-alpha-x86_64-linux.iso.drv",
+  "out": "/nix/store/w6w3g8nfjr25g8scppkw785x41pna3ka-sleepy-0.1.0-alpha-x86_64-linux.iso",
+  "build_command": "nix build .#packages.x86_64-linux.installer-iso --no-link --max-jobs 1 --cores 2 -L --json",
+  "flake_lock_sha256": "5287c31b89266a72a954c0abd619e798563e337a996d09338bbbe5e068472be6",
+  "runner_source_revision": "4821da5b0ae6678d61774b86438bcd68654f3deb",
+  "completed_gates": 40,
+  "installed_disk_boots": 2,
+  "vm_result": "passed",
+  "cache_transport": "http://10.0.2.2:8080",
+  "cache_public_key": "sleepy-local-75e6fa3:SwFBCGRii3DGc3jQoZXDxgNDzyAoW/aKOELIUSBGL2Y=",
+  "immutable_source_derivation_matches_built_image": true,
+  "verified_at_utc": "2026-09-15T11:04:48.387221+00:00",
+  "known_issue": "A separate candidate boot reproduced a lost lock request after daemon restart (request.generation-stale). Replacement with fix is planned; do not treat this recovery run as candidate-update acceptance.",
+  "components": {
+    "sleepy-sdk": "dff28bb596950d862ae5d219e478460dfa13e8f4",
+    "sleepy-session": "210cbaad7a50280e4406281f90cbe36def50086c",
+    "sleepy-desktop": "45f721a037693523ba1886eba20784ac9e8102fc",
+    "sleepy-artwork": "ac3feed1e81b4e74a84a326c1f53f3ddaf94aa3e"
+  },
+  "checks": {
+    "installer": {
+      "tests": 52,
+      "passed": 51,
+      "skipped": 1
+    },
+    "system_tui": {
+      "tests": 28,
+      "passed": 28
+    },
+    "update_backend": {
+      "tests": 32,
+      "passed": 32
+    },
+    "runner": {
+      "tests": 31,
+      "passed": 31
+    }
+  }
+}

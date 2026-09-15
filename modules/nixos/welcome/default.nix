@@ -16,12 +16,16 @@
       fi
     '';
   };
+  updater = pkgs.callPackage ../../../packages/sleepy-update {
+    nix = config.nix.package;
+  };
   systemTools = pkgs.callPackage ../../../packages/sleepy-system {
+    sleepy-update = updater;
     nix = config.nix.package;
     nixos-rebuild = config.system.build.nixos-rebuild;
   };
 in {
-  environment.systemPackages = [welcome systemTools pkgs.thunar];
+  environment.systemPackages = [welcome systemTools updater pkgs.thunar];
   services.gvfs.enable = true;
   # A failed/dismissed welcome never prevents the desktop from starting.
   systemd.user.services.sleepy-welcome = {

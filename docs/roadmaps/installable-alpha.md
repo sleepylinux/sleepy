@@ -12,11 +12,11 @@ Generic defaults stay overridable. No custom compositor or package manager.
 - [x] Actual mounted-descendant rejection before preflight, descendant identity
   fingerprinting and changed-target checks. The lsblk topology regression is
   fixed; older installer images are superseded.
-- [x] Image `afd713c`: fresh installation, two disk-only password boots and
+- [x] Image `7c75fa8`: fresh installation, two disk-only password boots and
   40 gates. Delete boot entries on the disposable disk, prove failed boot,
   inspect/cancel with unchanged GPT and full partition hashes, then restore
   through the offline TUI and retain configuration, profile and personal files.
-- [x] New recovery image also repairs the earlier public-only installed229
+- [x] Historical image `afd713c` also repairs the earlier public-only installed229
   disk. Historical failed/interrupted investigations keep their original status.
 - [x] Everyday desktop: terminal/file manager, PNG save/view/clipboard, dark GTK,
   original crescent Fastfetch, system status/menu, first-boot welcome and keyring.
@@ -28,12 +28,26 @@ Generic defaults stay overridable. No custom compositor or package manager.
   separate diagnostics cover Kalk, Firefox portal, polkit and virtual audio.
 - [x] Component fixes and source review, behavioral regressions, packaged tests,
   exact image/checksum/pins and revision-bound VM evidence. Production PR #10
-  merged; [PR #11](https://github.com/sleepylinux/sleepy/pull/11) tracks the guided
-  recovery/safety follow-up and its required CI/integration status.
+  and [PR #11](https://github.com/sleepylinux/sleepy/pull/11) merged; the latter's
+  exact `27c99c4` CI run 34955692745 passed all jobs, including strict sandbox
+  topology tests and production VM checks.
+
+- [x] Reviewed-candidate updates: image `8624092` → candidate `d40861d` passed
+  44 gates and three real-password disk boots, including real builder
+  interruption, candidate selection, saved rebuild, repeated preparation/GC
+  cleanup, offline rollback and future-update validation. These revisions share
+  runtime code; a separate `88a87c5` → `d40861d` changed-runtime test passed
+  43 gates and three password boots. Pinned-tool regressions also prove rollback
+  works with absent/broken saved configuration. Integration and exact CI are
+  tracked in [PR #12](https://github.com/sleepylinux/sleepy/pull/12).
+- [x] Final visual inspection: custom ASCII crescent and compact Fastfetch Disk
+  output fit the actual 1280×800 desktop. Desktop PR #10/session PR #14 merged
+  after full component CI and automated review. The source-copy cleanup check
+  also passes as a non-root user. No public update channel has been promoted.
 
 [Acceptance and exact limits](../acceptance/usable-alpha.md),
 [installation](../runbooks/installable-alpha.md), [recovery](../recovery.md).
-The final ISO is 820 MiB. Keep the verified artifact and labelled signed cache;
+The current installer ISO is 821 MiB. Keep the verified artifact and labelled signed cache;
 remove disposable disks, credentials and the task-owned builder after validation.
 
 ## Next cycle, in dependency order
@@ -46,20 +60,11 @@ remove disposable disks, credentials and the task-owned builder after validation
    assignable IOMMU group exposed; no repository self-hosted runner is registered.
    Do not unbind or alter that host OS. Configuration evaluation and virtual audio
    are useful evidence, not physical GPU or suspend acceptance.
-2. **Reviewed-candidate updates.** Keep saved-config rebuild semantics. The
-   next implementable slice is an explicitly approved immutable candidate,
-   staged while preserving installation settings and system.stateVersion,
-   built before selection for the next boot. Track previous configuration and
-   generation together so rollback and the next rebuild agree. Gates: rejected
-   or changed candidate, concurrent config edits, offline/build failure,
-   interruption, failed boot and previous-generation password desktop recovery.
-   A content hash proves identity, not maintainer approval. Automatic channels
-   require an approved signing/catalog/promotion policy; none exists yet.
-3. **Complete the session capture provider.** Print already uses native
+2. **Complete the session capture provider.** Print already uses native
    Quickshell screencopy and Swappy. The separate SDK capture action expects an
    unimplemented helper; keep doctor honest until consent/output contracts and
    actual capture are tested. Do not alias its status to the Print picker.
-4. **Encryption and public distribution.** Add a separate encrypted
+3. **Encryption and public distribution.** Add a separate encrypted
    install/unlock/recovery branch. Prepare reproducible public binary artifacts,
    source revisions/checksums, short docs and honest known issues. Validate a
    current public-only installation. Release publication and public channel

@@ -7,12 +7,18 @@ The root integration pins this exact reviewed public component graph:
 | Component | Reviewed revision |
 |---|---|
 | `sleepy-sdk` | `dff28bb596950d862ae5d219e478460dfa13e8f4` |
-| `sleepy-session` | `210cbaad7a50280e4406281f90cbe36def50086c` |
+| `sleepy-session` | `ca37debffa9d01f1d0c9369a31faf85e88a1198a` |
 | `sleepy-artwork` | `ac3feed1e81b4e74a84a326c1f53f3ddaf94aa3e` |
-| `sleepy-desktop` | `45f721a037693523ba1886eba20784ac9e8102fc` |
+| `sleepy-desktop` | `15b8dab9bd2534be7f054e62b6e36cb46fd74a1f` |
+
+The current graph includes session descendant-process readiness fixes and
+desktop native-locker readiness recovery. Current installed acceptance is
+recorded separately for image `8624092` and candidate `d40861d` in
+[usable-alpha acceptance](usable-alpha.md). The `97830de` results below
+describe the earlier graph; they are not proof of this exact lock.
 
 The generated `flake.lock` SHA-256 is
-`5287c31b89266a72a954c0abd619e798563e337a996d09338bbbe5e068472be6`. This candidate includes the SDK UTF-8 fix, deterministic session process tests,
+`2fcc6168af4d79072e79bf08b68e56f9e2298597d8208c0d10f843e0032946af`. This candidate includes the SDK UTF-8 fix, deterministic session process tests,
 consistent Hyprland command readback deadlines, typed audio monitor events,
 empty Wayland application metadata normalization, and the native locker unlock fix. The current desktop adds a dark native lock
 view and hides optional panels without data; its offscreen QML checks pass,

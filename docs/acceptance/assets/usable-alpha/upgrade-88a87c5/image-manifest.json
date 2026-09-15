@@ -1,0 +1,16 @@
+{
+  "status": "historical upgrade base; fresh VM upgrade acceptance pending",
+  "source_revision": "88a87c599aca03c6612f6cf32ae0d3aa83fd358b",
+  "sha256": "a80c872285e25849681142af63dbca88faa2271026fc5d3333e79b6a37de4784",
+  "bytes": 860880896,
+  "drv": "/nix/store/8hcm36jsgssm8qnqsnfg6csha0b9bka8-sleepy-0.1.0-alpha-x86_64-linux.iso.drv",
+  "out": "/nix/store/mlrmm5pwd6jwwmzy3i9hg4gzcvck4d3z-sleepy-0.1.0-alpha-x86_64-linux.iso",
+  "flake_lock_sha256": "99ba51c7e41253b837693335dea9a099c7c556238a401a00cff6f4b0b260a9c5",
+  "components": {
+    "sleepy-sdk": "dff28bb596950d862ae5d219e478460dfa13e8f4",
+    "sleepy-session": "210cbaad7a50280e4406281f90cbe36def50086c",
+    "sleepy-desktop": "0a72d23ad6ed4a4c384020e7e5c0999df7c23970",
+    "sleepy-artwork": "ac3feed1e81b4e74a84a326c1f53f3ddaf94aa3e"
+  },
+  "shell_store_path": "/nix/store/66ad4fv737bn2zds059d78qz38q2lcr7-sleepy-shell-0.2.0"
+}

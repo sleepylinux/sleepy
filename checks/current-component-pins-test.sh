@@ -17,7 +17,7 @@ expected=$(mktemp /tmp/sleepy-current-component-pins.XXXXXX.json)
 deployment_candidate=$(mktemp /tmp/sleepy-deployment-candidate.XXXXXX.md)
 acceptance_candidate=$(mktemp /tmp/sleepy-acceptance-candidate.XXXXXX.md)
 trap 'rm -f -- "$expected" "$deployment_candidate" "$acceptance_candidate"' EXIT
-approved_lock_sha=5287c31b89266a72a954c0abd619e798563e337a996d09338bbbe5e068472be6
+approved_lock_sha=2fcc6168af4d79072e79bf08b68e56f9e2298597d8208c0d10f843e0032946af
 
 cat >"$expected" <<'EOF'
 {
@@ -29,16 +29,16 @@ cat >"$expected" <<'EOF'
       "revision": "dff28bb596950d862ae5d219e478460dfa13e8f4"
     },
     "sleepy-session": {
-      "url": "github:sleepylinux/sleepy-session/210cbaad7a50280e4406281f90cbe36def50086c",
-      "revision": "210cbaad7a50280e4406281f90cbe36def50086c"
+      "url": "github:sleepylinux/sleepy-session/ca37debffa9d01f1d0c9369a31faf85e88a1198a",
+      "revision": "ca37debffa9d01f1d0c9369a31faf85e88a1198a"
     },
     "sleepy-artwork": {
       "url": "github:sleepylinux/sleepy-artwork/ac3feed1e81b4e74a84a326c1f53f3ddaf94aa3e",
       "revision": "ac3feed1e81b4e74a84a326c1f53f3ddaf94aa3e"
     },
     "sleepy-desktop": {
-      "url": "github:sleepylinux/sleepy-desktop/45f721a037693523ba1886eba20784ac9e8102fc",
-      "revision": "45f721a037693523ba1886eba20784ac9e8102fc"
+      "url": "github:sleepylinux/sleepy-desktop/15b8dab9bd2534be7f054e62b6e36cb46fd74a1f",
+      "revision": "15b8dab9bd2534be7f054e62b6e36cb46fd74a1f"
     }
   }
 }
@@ -104,9 +104,9 @@ fi
 
 for expected_line in \
   'sleepy-sdk      dff28bb596950d862ae5d219e478460dfa13e8f4' \
-  'sleepy-session  210cbaad7a50280e4406281f90cbe36def50086c' \
+  'sleepy-session  ca37debffa9d01f1d0c9369a31faf85e88a1198a' \
   'sleepy-artwork  ac3feed1e81b4e74a84a326c1f53f3ddaf94aa3e' \
-  'sleepy-desktop  45f721a037693523ba1886eba20784ac9e8102fc'; do
+  'sleepy-desktop  15b8dab9bd2534be7f054e62b6e36cb46fd74a1f'; do
   if test "$(grep -Fxc -- "$expected_line" "$deployment_candidate")" -ne 1; then
     printf 'current component pins: deployment candidate must contain exactly one %s\n' \
       "$expected_line" >&2
@@ -132,9 +132,9 @@ while IFS=$'\t' read -r component revision; do
   fi
 done <<'EOF'
 sleepy-sdk	dff28bb596950d862ae5d219e478460dfa13e8f4
-sleepy-session	210cbaad7a50280e4406281f90cbe36def50086c
+sleepy-session	ca37debffa9d01f1d0c9369a31faf85e88a1198a
 sleepy-artwork	ac3feed1e81b4e74a84a326c1f53f3ddaf94aa3e
-sleepy-desktop	45f721a037693523ba1886eba20784ac9e8102fc
+sleepy-desktop	15b8dab9bd2534be7f054e62b6e36cb46fd74a1f
 EOF
 
 if test "$failures" -ne 0; then
@@ -169,23 +169,23 @@ if test "${SLEEPY_CURRENT_PINS_FIXTURE:-0}" != 1; then
     fi
   }
 
-  sed -i '0,/5287c31b89266a72a954c0abd619e798563e337a996d09338bbbe5e068472be6/s//0000000000000000000000000000000000000000000000000000000000000000/' \
+  sed -i '0,/2fcc6168af4d79072e79bf08b68e56f9e2298597d8208c0d10f843e0032946af/s//0000000000000000000000000000000000000000000000000000000000000000/' \
     "$fixture/docs/deployment.md"
   assert_rejected deployment-lock-sha
   install -m 0600 "$repo_root/docs/deployment.md" "$fixture/docs/deployment.md"
 
-  sed -i '0,/5287c31b89266a72a954c0abd619e798563e337a996d09338bbbe5e068472be6/s//0000000000000000000000000000000000000000000000000000000000000000/' \
+  sed -i '0,/2fcc6168af4d79072e79bf08b68e56f9e2298597d8208c0d10f843e0032946af/s//0000000000000000000000000000000000000000000000000000000000000000/' \
     "$fixture/docs/acceptance/desktop-foundation.md"
   assert_rejected acceptance-lock-sha
   install -m 0600 "$repo_root/docs/acceptance/desktop-foundation.md" \
     "$fixture/docs/acceptance/desktop-foundation.md"
 
-  sed -i '/^sleepy-session  210cbaad7a50280e4406281f90cbe36def50086c$/a sleepy-session  6f1857bd786323ad89ac91c250a8485f944eb39c' \
+  sed -i '/^sleepy-session  ca37debffa9d01f1d0c9369a31faf85e88a1198a$/a sleepy-session  6f1857bd786323ad89ac91c250a8485f944eb39c' \
     "$fixture/docs/deployment.md"
   assert_rejected deployment-stale-duplicate
   install -m 0600 "$repo_root/docs/deployment.md" "$fixture/docs/deployment.md"
 
-  sed -i '/^| `sleepy-session` | `210cbaad7a50280e4406281f90cbe36def50086c` |$/a | `sleepy-session` | `6f1857bd786323ad89ac91c250a8485f944eb39c` |' \
+  sed -i '/^| `sleepy-session` | `ca37debffa9d01f1d0c9369a31faf85e88a1198a` |$/a | `sleepy-session` | `6f1857bd786323ad89ac91c250a8485f944eb39c` |' \
     "$fixture/docs/acceptance/desktop-foundation.md"
   assert_rejected acceptance-stale-duplicate
   install -m 0600 "$repo_root/docs/acceptance/desktop-foundation.md" \
@@ -196,7 +196,7 @@ if test "${SLEEPY_CURRENT_PINS_FIXTURE:-0}" != 1; then
   assert_rejected flake-sdk-pin
   install -m 0600 "$repo_root/flake.nix" "$fixture/flake.nix"
 
-  sed -i '0,/210cbaad7a50280e4406281f90cbe36def50086c/s//0000000000000000000000000000000000000000/' \
+  sed -i '0,/ca37debffa9d01f1d0c9369a31faf85e88a1198a/s//0000000000000000000000000000000000000000/' \
     "$fixture/components/desktop-m1.json"
   assert_rejected manifest-session-pin
   install -m 0600 "$repo_root/components/desktop-m1.json" \

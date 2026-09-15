@@ -6,5 +6,6 @@
     ./session
     ./hardware
     ./welcome
+    ./updates
   ];
 }

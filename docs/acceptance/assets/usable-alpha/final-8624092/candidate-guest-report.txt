@@ -1,0 +1,122 @@
+SLEEPY_REPORT_START
+REAL_USER_LOGIN_OK
+/dev/vda2 btrfs
+/dev/vda1 vfat
+INSTALLED_DISK_BOOT_OK
+active
+active
+active
+active
+active
+DESKTOP_UNITS_AND_SOCKET_OK
+FIRST_BOOT_WELCOME_DISMISSED_AND_INACTIVE_OK
+FIRST_BOOT_WELCOME_STATE_PERSISTED_OK
+ok
+ok
+TERMINAL_AND_FILE_MANAGER_WINDOWS_OK
+CRASH_RECOVERY_OK sleepy-shell.service
+CRASH_RECOVERY_OK sleepy-session.service
+active
+true
+REAL_HYPRLAND_SETTING_PERSISTED_OK
+PERSISTENCE_AFTER_REBOOT_OK
+true
+LOCK_RETURN_TO_DESKTOP
+LOCK_GRAPHICAL_VT_READY
+ok
+true
+KEYBOARD_LAYOUT_SELECTED_OK
+ok
+ok
+true
+LOCK_SHELL_CRASH_WAKE_READY
+true
+LOCK_SHELL_CRASH_INPUT_WAKE_OK
+LOCK_SWITCH_TO_CONSOLE
+LOCK_CONSOLE_VT_READY
+LOCK_RETURNED_GRAPHICAL_VT_READY
+ok
+true
+LOCK_VT_ROUNDTRIP_READY
+LOCK_READY_FOR_REAL_PASSWORD
+true
+LOCK_SCREEN_LAYOUT_SWITCH_OK
+REAL_PASSWORD_LOCK_UNLOCK_OK
+$2    S L E E P Y
+     S L E E P Y
+DAILY_FASTFETCH_ASSET_AND_EXECUTION_OK
+gtk-theme-name=adw-gtk3-dark
+gtk-icon-theme-name=Papirus-Dark
+DAILY_GTK_DARK_CONFIG_OK
+Current system: /nix/store/d5qrpm08gngchsyqdnplagmaq3i2vqh9-nixos-system-sleepy-26.11.20260822.2c423e0
+Booted system: /nix/store/d5qrpm08gngchsyqdnplagmaq3i2vqh9-nixos-system-sleepy-26.11.20260822.2c423e0
+Selected system profile: /nix/store/d5qrpm08gngchsyqdnplagmaq3i2vqh9-nixos-system-sleepy-26.11.20260822.2c423e0
+DAILY_SYSTEM_STATUS_OK
+{"ok":true,"generation":488,"checks":[{"capability":"hyprland","status":"available","required":true},{"capability":"lock","status":"available","required":true},{"capability":"network","status":"available","required":false},{"capability":"audio","status":"available","required":false},{"capability":"bluetooth","status":"unavailable","required":false},{"capability":"battery","status":"unsupported","required":false},{"capability":"brightness","status":"available","required":false},{"capability":"power","status":"available","required":false},{"capability":"media","status":"available","required":false},{"capability":"night-light","status":"available","required":false},{"capability":"resources","status":"available","required":false},{"capability":"screenshot","status":"unavailable","required":false},{"capability":"recording","status":"available","required":false}]}
+true
+DAILY_DOCTOR_HEALTHY_WITH_VIRTUAL_AUDIO_OK
+DAILY_KEYRING_PERSISTED_UNLOCKED_OK
+/home/sleepy/Pictures/Screenshots/Sleepy-20260915-124647.png: OK
+DAILY_SCREENSHOT_PERSISTED_OK
+DAILY_IDLE_SAMPLE_READY
+DAILY_IDLE_SAMPLE {"cpu_seconds": 0.0, "cpu_ticks": 543, "elapsed_seconds": 0.0, "pid": 4927, "rss_kib": 489716, "start_ticks": 9736, "threads": 37}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 1.04, "cpu_ticks": 647, "elapsed_seconds": 10.0, "pid": 4927, "rss_kib": 484988, "start_ticks": 9736, "threads": 37}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 1.06, "cpu_ticks": 649, "elapsed_seconds": 20.0, "pid": 4927, "rss_kib": 484372, "start_ticks": 9736, "threads": 37}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 1.09, "cpu_ticks": 652, "elapsed_seconds": 30.0, "pid": 4927, "rss_kib": 485280, "start_ticks": 9736, "threads": 31}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 1.11, "cpu_ticks": 654, "elapsed_seconds": 40.0, "pid": 4927, "rss_kib": 481116, "start_ticks": 9736, "threads": 30}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 1.11, "cpu_ticks": 654, "elapsed_seconds": 50.0, "pid": 4927, "rss_kib": 481000, "start_ticks": 9736, "threads": 30}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 1.12, "cpu_ticks": 655, "elapsed_seconds": 60.0, "pid": 4927, "rss_kib": 481060, "start_ticks": 9736, "threads": 30}
+active
+DAILY_IDLE_SHELL_STABLE_OK
+/nix/store/c72vfzlldmppz6yf91d0cl32rdrkjzs0-source
+Sleepy version: 0.1.0
+Source NAR: sha256-vTdwqyzrnTo0...
+Current system: /nix/store/d5qrpm08gngchsyqdnplagmaq3i2vqh9-nixos-system-sleepy-26.11.20260822.2c423e0
+Booted system: /nix/store/d5qrpm08gngchsyqdnplagmaq3i2vqh9-nixos-system-sleepy-26.11.20260822.2c423e0
+Selected system profile: /nix/store/d5qrpm08gngchsyqdnplagmaq3i2vqh9-nixos-system-sleepy-26.11.20260822.2c423e0
+CANDIDATE_REAL_PASSWORD_BOOT_SOURCE_OK
+{"stage": "fetch", "message": "Fetching approved immutable source", "progress": 10}
+{"stage": "build", "message": "Building candidate with saved installed settings", "progress": 30}
+{"stage": "select", "message": "Selecting exact built system for next boot", "progress": 80}
+{"stage": "ready", "message": "Candidate prepared. Reboot to use it; the running desktop is unchanged.", "progress": 100}
+{"schema": 1, "phase": "ready", "candidate": {"schema": 1, "id": "vm-reviewed", "version": "VM fixture", "revision": "d40861dddf01018b4de7bb13a81012de57f23625", "nar_hash": "sha256-vTdwqyzrnTo0PihpWPUGu5ZSH+mVNU4HnKz82jl7qe0="}, "old": {"generation": 2, "system": "/nix/store/d5qrpm08gngchsyqdnplagmaq3i2vqh9-nixos-system-sleepy-26.11.20260822.2c423e0"}, "configuration": "d0c1887973e723779bef95321ee46dadd8db16c4e0c1027eaae80bc635af473a", "gc_root": "/var/lib/sleepy-update/attempt-67f364dcb8903782e453291b7756e30d/built-system", "built": "/nix/store/d5qrpm08gngchsyqdnplagmaq3i2vqh9-nixos-system-sleepy-26.11.20260822.2c423e0"}
+CANDIDATE_COMPLETED_GC_ROOT_RELEASED_OTHERS_PRESERVED_OK
+Sleepy: rebuild. Administrator authentication may be requested.
+Live progress follows. Diagnostics: /root/.local/state/sleepy/system/rebuild.7BSGcQHZ.log
+warning: not writing modified lock file of flake 'path:/etc/nixos':
+• Updated input 'sleepy':
+    'path:./sleepy-source'
+  → 'path:/nix/store/c72vfzlldmppz6yf91d0cl32rdrkjzs0-source?lastModified=0&narHash=sha256-vTdwqyzrnTo0PihpWPUGu5ZSH%2BmVNU4HnKz82jl7qe0%3D' (1970-01-01)
+building the system configuration...
+warning: not writing modified lock file of flake 'path:/etc/nixos':
+• Updated input 'sleepy':
+    'path:./sleepy-source'
+  → 'path:/nix/store/c72vfzlldmppz6yf91d0cl32rdrkjzs0-source?lastModified=0&narHash=sha256-vTdwqyzrnTo0PihpWPUGu5ZSH%2BmVNU4HnKz82jl7qe0%3D' (1970-01-01)
+Checking switch inhibitors... done
+Skipping "/boot/EFI/systemd/systemd-bootx64.efi", same boot loader version in place already.
+Skipping "/boot/EFI/BOOT/BOOTX64.EFI", same boot loader version in place already.
+activating the configuration...
+setting up /etc...
+reloading user units for sleepy...
+restarting the following user units: nixos-activation.service
+restarting sysinit-reactivation.target
+the following new units were started: NetworkManager-dispatcher.service, sysinit-reactivation.target, systemd-tmpfiles-resetup.service
+Done. The new configuration is /nix/store/d5qrpm08gngchsyqdnplagmaq3i2vqh9-nixos-system-sleepy-26.11.20260822.2c423e0
+Sleepy: rebuild completed. Diagnostics: /root/.local/state/sleepy/system/rebuild.7BSGcQHZ.log
+CANDIDATE_SAVED_REBUILD_STAYS_CANDIDATE_OK
+Sleepy: rollback. Administrator authentication may be requested.
+Live progress follows. Diagnostics: /root/.local/state/sleepy/system/rollback.hiXBfBhl.log
+building the system configuration...
+switching profile from version 2 to 1
+Checking switch inhibitors... done
+Skipping "/boot/EFI/systemd/systemd-bootx64.efi", same boot loader version in place already.
+Skipping "/boot/EFI/BOOT/BOOTX64.EFI", same boot loader version in place already.
+activating the configuration...
+setting up /etc...
+reloading user units for sleepy...
+restarting the following user units: nixos-activation.service
+restarting sysinit-reactivation.target
+Done. The new configuration is /nix/var/nix/profiles/system
+Sleepy: rollback completed. Diagnostics: /root/.local/state/sleepy/system/rollback.hiXBfBhl.log
+CANDIDATE_ORIGINAL_SELECTED_FOR_BOOT_OK
+SLEEPY_REPORT_COMPLETE

@@ -14,7 +14,7 @@
     };
 
     sleepy-session = {
-      url = "github:sleepylinux/sleepy-session/210cbaad7a50280e4406281f90cbe36def50086c";
+      url = "github:sleepylinux/sleepy-session/ca37debffa9d01f1d0c9369a31faf85e88a1198a";
       inputs = {
         nixpkgs.follows = "nixpkgs";
         sleepy-sdk.follows = "sleepy-sdk";
@@ -27,7 +27,7 @@
     };
 
     sleepy-desktop = {
-      url = "github:sleepylinux/sleepy-desktop/45f721a037693523ba1886eba20784ac9e8102fc";
+      url = "github:sleepylinux/sleepy-desktop/15b8dab9bd2534be7f054e62b6e36cb46fd74a1f";
       inputs = {
         nixpkgs.follows = "nixpkgs";
         sleepy-artwork.follows = "sleepy-artwork";
@@ -65,6 +65,9 @@
     packages = forAllSystems (system: let
       pkgs = mkPkgs system;
     in {
+      sleepy-update = pkgs.callPackage ./packages/sleepy-update {
+        nix = import ./packages/vendor/nix-with-git {inherit pkgs;};
+      };
       sleepy-installer = pkgs.callPackage ./packages/sleepy-installer {
         source = self;
         nix = import ./packages/vendor/nix-with-git {inherit pkgs;};

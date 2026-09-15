@@ -1,0 +1,63 @@
+{
+  "status": "credential scan passed including screenshot OCR",
+  "gate_count": 43,
+  "installed_disk_boots": 3,
+  "original_qemu_stopped": true,
+  "files": {
+    "result.json": {
+      "source": "/home/lazy/orca/workspaces/sleepy/candidate-updates/work/vm-upgrade-88-to-d408/result.json",
+      "sha256": "4524cc94f92b35cbd15e1632edda6ab49b4e18be9126ca6bbb56d600eca277c8",
+      "bytes": 2510
+    },
+    "installed-guest-report.txt": {
+      "source": "/home/lazy/orca/workspaces/sleepy/candidate-updates/work/vm-upgrade-88-to-d408/installed-guest-report.txt",
+      "sha256": "fb2c5e0d444ab1fbedb4c56cfb79d9ce2086aeb754df51f5c4c087b089cda9b5",
+      "bytes": 12911
+    },
+    "candidate-guest-report.txt": {
+      "source": "/home/lazy/orca/workspaces/sleepy/candidate-updates/work/vm-upgrade-88-to-d408/candidate-guest-report.txt",
+      "sha256": "0df1475a9f9d1f2eb4b7f3342edc4b87d72564781d3e1be898982b8130c1ec1b",
+      "bytes": 9131
+    },
+    "offline-reboot-guest-report.txt": {
+      "source": "/home/lazy/orca/workspaces/sleepy/candidate-updates/work/vm-upgrade-88-to-d408/offline-reboot-guest-report.txt",
+      "sha256": "8b4869b88b80e0d8056e24b5cec4d91a37808d4103cf737ac03f77e4796794aa",
+      "bytes": 6698
+    },
+    "installer-options.png": {
+      "source": "/home/lazy/orca/workspaces/sleepy/candidate-updates/work/vm-upgrade-88-to-d408/installer-options.png",
+      "sha256": "f6f82d19bffed06ff1ca188d65dee000067c1d2ff8ba50563ed203e9420f20b5",
+      "bytes": 11738
+    },
+    "candidate-applications.png": {
+      "source": "/home/lazy/orca/workspaces/sleepy/candidate-updates/work/vm-upgrade-88-to-d408/candidate-applications.png",
+      "sha256": "f20bf4a3f7a98a92f549ea52a677302638fe201eab049b4711d1de3b61e3754e",
+      "bytes": 111773
+    },
+    "offline-reboot-desktop.png": {
+      "source": "/home/lazy/orca/workspaces/sleepy/candidate-updates/work/vm-upgrade-88-to-d408/offline-reboot-desktop.png",
+      "sha256": "12a5056c80744a15a5afd871859dccffd489de578afe84aeb8a7769db0b8052f",
+      "bytes": 134192
+    },
+    "installer-serial-bootstrap.log.gz": {
+      "source": "/home/lazy/orca/workspaces/sleepy/candidate-updates/work/vm-upgrade-88-to-d408/installer-serial-bootstrap.log",
+      "sha256": "beb76e9a4f6a456c18508e0131bf6d0e7612de200540cf5456e1e68a06190cf2",
+      "bytes": 3211
+    },
+    "installer-serial.log.gz": {
+      "source": "/home/lazy/orca/workspaces/sleepy/candidate-updates/work/vm-upgrade-88-to-d408/installer-serial.log",
+      "sha256": "73dd3dda1c9fcb859350d56ac7f51ba07dc4de229443b7bff3469ae00726955e",
+      "bytes": 1664
+    },
+    "installer-safety.log.gz": {
+      "source": "/home/lazy/orca/workspaces/sleepy/candidate-updates/work/vm-upgrade-88-to-d408/installer-safety.log",
+      "sha256": "63f7eda561c55fc33068ffd8dfbbb4789983f4eaed7f25f2b5bee4210a1864f2",
+      "bytes": 2170
+    },
+    "image-manifest.json": {
+      "source": "/home/lazy/orca/workspaces/sleepy/razvitie/work/artifacts/sleepy-upgrade-base-88a87c5.json",
+      "sha256": "61f8ca117d49eedcdaa4bf98f93f83d4f5ffabddde41ecde2c91ca35d81b6b07",
+      "bytes": 895
+    }
+  }
+}

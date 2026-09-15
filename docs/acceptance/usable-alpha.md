@@ -1,6 +1,41 @@
 # Verified installed usable-alpha snapshots
 
-## Current installer and offline recovery
+## Current installer and candidate update acceptance
+
+Image **86240920109f37263c3260ea501c2a15fafa7dd8** passed **44 gates and three
+installed-disk password boots**, using clean runner and candidate
+**d40861dddf01018b4de7bb13a81012de57f23625**. The 821 MiB network TUI installer
+contains no live desktop. Optional NVIDIA, gaming, development, Flatpak and
+Bluetooth remain unchecked. The ISO is detached for installed boots.
+
+- ISO `sleepy-usable-8624092.iso`: **860880896 bytes**.
+- SHA256 `92f0f566b17e70dcf9d1eba79b4f6bb61c2d805157166c879069f0ddbb05d71c`.
+- [Result, manifests and guest reports](assets/usable-alpha/final-8624092/README.md).
+
+The run covers visible installation, invalid/offline targets, actual install
+interruption, real login and native lock, shell/session crashes, screenshots,
+keyring/settings persistence, candidate rejection and builder interruption,
+candidate boot, saved rebuild, repeated preparation/GC-root cleanup and offline
+rollback. After rollback, future update validation remains available. The
+candidate's runtime equals the image runtime; these are distinct retained source
+identities. A separate **88a87c5 → d40861d** run passed **43 gates and three
+password boots** with changed runtime, followed by offline rollback and saved
+rebuild. [Its proof](assets/usable-alpha/upgrade-88a87c5/README.md) records the
+older image and exact source changes; it omits the interrupted-install gate.
+
+A separate disk overlay confirms the custom crescent ASCII logo and complete
+Btrfs line in actual Fastfetch at 1280×800, with real Ghostty and Thunar. No guest
+configuration or output values were patched for the screenshot.
+
+Source `7c75fa8` separately passed **40 recovery gates and two password boots**,
+including deleting boot entries, proving failed UEFI boot, read-only inspection
+and cancel with full partition hashes unchanged, then offline TUI repair and
+password login. [Recovery proof](assets/usable-alpha/recovery-7c75fa8/README.md)
+records the exact earlier source. Its recovery backend/TUI and image module are
+unchanged in `8624092`. These local VM proofs do not certify physical hardware or a
+public release. See [the runbook](../runbooks/installable-alpha.md).
+
+## Historical installer and offline recovery (afd713c)
 
 Image **afd713c5098900061209a746742b5525acdbfbe8** passed a fresh visible TUI
 installation, **40 gates and two installed-disk boots** with clean runner

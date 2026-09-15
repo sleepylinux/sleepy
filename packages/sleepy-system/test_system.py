@@ -1,9 +1,12 @@
 import os
+import json
+import shlex
 from pathlib import Path
 import shutil
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 
 SOURCE = Path(__file__).with_name('sleepy-system.sh')
 
@@ -24,16 +27,24 @@ class SystemTools(unittest.TestCase):
                         HOME=str(self.root), XDG_STATE_HOME=str(self.root / 'state'),
                         CALLS=str(self.calls), REBUILD_STATUS='0')
         self.command('nixos-rebuild', 'printf "rebuild %s\\n" "$*" >> "$CALLS"; echo build-output; exit "$REBUILD_STATUS"')
+        self.command('sleepy-update', '''printf "update %s\\n" "$*" >> "$CALLS"
+case "$1" in
+ source) printf '%s' "${UPDATE_SOURCE:-}"; exit "${SOURCE_STATUS:-0}";;
+ candidates) printf '%s' "${CANDIDATES:-}"; exit "${CANDIDATES_STATUS:-0}";;
+ *) echo '{"phase":"ready"}'; exit "${UPDATE_STATUS:-0}";;
+esac''')
         self.command('sudo', 'printf "sudo %s\\n" "$*" >> "$CALLS"; exec "$@"')
         self.command('nix-env', 'printf "nix-env %s\\n" "$*" >> "$CALLS"; echo "12 current"')
         self.command('readlink', 'printf "/nix/store/test-%s\\n" "${2##*/}"')
         self.command('dialog', '''printf "dialog %s\\n" "$*" >> "$CALLS"
 case "$*" in
+ *"Choose an update"*) printf '%s' "${CANDIDATE_CHOICE:-__back}"; exit "${CANDIDATE_MENU_STATUS:-0}";;
  *--menu*) printf '%s' "${CHOICE:-cancel}"; exit "${MENU_STATUS:-0}";;
  *--yesno*) exit "${CONFIRM_STATUS:-0}";;
 esac''')
+        self.metadata = self.root / 'source.json'
         self.script = self.root / 'sleepy-system'
-        self.script.write_text(SOURCE.read_text().replace('@rebuild@', str(self.bin / 'nixos-rebuild')).replace('@dialogrc@', '/test/dialogrc').replace('/nix/var/nix/profiles/system', str(self.profile)))
+        self.script.write_text(SOURCE.read_text().replace('@rebuild@', str(self.bin / 'nixos-rebuild')).replace('@update@', str(self.bin / 'sleepy-update')).replace('@dialogrc@', '/test/dialogrc').replace('/nix/var/nix/profiles/system', str(self.profile)).replace('/run/current-system/etc/sleepy/source.json', str(self.metadata)))
 
     def command(self, name, body):
         p = self.bin / name
@@ -57,8 +68,37 @@ esac''')
         self.assertIn('Booted system:', p.stdout)
         self.assertNotIn('sudo', self.calls_text())
 
+    def test_status_reports_current_source_version_and_short_nar_readonly(self):
+        self.metadata.write_text(json.dumps(dict(schema=1, version='Alpha 2', nar_hash='sha256-'+'A'*43+'=', source_path='/nix/store/source', revision=None)))
+        result = self.run_tool('status')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('Sleepy version: Alpha 2', result.stdout)
+        self.assertIn('Source NAR: sha256-'+'A'*12+'...', result.stdout)
+        self.assertNotIn('A'*43, result.stdout)
+        self.assertIn('Current system:', result.stdout)
+        self.assertIn('Booted system:', result.stdout)
+        self.assertNotIn('sudo ', self.calls_text())
+        self.assertNotIn('update status', self.calls_text())
+        self.assertEqual(self.run_tool('menu', CHOICE='status').returncode, 0)
+        self.assertIn('Sleepy version: Alpha 2', self.calls_text())
+
+    def test_missing_or_malformed_source_metadata_does_not_hide_system_status(self):
+        for contents in (None, '{broken', '{"schema":1,"version":"bad"}',
+                         json.dumps(dict(schema=1, version='Bad\u001b[2J', nar_hash='sha256-'+'A'*43+'='))):
+            with self.subTest(contents=contents):
+                self.metadata.unlink(missing_ok=True)
+                if contents is not None: self.metadata.write_text(contents)
+                result = self.run_tool('status')
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn('Sleepy version: unavailable', result.stdout)
+                self.assertIn('Source NAR: unavailable', result.stdout)
+                self.assertIn('Selected system profile:', result.stdout)
+                self.assertNotIn('\x1b', result.stdout)
+                self.assertNotIn('sudo ', self.calls_text())
+                if contents is not None: self.assertIn('source metadata', result.stdout)
+
     def test_existing_rebuild_and_rollback_fixed_arguments(self):
-        for name, args in [('rebuild', 'switch --flake /etc/nixos#installed'), ('rollback', 'switch --rollback')]:
+        for name, args in [('rebuild', 'switch --flake /etc/nixos#installed'), ('rollback', 'switch --rollback --no-reexec --flake /etc/nixos#installed')]:
             with self.subTest(name=name):
                 self.calls.unlink(missing_ok=True)
                 self.assertEqual(self.run_tool(name).returncode, 0)
@@ -82,6 +122,62 @@ esac''')
         self.assertEqual(self.run_tool(MENU_STATUS='1').returncode, 0)
         self.assertIn('--menu', self.calls_text())
         self.assertNotIn('sudo', self.calls_text())
+
+    def test_pinned_rebuild_rolls_back_without_evaluating_saved_configuration(self):
+        import site
+        package_site = os.environ.get('SLEEPY_TEST_REBUILD_SITE')
+        self.assertTrue(package_site, 'Run the Nix installer check for the pinned nixos-rebuild dispatch test')
+        site.addsitedir(package_site)
+        import nixos_rebuild
+        from nixos_rebuild import models, nix
+
+        result = self.run_tool('rollback')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        dispatch = next(line for line in self.calls_text().splitlines() if line.startswith('rebuild '))
+        argv = ['nixos-rebuild'] + shlex.split(dispatch[len('rebuild '):])
+        previous = self.root / 'previous-system'
+        (previous / 'bin').mkdir(parents=True)
+        marker = self.root / 'activated-previous'
+        executable = previous / 'bin/switch-to-configuration'
+        executable.write_text('#!' + shutil.which('bash') + '\nprintf "%s" "$1" > ' + shlex.quote(str(marker)) + '\n')
+        executable.chmod(0o755)
+        configuration = self.root / 'saved-flake.nix'
+        calls = []
+
+        def command(command, **kwargs):
+            values = [str(value) for value in command]
+            calls.append(values)
+            if values == ['nix-instantiate', '--find-file', 'nixos-system']:
+                return subprocess.CompletedProcess(values, 1, '')
+            if values[:2] == ['nix-env', '--rollback']:
+                self.profile.unlink()
+                self.profile.symlink_to(previous)
+                return subprocess.CompletedProcess(values, 0, '')
+            if values == ['test', '-d', '/run/systemd/system']:
+                return subprocess.CompletedProcess(values, 1, '')
+            if values == [str(self.profile / 'bin/switch-to-configuration'), 'switch']:
+                return subprocess.run(values, check=True, capture_output=True, text=True)
+            raise AssertionError('Rollback attempted configuration evaluation or another unexpected command: ' + repr(values))
+
+        def path(value):
+            return configuration if str(value) == '/etc/nixos/flake.nix' else Path(value)
+
+        for exists in (False, True):
+            with self.subTest(saved_config_exists=exists):
+                marker.unlink(missing_ok=True)
+                if exists:
+                    configuration.write_text('this is not valid Nix; rollback must not evaluate it')
+                else:
+                    configuration.unlink(missing_ok=True)
+                before = configuration.read_bytes() if exists else None
+                with patch.object(models.Profile, 'from_arg', return_value=models.Profile('system', self.profile)), \
+                     patch.object(models, 'Path', side_effect=path), \
+                     patch.object(nix, 'run_wrapper', side_effect=command), \
+                     patch.dict(os.environ, {'_NIXOS_REBUILD_REEXEC': ''}):
+                    nixos_rebuild.execute(argv)
+                self.assertEqual(marker.read_text(), 'switch')
+                self.assertEqual(configuration.read_bytes() if exists else None, before)
+                self.assertEqual(self.profile.resolve(), previous)
 
     def test_menu_rollback_decline_never_mutates(self):
         self.assertEqual(self.run_tool('menu', CHOICE='rollback', CONFIRM_STATUS='1').returncode, 0)
@@ -150,6 +246,120 @@ esac''')
         self.assertEqual({p.name: p.lstat().st_mtime_ns for p in self.profiles.iterdir()}, before)
         self.assertEqual(lock.read_text(), 'unchanged')
         self.assertNotIn('sudo', self.calls_text())
+
+    def test_rebuild_uses_selected_source_without_rewriting_lock(self):
+        source = '/nix/store/' + 'a' * 32 + '-source'
+        result = self.run_tool('rebuild', UPDATE_SOURCE=source)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('switch --flake /etc/nixos#installed --override-input sleepy path:' + source + ' --no-write-lock-file', self.calls_text())
+
+    def test_bad_or_failed_source_aborts_before_sudo(self):
+        for source, status in [('/tmp/source', '0'), ('/nix/store/' + 'a'*32 + '-source\nextra', '0'), ('', '7')]:
+            self.calls.unlink(missing_ok=True)
+            result = self.run_tool('menu', CHOICE='rebuild', UPDATE_SOURCE=source, SOURCE_STATUS=status)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertNotIn('sudo ', self.calls_text())
+
+    def test_approved_candidate_is_selected_and_confirmed_before_prepare(self):
+        result = self.run_tool('update', CANDIDATES='alpha-1\tAlpha 1 (abcdef123456)', CANDIDATE_CHOICE='alpha-1')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        calls = self.calls_text()
+        self.assertIn('--defaultno', calls)
+        self.assertIn('update prepare alpha-1', calls)
+        self.assertEqual(calls.count('update candidates'), 1)
+        logs = list((self.root / 'state').rglob('*.log'))
+        self.assertEqual(len(logs), 1)
+        self.assertEqual(logs[0].stat().st_mode & 0o777, 0o600)
+
+    def test_candidate_named_back_remains_selectable(self):
+        result = self.run_tool('update', CANDIDATES='back\tApproved previous candidate', CANDIDATE_CHOICE='back')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('update prepare back', self.calls_text())
+
+    def test_candidate_cancel_decline_failure_or_unlisted_selection_never_mutates(self):
+        for env in [dict(CANDIDATE_CHOICE='__back'), dict(CANDIDATE_CHOICE='alpha-1', CONFIRM_STATUS='1'),
+                    dict(CANDIDATE_CHOICE='missing'), dict(CANDIDATES_STATUS='9'),
+                    dict(CANDIDATES='alpha-1\tVersion\textra'), dict(CANDIDATES='$(touch bad)\tVersion'), dict(CANDIDATES='alpha-1\tOne\nalpha-1\tTwo'),
+                    dict(CANDIDATES='alpha-1\tVersion', CANDIDATE_CHOICE='$(touch bad)')]:
+            self.calls.unlink(missing_ok=True)
+            self.run_tool('update', **(dict(CANDIDATES='alpha-1\tVersion') | env))
+            self.assertNotIn('sudo ', self.calls_text())
+
+    def test_progress_is_readable_and_control_free_but_private_log_is_raw(self):
+        self.command('sleepy-update', r'''printf '%s\n' '{"stage":"build","progress":25,"message":"Downloading\u001b[2J dependencies"}'; echo "plain backend diagnostic"''')
+        result = self.run_tool('recover-update')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('25%  build: Downloading', result.stdout)
+        self.assertIn('plain backend diagnostic', result.stdout)
+        self.assertNotIn('\x1b', result.stdout)
+        log = next((self.root / 'state').rglob('*.log')).read_text()
+        self.assertIn('"stage":"build"', log)
+        self.assertIn('\\u001b', log)
+
+    def test_update_status_renders_human_phase_and_only_relevant_fields(self):
+        for phase, expected in [('idle', 'No update transaction'), ('ready', 'Prepared for boot'),
+                                ('recovery-failed', 'Recovery needs attention')]:
+            with self.subTest(phase=phase):
+                payload = dict(schema=1, phase=phase, password='PRIVATE_PASSWORD', configuration='PRIVATE_SNAPSHOT')
+                if phase != 'idle':
+                    payload.update(candidate=dict(id='alpha-2', version='Alpha 2', revision='abcdef123456' + '0'*28),
+                                   old=dict(generation=7, system='/nix/store/'+'a'*32+'-nixos-system-sleepy'),
+                                   built='/nix/store/'+'b'*32+'-nixos-system-sleepy')
+                self.command('sleepy-update', "printf '%s\\n' " + shlex.quote(json.dumps(payload)))
+                result = self.run_tool('update-status')
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn(expected, result.stdout)
+                self.assertNotIn('PRIVATE', result.stdout)
+                self.assertNotIn('"phase"', result.stdout)
+                if phase != 'idle':
+                    self.assertIn('Alpha 2 [abcdef123456]', result.stdout)
+                    self.assertIn('Previous generation: 7', result.stdout)
+                if phase == 'ready': self.assertIn('Boot health is not confirmed', result.stdout)
+                if phase == 'recovery-failed': self.assertIn('installer recovery', result.stdout)
+                logs = list((self.root / 'state').rglob('*.log'))
+                self.assertTrue(any('PRIVATE_SNAPSHOT' in log.read_text() for log in logs))
+
+    def test_update_status_preserves_plain_errors_and_exit_status(self):
+        self.command('sleepy-update', 'echo "Cannot read private update journal" >&2; exit 9')
+        result = self.run_tool('update-status')
+        self.assertEqual(result.returncode, 9)
+        self.assertIn('Cannot read private update journal', result.stdout)
+
+    def test_formatter_failure_is_reported_as_failure(self):
+        self.command('jq', 'cat >/dev/null; exit 24')
+        result = self.run_tool('recover-update')
+        self.assertEqual(result.returncode, 24, result.stderr)
+
+    def test_candidate_description_is_data_not_shell_code(self):
+        marker = self.root / 'injected'
+        description = 'Release $(touch ' + str(marker) + ')'
+        result = self.run_tool('update', CANDIDATES='alpha-1\t' + description, CANDIDATE_CHOICE='alpha-1')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse(marker.exists())
+        self.assertIn('update prepare alpha-1', self.calls_text())
+
+    def test_candidate_confirmation_error_and_log_failure_abort_before_sudo(self):
+        result = self.run_tool('update', CANDIDATES='alpha-1\tOne', CANDIDATE_CHOICE='alpha-1', CONFIRM_STATUS='2')
+        self.assertEqual(result.returncode, 2)
+        self.assertNotIn('sudo ', self.calls_text())
+        self.command('mktemp', 'exit 19')
+        result = self.run_tool('update', CANDIDATES='alpha-1\tOne', CANDIDATE_CHOICE='alpha-1')
+        self.assertEqual(result.returncode, 19)
+        self.assertNotIn('sudo ', self.calls_text())
+
+    def test_update_status_uses_normal_sudo_and_recovery_declines_without_sudo(self):
+        result = self.run_tool('update-status')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('update status', self.calls_text())
+        self.assertIn('sudo ', self.calls_text())
+        self.calls.unlink()
+        self.assertEqual(self.run_tool('recover-update', CONFIRM_STATUS='1').returncode, 0)
+        self.assertNotIn('sudo ', self.calls_text())
+
+    def test_prepare_and_recover_propagate_backend_failure(self):
+        for action in ('update', 'recover-update'):
+            result = self.run_tool(action, CANDIDATES='alpha-1\tVersion', CANDIDATE_CHOICE='alpha-1', UPDATE_STATUS='17')
+            self.assertEqual(result.returncode, 17, result.stderr)
 
     def test_unknown_command_rejected_without_mutation(self):
         self.assertEqual(self.run_tool('arbitrary-command').returncode, 2)

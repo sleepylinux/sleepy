@@ -7,6 +7,7 @@ This is an integration runner, not a replacement for a successful VM result.
 """
 import argparse
 import boot_recovery
+import candidate_updates
 import base64
 import hashlib
 import json
@@ -907,7 +908,7 @@ printf 'DAILY_IDLE_SHELL_STABLE_OK\n'
 '''
 
 
-def guest_report(machine, password, stage, after_reboot=False, update_phase=None, final=False, recovery_phase=None):
+def guest_report(machine, password, stage, after_reboot=False, update_phase=None, final=False, recovery_phase=None, candidate_phase=None):
     """Authenticate on a real VT, then explicitly sudo fixed disposable-VM checks."""
     machine.qmp.keys('ctrl', 'alt', 'f2')
     machine.wait_screen('login:', f'{stage}-console')
@@ -918,7 +919,7 @@ def guest_report(machine, password, stage, after_reboot=False, update_phase=None
     machine.qmp.text("printf 'SLEEPY_AUTH_%s\\n' OK\n")
     machine.wait_screen('SLEEPY_AUTH_OK', f'{stage}-authenticated')
     channel = socket.socket(socket.AF_UNIX)
-    audit_timeout = 1800 if update_phase else 180
+    audit_timeout = 1800 if update_phase or candidate_phase else 180
     if getattr(machine, 'flatpak_recovery', False) and not after_reboot:
         # One production attempt (60s), natural retry (420s), Software (30s).
         audit_timeout += 510
@@ -1005,7 +1006,7 @@ runuser -u sleepy -- mkdir -p /home/sleepy/.config/sleepy
 runuser -u sleepy -- sh -c 'printf sleepy-alpha-state > /home/sleepy/.config/sleepy/alpha-persistence'
 sync
 printf 'PERSISTENCE_MARKER_WRITTEN\n'
-''') + (flatpak_fixture(after_reboot) if getattr(machine, 'flatpak_recovery', False) else '') + lock_fixture(getattr(machine, 'keyboard', 'us')) + (daily_fixture(after_reboot) + daily_idle_fixture() if getattr(machine, 'daily_usability', False) else '') + update_fixture(update_phase) + boot_recovery.fixture(recovery_phase) + (r'''
+''') + (flatpak_fixture(after_reboot) if getattr(machine, 'flatpak_recovery', False) else '') + lock_fixture(getattr(machine, 'keyboard', 'us')) + (daily_fixture(after_reboot) + daily_idle_fixture() if getattr(machine, 'daily_usability', False) else '') + update_fixture(update_phase) + boot_recovery.fixture(recovery_phase) + candidate_updates.fixture(candidate_phase, getattr(machine, 'candidate_revision', None), getattr(machine, 'candidate_nar_hash', None)) + (r'''
 cp -p /var/lib/sleepy-alpha/hypr-user.before /home/sleepy/.config/hypr/sleepy-user.conf
 hypr reload
 printf 'USER_SETTING_FIXTURE_RESTORED_OK\n'
@@ -1159,12 +1160,18 @@ def main():
     parser.add_argument('--daily-usability', action='store_true', help='Verify installed daily defaults, real Print save/clipboard and PNG persistence; adds virtual audio')
     parser.add_argument('--boot-recovery', action='store_true', help='Damage only disposable ESP entries, prove failed boot, repair through the real ISO TUI and verify unchanged system/user data')
     parser.add_argument('--update-safety', action='store_true', help='Also test failed rebuild boot safety, boot a second generation, then rollback and boot the original')
+    parser.add_argument('--candidate-revision', help='Exact candidate source commit; explicit local VM catalog fixture only')
+    parser.add_argument('--candidate-nar-hash', help='Expected immutable candidate source SHA256 SRI')
     parser.add_argument('--pause-at-greeter', action='store_true', help='Pause and release QMP before first graphical login for field inspection; see printed continuation instructions')
     parser.add_argument('--cache-url', help='Optional signed binary cache reachable inside VM (e.g. http://10.0.2.2:8080)')
     parser.add_argument('--cache-public-key', help='Public signing key for the optional cache; private key must stay on host')
     args = parser.parse_args()
     if args.boot_recovery and args.update_safety:
         parser.error('--boot-recovery and --update-safety are separate destructive-fixture scenarios')
+    try:
+        candidate_updates.validate(args.candidate_revision, args.candidate_nar_hash, args.update_safety, args.boot_recovery)
+    except ValueError as error:
+        parser.error(str(error))
     output, iso = args.output.resolve(), args.iso.resolve()
     if bool(args.cache_url) != bool(args.cache_public_key): parser.error('--cache-url and --cache-public-key must be supplied together')
     if args.cache_url and not re.fullmatch(r'https?://[A-Za-z0-9.:/_-]+', args.cache_url): parser.error('Invalid cache URL')
@@ -1191,6 +1198,8 @@ def main():
               'runner_source_dirty': bool(subprocess.run(['git', 'status', '--porcelain'], capture_output=True, text=True).stdout)}
     machine = Machine(output, args.firmware.resolve(), args.memory, acceleration)
     machine.pause_at_greeter = args.pause_at_greeter
+    machine.candidate_revision = args.candidate_revision
+    machine.candidate_nar_hash = args.candidate_nar_hash
     machine.keyboard = args.keyboard
     machine.daily_usability = args.daily_usability
     machine.flatpak_recovery = args.flatpak_recovery
@@ -1198,6 +1207,8 @@ def main():
     result['daily_usability'] = args.daily_usability
     result['keyboard'] = args.keyboard
     result['boot_recovery'] = args.boot_recovery
+    result['candidate_revision'] = args.candidate_revision
+    result['candidate_nar_hash'] = args.candidate_nar_hash
     try:
         print('Booting installer and driving the visible tty1 TUI.', flush=True)
         machine.boot('installer', iso)
@@ -1209,7 +1220,8 @@ def main():
         machine.boot('installed')
         login_desktop(machine, password, 'installed')
         guest_report(machine, password, 'installed', update_phase='seed' if args.update_safety else None,
-                     recovery_phase='damage' if args.boot_recovery else None)
+                     recovery_phase='damage' if args.boot_recovery else None,
+                     candidate_phase='prepare' if args.candidate_revision else None)
         result['completed'] += ['installed-disk-boot', 'real-password-login', 'desktop-units-and-socket',
                                 'shell-SIGKILL-recovery', 'session-daemon-SIGKILL-recovery', 'terminal-and-file-manager-windows', 'real-Hyprland-setting-applied']
         if args.update_safety:
@@ -1221,6 +1233,15 @@ def main():
             login_desktop(machine, password, 'generation2')
             guest_report(machine, password, 'generation2', after_reboot=True, update_phase='rollback')
             result['completed'] += ['second-generation-real-boot', 'previous-generation-selected']
+        if args.candidate_revision:
+            result['completed'] += ['candidate-wrong-hash-preserved-boot-config', 'candidate-prepared-without-live-activation']
+            machine.qmp.call('system_powerdown')
+            machine.process.wait(timeout=120)
+            machine.stop()
+            machine.boot('candidate')
+            login_desktop(machine, password, 'candidate')
+            guest_report(machine, password, 'candidate', after_reboot=True, candidate_phase='rollback')
+            result['completed'] += ['candidate-real-password-boot', 'candidate-saved-rebuild-preserved-source', 'candidate-original-selected']
         # An ACPI shutdown exercises normal system cleanup before the next boot.
         machine.qmp.call('system_powerdown')
         machine.process.wait(timeout=120)
@@ -1235,9 +1256,11 @@ def main():
         login_desktop(machine, password, 'offline-reboot')
         guest_report(machine, password, 'offline-reboot', after_reboot=True,
                      update_phase='verify' if args.update_safety else None, final=True,
-                     recovery_phase='verify' if args.boot_recovery else None)
+                     recovery_phase='verify' if args.boot_recovery else None,
+                     candidate_phase='verify' if args.candidate_revision else None)
         result['completed'] += ['offline-disk-reboot', 'offline-password-login', 'user-state-persistence', 'real-Hyprland-setting-persistence']
         if args.update_safety: result['completed'].append('previous-generation-real-boot')
+        if args.candidate_revision: result['completed'].append('candidate-rollback-password-boot-and-rebuild-preserved-source')
         if args.boot_recovery: result['completed'].append('repaired-disk-password-login-profile-userdata-preserved')
         machine.qmp.call('system_powerdown')
         machine.process.wait(timeout=120)
@@ -1269,6 +1292,10 @@ def main():
             if check not in result['completed']: result['completed'].append(check)
         # Preserve verified substeps even if a later update or reboot gate fails.
         markers = {
+            'CANDIDATE_POST_ROLLBACK_VALIDATION_PRESERVED_STATE_OK': 'candidate-post-rollback-validation-preserved-state',
+            'CANDIDATE_COMPLETED_GC_ROOT_RELEASED_OTHERS_PRESERVED_OK': 'candidate-completed-gc-root-released-others-preserved',
+            'CANDIDATE_INVALID_CONFIG_PRESERVED_BOOT_CONFIG_OK': 'candidate-invalid-config-preserved-boot-config',
+            'CANDIDATE_SIGTERM_PRESERVED_BOOT_CONFIG_OK': 'candidate-SIGTERM-preserved-boot-config',
             'IDLE_LOCK_NATIVE_UNLOCK_OK': 'preexisting-idle-lock-native-password-unlock',
             'FLATPAK_OFFLINE_DESKTOP_AND_FAILED_REGISTRATION_OK': 'flatpak-offline-first-desktop',
             'FLATPAK_REAL_FLATHUB_TIMER_RECOVERY_OK': 'flatpak-real-Flathub-timer-recovery',

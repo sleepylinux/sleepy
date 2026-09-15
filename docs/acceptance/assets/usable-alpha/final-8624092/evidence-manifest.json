@@ -1,0 +1,107 @@
+{
+  "status": "selected evidence credential scan passed; PNG OCR also scanned",
+  "gate_count": 44,
+  "installed_disk_boots": 3,
+  "files": {
+    "result.json": {
+      "source": "work/vm-final-862-to-d408/result.json",
+      "sha256": "550491e859a39a9ea065ed7a21e15dbd66e1c1fc76793a47647bb0e6f6de70e0",
+      "bytes": 2557
+    },
+    "installed-guest-report.txt": {
+      "source": "work/vm-final-862-to-d408/installed-guest-report.txt",
+      "sha256": "7185a990d823d2b103f3eb93e633d3b72a8c75403cb13bf40455e8006cb8b2d9",
+      "bytes": 7834
+    },
+    "candidate-guest-report.txt": {
+      "source": "work/vm-final-862-to-d408/candidate-guest-report.txt",
+      "sha256": "7a2f761c1c76fb0ec1814e540332c537ef2b88923edbed533e28b98dbc4887a8",
+      "bytes": 7397
+    },
+    "offline-reboot-guest-report.txt": {
+      "source": "work/vm-final-862-to-d408/offline-reboot-guest-report.txt",
+      "sha256": "77e7a07443c19f5a177671672b8a745345068fe31090aaa90dbdabef0127e470",
+      "bytes": 6692
+    },
+    "installer-options.png": {
+      "source": "work/vm-final-862-to-d408/installer-options.png",
+      "sha256": "5a1364559181d2e595d8e1850d949a0d34ab27a6568492982d5eb54ca188d417",
+      "bytes": 11729
+    },
+    "installer-confirmation.png": {
+      "source": "work/vm-final-862-to-d408/installer-confirmation.png",
+      "sha256": "29a3fa671475240395341c7a26c2e568bf09a92a26a3c438d4919c64b7b0f4d5",
+      "bytes": 10719
+    },
+    "installer-complete.png": {
+      "source": "work/vm-final-862-to-d408/installer-complete.png",
+      "sha256": "0d684b5e85d5dd19aca585116fecc071e2909ee20e2b8241e364b7690d5c9040",
+      "bytes": 9286
+    },
+    "installed-system-menu.png": {
+      "source": "work/vm-final-862-to-d408/installed-system-menu.png",
+      "sha256": "7cfbbb16ff7ac349607da0a9a2bc9e8cfbc1899a3fd38350ae55feba3fb90b3d",
+      "bytes": 118065
+    },
+    "installed-locked.png": {
+      "source": "work/vm-final-862-to-d408/installed-locked.png",
+      "sha256": "acdcbc032995d2a16d812195331152ef9f7326deea4011aef95dcd789e7bad6b",
+      "bytes": 31942
+    },
+    "installed-daily-screenshot-viewer.png": {
+      "source": "work/vm-final-862-to-d408/installed-daily-screenshot-viewer.png",
+      "sha256": "38723cc6f7a6842b328f013c0b358da64b94a319ea492052b141e08476f4e371",
+      "bytes": 176198
+    },
+    "candidate-desktop.png": {
+      "source": "work/vm-final-862-to-d408/candidate-desktop.png",
+      "sha256": "218d39fa53cc20c60c37bb20d92bc508bff6f8d1835636300f0c9690781c4b90",
+      "bytes": 133754
+    },
+    "offline-reboot-desktop.png": {
+      "source": "work/vm-final-862-to-d408/offline-reboot-desktop.png",
+      "sha256": "48031a31e5702edfd3272567a8f2fdac1b0291877bc455842d106b0b8e20ea65",
+      "bytes": 133789
+    },
+    "installer-serial-bootstrap.log.gz": {
+      "source": "work/vm-final-862-to-d408/installer-serial-bootstrap.log",
+      "sha256": "47923ea22308bbdad5afbbd5b289f98f7666526d9a7fc48a04c67871e8b8c743",
+      "bytes": 3215
+    },
+    "installer-serial.log.gz": {
+      "source": "work/vm-final-862-to-d408/installer-serial.log",
+      "sha256": "3395c81a204b1f5dcc68705b5dbc82b35099684707e623987ad1dbd70d90efcb",
+      "bytes": 1647
+    },
+    "installer-safety.log.gz": {
+      "source": "work/vm-final-862-to-d408/installer-safety.log",
+      "sha256": "86a93a88b489ea434abfc20caf2158e52efb7bad5dc8dacf8cef8abd7711bd45",
+      "bytes": 2189
+    },
+    "fastfetch-1280.png": {
+      "source": "work/visual-final-fastfetch/fastfetch-1280.png",
+      "sha256": "6c57e9831aa47146c20b8a9f9a453b4ea3e844d973b1e11b7bdd6f05b97fe639",
+      "bytes": 78922
+    },
+    "visual-applications.png": {
+      "source": "work/visual-final-fastfetch/visual-applications.png",
+      "sha256": "c71e5a823faae4999c41d00895f207b980321c24af03b4de4752cebeac2d58fb",
+      "bytes": 84782
+    },
+    "visual-provenance.json": {
+      "source": "work/visual-final-fastfetch/provenance.json",
+      "sha256": "83c326a4d8ccfbb041c06b585040f193ee6b772c940222af85bc1fbd4701a9bb",
+      "bytes": 2164
+    },
+    "visual-reproduce.py": {
+      "source": "work/visual-final-fastfetch/reproduce.py",
+      "sha256": "a0b1e5e3025fd94aa046f3319d0566b879d2ced920d25ff369201bae6c1ecaca",
+      "bytes": 4670
+    },
+    "image-manifest.json": {
+      "source": "/home/lazy/orca/workspaces/sleepy/razvitie/work/artifacts/sleepy-usable-8624092.json",
+      "sha256": "b7caa7542bc07f4dc30032699fe9d20732720b459f5d3995332a4ea64e64cff4",
+      "bytes": 1452
+    }
+  }
+}
