@@ -156,8 +156,9 @@ def recovery_lock():
 def mounted_root(layout, writable=False):
     if os.path.ismount(ROOT):
         raise backend.InstallError('Recovery mount directory already has an unowned mount')
-    # nologreplay is essential: a Btrfs read-only mount otherwise may replay its log.
-    options = 'rw,nosuid,nodev' if writable else 'ro,nologreplay,nosuid,nodev,noexec'
+    # Linux 6.18 accepts rescue=nologreplay, not the old standalone spelling.
+    # Preserve replay protection: a plain read-only Btrfs mount may write its log.
+    options = 'rw,nosuid,nodev' if writable else 'ro,rescue=nologreplay,nosuid,nodev,noexec'
     try:
         backend.run(['mount', '-t', 'btrfs', '-o', options, layout['root'], str(ROOT)])
         yield

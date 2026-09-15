@@ -118,7 +118,7 @@ class RecoveryMountTests(unittest.TestCase):
                 with recovery.mounted_root({'root': '/dev/vda2'}): self.fail('must not enter')
         self.assertFalse(mounted)
         self.assertEqual(commands[-1], ['umount', '--recursive', str(recovery.ROOT)])
-        self.assertIn('ro,nologreplay,nosuid,nodev,noexec', commands[0])
+        self.assertIn('ro,rescue=nologreplay,nosuid,nodev,noexec', commands[0])
 
     def test_preexisting_mount_is_never_unmounted(self):
         with patch.object(recovery.os.path, 'ismount', return_value=True), patch.object(backend, 'run') as run:
