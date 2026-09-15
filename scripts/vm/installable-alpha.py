@@ -158,12 +158,15 @@ class Machine:
     def screen(self, name):
         return self.qmp.screenshot(self.output / (name + '.png'))
 
-    def wait_screen(self, fragment, name, timeout=180):
+    def wait_screen(self, fragment, name, timeout=180, reject=()):
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
             text = self.screen(name)
             fragments = [fragment] if isinstance(fragment, str) else fragment
             normalized = ' '.join(text.lower().split())
+            for failure in reject:
+                if ' '.join(failure.lower().split()) in normalized:
+                    raise RuntimeError(f'Recovery reported {failure!r}; inspect {name}.png and recovery-serial.log')
             if all(' '.join(part.lower().split()) in normalized for part in fragments): return text
             if self.process.poll() is not None: raise RuntimeError('VM stopped unexpectedly')
             time.sleep(3)

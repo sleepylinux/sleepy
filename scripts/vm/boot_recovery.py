@@ -49,27 +49,30 @@ printf 'BOOT_RECOVERY_PROFILE_USERDATA_AND_ENTRIES_OK\n'
 
 
 def recovery_tui(machine, verify_cancel):
-    machine.wait_screen('Welcome home', 'recovery-welcome', timeout=300)
+    def wait(fragment, name, **kwargs):
+        return machine.wait_screen(fragment, name, reject=(
+            'Recovery needs attention', 'Boot repair stopped', 'Confirmation did not match'), **kwargs)
+    wait('Welcome home', 'recovery-welcome', timeout=300)
     machine.qmp.keys('down')
     machine.qmp.keys('down')
     machine.qmp.keys('ret')
-    machine.wait_screen('Recover Sleepy boot', 'recovery-disk')
+    wait('Recover Sleepy boot', 'recovery-disk')
     machine.qmp.keys('home')  # sole eligible VM disk, independent of safe default
     machine.qmp.keys('ret')
-    machine.wait_screen(['Installed Sleepy', 'Current generation:', 'Retained generations:'], 'recovery-inspection')
+    wait(['Installed Sleepy', 'Current generation:', 'Retained generations:'], 'recovery-inspection')
     # Back is deliberately the default: Enter must not perform a repair.
     machine.qmp.keys('ret')
-    machine.wait_screen('Recover Sleepy boot', 'recovery-cancelled')
+    wait('Recover Sleepy boot', 'recovery-cancelled')
     verify_cancel()
     machine.qmp.keys('home')
     machine.qmp.keys('ret')
-    machine.wait_screen(['Installed Sleepy', 'Current generation:', 'Retained generations:'], 'recovery-inspection-again')
+    wait(['Installed Sleepy', 'Current generation:', 'Retained generations:'], 'recovery-inspection-again')
     machine.qmp.keys('up')
     machine.qmp.keys('ret')
-    machine.wait_screen('Confirm boot repair', 'recovery-confirmation')
+    wait('Confirm boot repair', 'recovery-confirmation')
     machine.qmp.text('/dev/vda')
     machine.qmp.keys('ret')
-    machine.wait_screen('Boot repair complete', 'recovery-complete', timeout=300)
+    wait('Boot repair complete', 'recovery-complete', timeout=300)
 
 
 
@@ -154,7 +157,13 @@ def repair(machine, iso, serial_line, shell_prompt):
                          'test -z "$(lsblk -nr -o MOUNTPOINT /dev/vda | tr -d "[:space:]")"; '
                          'printf "RECOVERY_INSPECT_CANCEL_%s\\n" OK')
                 serial_line(terminal, 'sudo -n sh -c ' + shlex.quote(check), 'RECOVERY_INSPECT_CANCEL_OK')
-            recovery_tui(machine, verify_cancel)
+            try:
+                recovery_tui(machine, verify_cancel)
+            finally:
+                # Fixed privileged diagnostics from this disposable guest only.
+                # The backend log excludes credentials; retain it before shutdown.
+                serial_line(terminal, "sudo -n sh -c 'cat /var/log/sleepy-installer.log; printf \"RECOVERY_LOG_END_%s\\n\" OK'",
+                            'RECOVERY_LOG_END_OK', timeout=30)
             # Complete dialog does not auto-reboot. Explicitly shut down, detach
             # the image in Machine.boot(), then authenticate on the repaired disk.
             terminal.sendline('sudo -n poweroff')

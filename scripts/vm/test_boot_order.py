@@ -2,6 +2,7 @@
 import ast
 from pathlib import Path
 import tempfile
+import time
 import types
 import unittest
 
@@ -41,6 +42,15 @@ class BootOrder(unittest.TestCase):
                 self.assertIn('if=none,id=installer-media,format=raw,media=cdrom,readonly=on,file=/test/installer.iso', command)
                 self.assertNotIn('-boot', command)
                 self.assertNotIn('-cdrom', command)
+
+    def test_visible_recovery_error_stops_the_wait_immediately(self):
+        namespace = {'time': time}
+        exec(compile(ast.Module(body=[MACHINE], type_ignores=[]), str(SOURCE), 'exec'), namespace)
+        machine = namespace['Machine'](None, None, 8192, 'kvm')
+        screens = iter(['Recovery needs attention: mount failed'])
+        machine.screen = lambda _: next(screens)
+        with self.assertRaisesRegex(RuntimeError, 'Recovery needs attention'):
+            machine.wait_screen('Installed Sleepy', 'inspection', reject=('Recovery needs attention',))
 
     def test_disk_only_boot_has_no_installation_media_and_retains_nvram(self):
         command = self.command('offline-reboot', False)
