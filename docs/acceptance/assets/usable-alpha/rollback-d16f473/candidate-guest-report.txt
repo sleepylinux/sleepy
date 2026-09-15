@@ -1,0 +1,382 @@
+SLEEPY_REPORT_START
+REAL_USER_LOGIN_OK
+/dev/vda2 btrfs
+/dev/vda1 vfat
+INSTALLED_DISK_BOOT_OK
+active
+active
+active
+active
+active
+DESKTOP_UNITS_AND_SOCKET_OK
+FIRST_BOOT_WELCOME_DISMISSED_AND_INACTIVE_OK
+FIRST_BOOT_WELCOME_STATE_PERSISTED_OK
+ok
+ok
+TERMINAL_AND_FILE_MANAGER_WINDOWS_OK
+CRASH_RECOVERY_OK sleepy-shell.service
+CRASH_RECOVERY_OK sleepy-session.service
+active
+true
+REAL_HYPRLAND_SETTING_PERSISTED_OK
+PERSISTENCE_AFTER_REBOOT_OK
+true
+LOCK_RETURN_TO_DESKTOP
+LOCK_GRAPHICAL_VT_READY
+ok
+true
+KEYBOARD_LAYOUT_SELECTED_OK
+ok
+ok
+true
+LOCK_SHELL_CRASH_WAKE_READY
+true
+LOCK_SHELL_CRASH_INPUT_WAKE_OK
+LOCK_SWITCH_TO_CONSOLE
+LOCK_CONSOLE_VT_READY
+LOCK_RETURNED_GRAPHICAL_VT_READY
+ok
+true
+LOCK_VT_ROUNDTRIP_READY
+LOCK_READY_FOR_REAL_PASSWORD
+true
+LOCK_SCREEN_LAYOUT_SWITCH_OK
+REAL_PASSWORD_LOCK_UNLOCK_OK
+$2    S L E E P Y
+     S L E E P Y
+DAILY_FASTFETCH_ASSET_AND_EXECUTION_OK
+gtk-theme-name=adw-gtk3-dark
+gtk-icon-theme-name=Papirus-Dark
+DAILY_GTK_DARK_CONFIG_OK
+Current system: /nix/store/hnvmfhh96njfgw7hjs71lghhzqfrzfxp-nixos-system-sleepy-26.11.20260822.2c423e0
+Booted system: /nix/store/hnvmfhh96njfgw7hjs71lghhzqfrzfxp-nixos-system-sleepy-26.11.20260822.2c423e0
+Selected system profile: /nix/store/hnvmfhh96njfgw7hjs71lghhzqfrzfxp-nixos-system-sleepy-26.11.20260822.2c423e0
+DAILY_SYSTEM_STATUS_OK
+{"ok":true,"generation":483,"checks":[{"capability":"hyprland","status":"available","required":true},{"capability":"lock","status":"available","required":true},{"capability":"network","status":"available","required":false},{"capability":"audio","status":"available","required":false},{"capability":"bluetooth","status":"unavailable","required":false},{"capability":"battery","status":"unsupported","required":false},{"capability":"brightness","status":"available","required":false},{"capability":"power","status":"available","required":false},{"capability":"media","status":"available","required":false},{"capability":"night-light","status":"available","required":false},{"capability":"resources","status":"available","required":false},{"capability":"screenshot","status":"unavailable","required":false},{"capability":"recording","status":"available","required":false}]}
+true
+DAILY_DOCTOR_HEALTHY_WITH_VIRTUAL_AUDIO_OK
+DAILY_KEYRING_PERSISTED_UNLOCKED_OK
+/home/sleepy/Pictures/Screenshots/Sleepy-20260915-121249.png: OK
+DAILY_SCREENSHOT_PERSISTED_OK
+DAILY_IDLE_SAMPLE_READY
+DAILY_IDLE_SAMPLE {"cpu_seconds": 0.0, "cpu_ticks": 686, "elapsed_seconds": 0.0, "pid": 4777, "rss_kib": 480688, "start_ticks": 9441, "threads": 37}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 0.58, "cpu_ticks": 744, "elapsed_seconds": 10.0, "pid": 4777, "rss_kib": 470528, "start_ticks": 9441, "threads": 37}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 0.59, "cpu_ticks": 745, "elapsed_seconds": 20.0, "pid": 4777, "rss_kib": 470404, "start_ticks": 9441, "threads": 37}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 0.61, "cpu_ticks": 747, "elapsed_seconds": 30.0, "pid": 4777, "rss_kib": 468764, "start_ticks": 9441, "threads": 32}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 0.66, "cpu_ticks": 752, "elapsed_seconds": 40.0, "pid": 4777, "rss_kib": 468108, "start_ticks": 9441, "threads": 30}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 0.67, "cpu_ticks": 753, "elapsed_seconds": 50.0, "pid": 4777, "rss_kib": 468112, "start_ticks": 9441, "threads": 30}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 0.69, "cpu_ticks": 755, "elapsed_seconds": 60.001, "pid": 4777, "rss_kib": 468312, "start_ticks": 9441, "threads": 30}
+active
+DAILY_IDLE_SHELL_STABLE_OK
+/nix/store/ilmbkqmd404lf26aqkpkfbxmz2r482gz-source
+Sleepy version: 0.1.0
+Source NAR: sha256-yGG8/MJpdjNA...
+Current system: /nix/store/hnvmfhh96njfgw7hjs71lghhzqfrzfxp-nixos-system-sleepy-26.11.20260822.2c423e0
+Booted system: /nix/store/hnvmfhh96njfgw7hjs71lghhzqfrzfxp-nixos-system-sleepy-26.11.20260822.2c423e0
+Selected system profile: /nix/store/hnvmfhh96njfgw7hjs71lghhzqfrzfxp-nixos-system-sleepy-26.11.20260822.2c423e0
+CANDIDATE_REAL_PASSWORD_BOOT_SOURCE_OK
+{"stage": "fetch", "message": "Fetching approved immutable source", "progress": 10}
+{"stage": "build", "message": "Building candidate with saved installed settings", "progress": 30}
+{"stage": "select", "message": "Selecting exact built system for next boot", "progress": 80}
+{"stage": "ready", "message": "Candidate prepared. Reboot to use it; the running desktop is unchanged.", "progress": 100}
+{"schema": 1, "phase": "ready", "candidate": {"schema": 1, "id": "vm-reviewed", "version": "VM fixture", "revision": "a3837f1b75a430561b85647bd84f3df91858bb0c", "nar_hash": "sha256-yGG8/MJpdjNAOj97e0Ca5YX3JUkvJ7VweyUUnoG3Pbs="}, "old": {"generation": 2, "system": "/nix/store/hnvmfhh96njfgw7hjs71lghhzqfrzfxp-nixos-system-sleepy-26.11.20260822.2c423e0"}, "configuration": "beb074d5315d27de0f3c0367a5a7c52e35df4a6396f175f8ce41e6c02013e1b7", "gc_root": "/var/lib/sleepy-update/attempt-fadeb19e0bb07f5186853b62ef50af97/built-system", "built": "/nix/store/hnvmfhh96njfgw7hjs71lghhzqfrzfxp-nixos-system-sleepy-26.11.20260822.2c423e0"}
+CANDIDATE_COMPLETED_GC_ROOT_RELEASED_OTHERS_PRESERVED_OK
+Sleepy: rebuild. Administrator authentication may be requested.
+Live progress follows. Diagnostics: /root/.local/state/sleepy/system/rebuild.DYE5Oxn9.log
+warning: not writing modified lock file of flake 'path:/etc/nixos':
+• Updated input 'sleepy':
+    'path:./sleepy-source'
+  → 'path:/nix/store/ilmbkqmd404lf26aqkpkfbxmz2r482gz-source?lastModified=0&narHash=sha256-yGG8/MJpdjNAOj97e0Ca5YX3JUkvJ7VweyUUnoG3Pbs%3D' (1970-01-01)
+building the system configuration...
+warning: not writing modified lock file of flake 'path:/etc/nixos':
+• Updated input 'sleepy':
+    'path:./sleepy-source'
+  → 'path:/nix/store/ilmbkqmd404lf26aqkpkfbxmz2r482gz-source?lastModified=0&narHash=sha256-yGG8/MJpdjNAOj97e0Ca5YX3JUkvJ7VweyUUnoG3Pbs%3D' (1970-01-01)
+Checking switch inhibitors... done
+Skipping "/boot/EFI/systemd/systemd-bootx64.efi", same boot loader version in place already.
+Skipping "/boot/EFI/BOOT/BOOTX64.EFI", same boot loader version in place already.
+activating the configuration...
+setting up /etc...
+reloading user units for sleepy...
+restarting the following user units: nixos-activation.service
+restarting sysinit-reactivation.target
+the following new units were started: NetworkManager-dispatcher.service, sysinit-reactivation.target, systemd-tmpfiles-resetup.service
+Done. The new configuration is /nix/store/hnvmfhh96njfgw7hjs71lghhzqfrzfxp-nixos-system-sleepy-26.11.20260822.2c423e0
+Sleepy: rebuild completed. Diagnostics: /root/.local/state/sleepy/system/rebuild.DYE5Oxn9.log
+CANDIDATE_SAVED_REBUILD_STAYS_CANDIDATE_OK
+Sleepy: rollback. Administrator authentication may be requested.
+Live progress follows. Diagnostics: /root/.local/state/sleepy/system/rollback.EzJwBxJn.log
+error: flake 'path:/etc/nixos' does not provide attribute 'packages.x86_64-linux.nixosConfigurations."sleepy".config.system.build.nixos-rebuild', 'legacyPackages.x86_64-linux.nixosConfigurations."sleepy".config.system.build.nixos-rebuild' or 'nixosConfigurations."sleepy".config.system.build.nixos-rebuild'
+Command 'nix --extra-experimental-features 'nix-command flakes' build --print-out-paths '/etc/nixos#nixosConfigurations."sleepy".config.system.build.nixos-rebuild' --no-link' returned non-zero exit status 1.
+Sleepy: rollback failed (exit 1). Diagnostics: /root/.local/state/sleepy/system/rollback.EzJwBxJn.log
+Traceback (most recent call last):
+  File "<stdin>", line 262, in <module>
+  File "<stdin>", line 244, in guest
+  File "<stdin>", line 124, in command
+RuntimeError: sleepy-system failed: 1
+GUEST_AUDIT_ERROR line=309 command="$python" - <<'SLEEPY_CANDIDATE_PY'
+import base64, contextlib, hashlib, json, os, shlex, stat, subprocess, time, uuid
+from pathlib import Path
+def tree_state(root):
+    """Record file contents, permissions and link targets without following links."""
+    result = {}
+    for path in sorted(root.rglob('*')):
+        mode = path.lstat().st_mode
+        if stat.S_ISLNK(mode):
+            value = ('link', str(path.readlink()))
+        elif stat.S_ISREG(mode):
+            with path.open('rb') as stream:
+                value = ('file', hashlib.file_digest(stream, 'sha256').hexdigest())
+        elif stat.S_ISDIR(mode):
+            value = ('directory',)
+        else:
+            raise RuntimeError(f'Unexpected fixture filesystem entry: {path}')
+        result[str(path.relative_to(root))] = [stat.S_IMODE(mode), *value]
+    return result
+
+@contextlib.contextmanager
+def temporary_configuration(config, options):
+    """Import the original module at the same depth; restore its inode on all exits."""
+    original = config / 'configuration.nix'
+    backup = config / 'candidate-original.nix'
+    assert original.is_file() and not original.is_symlink()
+    assert not backup.exists() and not backup.is_symlink(), 'fixture backup already exists'
+    original.rename(backup)
+    try:
+        with original.open('x') as stream:
+            stream.write('{ pkgs, ... }: { imports = [ ./candidate-original.nix ];\n' + options + '\n}\n')
+        original.chmod(0o600)
+        yield
+    finally:
+        backup.replace(original)
+
+def marker_processes(marker, proc=Path('/proc')):
+    """Read only argv[0], never expose other processes' arguments in evidence."""
+    matches = set()
+    with os.scandir(proc) as entries:
+        for count, entry in enumerate(entries):
+            if count >= 32768:
+                raise RuntimeError('process observation exceeded its entry bound')
+            if not entry.name.isdecimal():
+                continue
+            try:
+                with (proc / entry.name / 'cmdline').open('rb') as stream:
+                    first = stream.read(256).split(b'\0', 1)[0]
+            except (FileNotFoundError, ProcessLookupError, PermissionError):
+                continue
+            if first == marker.encode():
+                matches.add(int(entry.name))
+    return matches
+
+def builder_command(marker, bash):
+    # Coreutils may dispatch by argv[0], so the marker belongs to Bash. The
+    # trailing builtin prevents Bash from replacing itself with multicall sleep.
+    return 'exec -a ' + shlex.quote(marker) + ' ' + shlex.quote(bash) + " -c 'sleep 600; :'"
+
+def interrupt_build(state, marker):
+    """Interrupt only after observing this attempt's actual controlled builder."""
+    assert not marker_processes(marker), 'controlled builder already exists'
+    output_path = state / 'interrupted-prepare.log'
+    with output_path.open('x') as output:
+        output_path.chmod(0o600)
+        process = subprocess.Popen(['sleepy-update', 'prepare', 'vm-reviewed'],
+                                   stdout=output, stderr=subprocess.STDOUT)
+        try:
+            deadline = time.monotonic() + 180
+            observed = set()
+            while time.monotonic() < deadline:
+                observed = marker_processes(marker)
+                if observed:
+                    break
+                if process.poll() is not None:
+                    raise RuntimeError('prepare exited before the controlled builder appeared')
+                time.sleep(0.25)
+            assert len(observed) == 1, 'one real controlled Nix builder must start within deadline'
+            assert process.poll() is None, 'backend exited before interruption'
+            print('CANDIDATE_CONTROLLED_BUILD_STARTED', flush=True)
+            process.terminate()
+            assert process.wait(timeout=20) == 1, 'SIGTERM did not produce a reaped failed prepare'
+            deadline = time.monotonic() + 20
+            while marker_processes(marker) and time.monotonic() < deadline:
+                time.sleep(0.25)
+            assert not marker_processes(marker), 'controlled builder survived backend cancellation'
+        finally:
+            if process.poll() is None:
+                process.terminate()
+                try:
+                    process.wait(timeout=20)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait(timeout=5)
+            output.flush()
+            print(output_path.read_text()[-65536:], end='', flush=True)
+
+def verify_reentry(command, profile, live, config, boot):
+    """The real offline prepare must reach hash validation after a booted rollback."""
+    before = (str(profile.resolve()), str(profile.readlink()), str(live.resolve()),
+              tree_state(config), tree_state(boot))
+    assert json.loads(command('sleepy-update', 'status').stdout)['phase'] == 'ready'
+    rejected = command('sleepy-update', 'prepare', 'vm-wrong-hash', timeout=300, ok=False)
+    assert rejected.returncode == 1, 'post-rollback wrong hash must be rejected'
+    messages = [json.loads(line) for line in rejected.stdout.splitlines() if line.strip()]
+    assert any(message.get('stage') == 'error' and message.get('message') ==
+               'Candidate revision or NAR hash does not match catalog' for message in messages), 'prepare did not reach cached source hash validation'
+    assert json.loads(command('sleepy-update', 'status').stdout)['phase'] == 'failed'
+    after = (str(profile.resolve()), str(profile.readlink()), str(live.resolve()),
+             tree_state(config), tree_state(boot))
+    assert after == before, 'post-rollback rejection changed profile/live/config/boot'
+    print('CANDIDATE_POST_ROLLBACK_VALIDATION_PRESERVED_STATE_OK', flush=True)
+
+def guest(phase, revision, nar_hash):
+    state = Path('/var/lib/sleepy-alpha/candidate-update')
+    metadata = Path('/run/current-system/etc/sleepy/source.json')
+    profile = Path('/nix/var/nix/profiles/system')
+    live = Path('/run/current-system')
+    config = Path('/etc/nixos')
+
+    def command(*argv, timeout=120, ok=True):
+        result = subprocess.run(argv, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=timeout)
+        print(result.stdout, end='', flush=True)
+        if ok and result.returncode != 0:
+            raise RuntimeError(f'{argv[0]} failed: {result.returncode}')
+        return result
+
+    def read_source():
+        value = json.loads(metadata.read_text())
+        assert value['schema'] == 1 and value['source_path'].startswith('/nix/store/')
+        assert value['nar_hash'].startswith('sha256-')
+        assert Path(value['source_path'], 'flake.nix').is_file()
+        resolved = command('sleepy-update', 'source').stdout.strip()
+        assert resolved == value['source_path'], 'source resolver disagrees with booted metadata'
+        return value
+
+    def config_unchanged(saved):
+        assert tree_state(config) == saved['config'], 'saved installation configuration changed'
+
+    def save(value):
+        (state / 'before.json').write_text(json.dumps(value))
+
+    if phase == 'prepare':
+        assert not state.exists(), 'candidate fixture must start fresh'
+        state.mkdir(mode=0o700)
+        source = read_source()
+        assert source.get('revision') != revision, 'candidate must differ from installed source'
+        before = {'source': source, 'live': str(live.resolve()), 'profile': str(profile.resolve()),
+                  'profile_link': str(profile.readlink()), 'boot': tree_state(Path('/boot')), 'config': tree_state(config)}
+        save(before)
+        assert json.loads(command('sleepy-update', 'status').stdout)['phase'] == 'idle'
+        assert json.loads(command('sleepy-update', 'candidates', '--json').stdout) == [], 'expected default-empty catalog'
+        catalog = Path('/etc/sleepy/candidates')
+        catalog.mkdir(parents=True, exist_ok=True)
+        assert not catalog.is_symlink(), 'test catalog must be a writable real directory'
+        # Explicit root-owned VM fixture, never a public promotion/catalog.
+        wrong = base64.b64encode(bytes([base64.b64decode(nar_hash[7:])[0] ^ 1]) + base64.b64decode(nar_hash[7:])[1:]).decode()
+        for identifier, digest in [('vm-wrong-hash', 'sha256-' + wrong), ('vm-reviewed', nar_hash)]:
+            path = catalog / (identifier + '.json')
+            with path.open('x') as stream:
+                json.dump({'schema': 1, 'id': identifier, 'version': 'VM fixture', 'revision': revision, 'nar_hash': digest}, stream)
+            path.chmod(0o644)
+            assert path.stat().st_uid == 0
+        candidates = json.loads(command('sleepy-update', 'candidates', '--json').stdout)
+        assert {item['id'] for item in candidates} == {'vm-wrong-hash', 'vm-reviewed'}
+        rejected = command('sleepy-update', 'prepare', 'vm-wrong-hash', timeout=300, ok=False)
+        assert rejected.returncode == 1, 'incorrect source hash must be rejected'
+        assert json.loads(command('sleepy-update', 'status').stdout)['phase'] == 'failed'
+        assert str(profile.resolve()) == before['profile'] and str(profile.readlink()) == before['profile_link']
+        assert str(live.resolve()) == before['live']
+        assert tree_state(Path('/boot')) == before['boot']
+        config_unchanged(before)
+        print('CANDIDATE_WRONG_HASH_PRESERVED_BOOT_CONFIG_OK', flush=True)
+        def unchanged_after_failed_prepare():
+            assert json.loads(command('sleepy-update', 'status').stdout)['phase'] == 'failed'
+            assert str(profile.resolve()) == before['profile'] and str(profile.readlink()) == before['profile_link']
+            assert str(live.resolve()) == before['live']
+            assert tree_state(Path('/boot')) == before['boot']
+            config_unchanged(before)
+
+        assert (config / 'configuration.nix').stat().st_uid == 0
+        invalid_marker = 'SLEEPY_CANDIDATE_INVALID_CONFIGURATION'
+        with temporary_configuration(config, 'assertions = [ { assertion = false; message = "' + invalid_marker + '"; } ];'):
+            rejected = command('sleepy-update', 'prepare', 'vm-reviewed', timeout=300, ok=False)
+            assert rejected.returncode == 1, 'invalid configuration unexpectedly prepared'
+            # Require the actual evaluator assertion, not an unrelated fetch error.
+            assert invalid_marker in Path('/var/lib/sleepy-update/update.log').read_text()
+        unchanged_after_failed_prepare()
+        print('CANDIDATE_INVALID_CONFIG_PRESERVED_BOOT_CONFIG_OK', flush=True)
+
+        build_marker = 'SLEEPY_CANDIDATE_BUILD_' + uuid.uuid4().hex
+        controlled_build = ("system.extraDependencies = [ (pkgs.runCommand \"sleepy-candidate-interrupt\" {} ''"
+                            + builder_command(build_marker, "${pkgs.bash}/bin/bash") + "\n'' ) ];")
+        with temporary_configuration(config, controlled_build):
+            interrupt_build(state, build_marker)
+        unchanged_after_failed_prepare()
+        print('CANDIDATE_SIGTERM_PRESERVED_BOOT_CONFIG_OK', flush=True)
+        command('sleepy-update', 'prepare', 'vm-reviewed', timeout=1500)
+        status = json.loads(command('sleepy-update', 'status').stdout)
+        assert status['phase'] == 'ready' and status['candidate']['revision'] == revision
+        assert status['candidate']['nar_hash'] == nar_hash
+        assert str(live.resolve()) == before['live']
+        config_unchanged(before)
+        prepared = str(profile.resolve())
+        assert prepared != before['profile'] and status['built'] == prepared
+        target = json.loads((profile / 'etc/sleepy/source.json').read_text())
+        assert target['nar_hash'] == nar_hash and target['source_path'].startswith('/nix/store/')
+        before['prepared'] = prepared
+        save(before)
+        print('CANDIDATE_PREPARED_WITHOUT_LIVE_OR_CONFIG_CHANGE_OK', flush=True)
+        return
+
+    before = json.loads((state / 'before.json').read_text())
+    config_unchanged(before)
+    source = read_source()
+    if phase == 'rollback':
+        assert str(live.resolve()) == before['prepared']
+        assert source['nar_hash'] == nar_hash
+        visible_status = command('sleepy-system', 'status').stdout
+        assert 'Sleepy version: ' + source['version'] in visible_status
+        assert 'Source NAR: ' + nar_hash[:19] in visible_status
+        print('CANDIDATE_REAL_PASSWORD_BOOT_SOURCE_OK', flush=True)
+        # Exercise the booted candidate's cleanup implementation, not the old
+        # installer backend used for the first preparation.
+        update_state = Path('/var/lib/sleepy-update')
+        previous_roots = {str(path): str(path.readlink()) for path in update_state.glob('attempt-*/built-system') if path.is_symlink()}
+        selected_link = str(profile.readlink())
+        command('sleepy-update', 'prepare', 'vm-reviewed', timeout=1500)
+        ready = json.loads(command('sleepy-update', 'status').stdout)
+        assert ready['phase'] == 'ready' and ready['built'] == before['prepared']
+        completed_root = Path(ready['gc_root'])
+        assert completed_root.parent.is_dir()
+        assert not completed_root.exists() and not completed_root.is_symlink(), 'completed attempt GC root was retained'
+        assert str(profile.readlink()) == selected_link, 'same candidate added a generation'
+        assert str(live.resolve()) == before['prepared']
+        assert {str(path): str(path.readlink()) for path in update_state.glob('attempt-*/built-system') if path.is_symlink()} == previous_roots
+        config_unchanged(before)
+        print('CANDIDATE_COMPLETED_GC_ROOT_RELEASED_OTHERS_PRESERVED_OK', flush=True)
+        command('sleepy-system', 'rebuild', timeout=1500)
+        config_unchanged(before)
+        rebuilt = json.loads((profile / 'etc/sleepy/source.json').read_text())
+        assert rebuilt == source, 'saved rebuild drifted from booted candidate source'
+        assert str(profile.resolve()) == before['prepared'], 'unchanged saved rebuild changed generation output'
+        print('CANDIDATE_SAVED_REBUILD_STAYS_CANDIDATE_OK', flush=True)
+        command('sleepy-system', 'rollback', timeout=120)
+        assert str(profile.resolve()) == before['profile'], 'rollback did not select original system'
+        config_unchanged(before)
+        print('CANDIDATE_ORIGINAL_SELECTED_FOR_BOOT_OK', flush=True)
+    elif phase == 'verify':
+        assert str(live.resolve()) == before['live']
+        assert source == before['source'], 'rollback source metadata differs from original'
+        assert str(profile.resolve()) == before['profile']
+        verify_reentry(command, profile, live, config, Path('/boot'))
+        command('sleepy-system', 'rebuild', timeout=1500)
+        config_unchanged(before)
+        rebuilt = json.loads((profile / 'etc/sleepy/source.json').read_text())
+        assert rebuilt['nar_hash'] == before['source']['nar_hash']
+        assert rebuilt['source_path'] == before['source']['source_path'], 'saved rebuild drifted after rollback'
+        print('CANDIDATE_ROLLBACK_PASSWORD_BOOT_AND_SAVED_REBUILD_OK', flush=True)
+    else:
+        raise ValueError('unknown candidate phase')
+
+guest('rollback', 'a3837f1b75a430561b85647bd84f3df91858bb0c', 'sha256-yGG8/MJpdjNAOj97e0Ca5YX3JUkvJ7VweyUUnoG3Pbs=')
+SLEEPY_CANDIDATE_PY
+ status=1
+SLEEPY_REPORT_FAILED line=309

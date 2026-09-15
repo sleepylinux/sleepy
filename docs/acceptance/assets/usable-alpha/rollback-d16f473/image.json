@@ -1,0 +1,17 @@
+{
+  "status": "fresh install and candidate password boots passed; overall update VM failed in rollback auto-reexec",
+  "source_revision": "d16f473f5ddf778dec87447dd2562c9bbf58222c",
+  "sha256": "6704ee816923bd6a8fdde0c55865e7c6da94f5138b3bde5dcfeb8d31766ec424",
+  "bytes": 860880896,
+  "drv": "/nix/store/9azv6g71jsmbfpqyl8g6kfpq5x2h9p7y-sleepy-0.1.0-alpha-x86_64-linux.iso.drv",
+  "out": "/nix/store/hrgs70ldjy93mvw9k6iy0kvfh8klv7yb-sleepy-0.1.0-alpha-x86_64-linux.iso",
+  "flake_lock_sha256": "2fcc6168af4d79072e79bf08b68e56f9e2298597d8208c0d10f843e0032946af",
+  "components": {
+    "sleepy-sdk": "dff28bb596950d862ae5d219e478460dfa13e8f4",
+    "sleepy-session": "ca37debffa9d01f1d0c9369a31faf85e88a1198a",
+    "sleepy-desktop": "15b8dab9bd2534be7f054e62b6e36cb46fd74a1f",
+    "sleepy-artwork": "ac3feed1e81b4e74a84a326c1f53f3ddaf94aa3e"
+  },
+  "shell_store_path": "/nix/store/x291rc2nri0snhv8hrvv56xci6jklw98-sleepy-shell-0.2.0",
+  "vm_result": "rollback-d16f473/result.json"
+}
