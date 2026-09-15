@@ -530,6 +530,11 @@ grep -F 'gtk-theme-name=adw-gtk3-dark' /home/sleepy/.config/gtk-3.0/settings.ini
 grep -F 'gtk-icon-theme-name=Papirus-Dark' /home/sleepy/.config/gtk-3.0/settings.ini
 test "$(uenv gsettings get org.gnome.desktop.interface color-scheme)" = "'prefer-dark'"
 printf 'DAILY_GTK_DARK_CONFIG_OK\n'
+uenv timeout 5 sleepy-system status > /tmp/sleepy-alpha-system-status.txt
+grep -Fx "Current system: $(readlink -e /run/current-system)" /tmp/sleepy-alpha-system-status.txt
+grep -Fx "Booted system: $(readlink -e /run/booted-system)" /tmp/sleepy-alpha-system-status.txt
+grep -Fx "Selected system profile: $(readlink -e /nix/var/nix/profiles/system)" /tmp/sleepy-alpha-system-status.txt
+printf 'DAILY_SYSTEM_STATUS_OK\n'
 # Only doctor summaries enter evidence, never raw desktop payloads.
 set +e
 uenv timeout 5 sleepyctl doctor --json > /tmp/sleepy-alpha-doctor.json
@@ -557,6 +562,27 @@ complete_png() {
   test "$(od -An -tx1 -N8 "$1" | tr -d ' \n')" = 89504e470d0a1a0a &&
     test "$(tail -c 12 "$1" | od -An -tx1 | tr -d ' \n')" = 0000000049454e44ae426082
 }
+# Open the actual packaged menu in a new, readable terminal; only Escape is
+# sent by the host. Comparing both targets and generation listings detects any
+# unintended system change without exercising rebuild/rollback during this gate.
+uenv timeout 5 sleepy-system status > /tmp/sleepy-alpha-system-before-menu.txt
+uenv timeout 5 sleepy-system generations > /tmp/sleepy-alpha-generations-before-menu.txt
+hypr clients -j | jq '[.[] | .address]' > /tmp/sleepy-alpha-before-system-menu.json
+hypr dispatch exec '[float; size 90% 90%; center] ghostty -e sleepy-system'
+system_menu_visible() {
+  system_menu_address=$(hypr clients -j | jq -r --slurpfile before /tmp/sleepy-alpha-before-system-menu.json '[.[] | select(.mapped and (.class | ascii_downcase | contains("ghostty")) and (.address as $a | $before[0] | index($a) | not))] | .[0].address // empty')
+  test -n "$system_menu_address"
+}
+wait_daily system_menu_visible
+hypr dispatch focuswindow "address:$system_menu_address"
+printf 'DAILY_SYSTEM_MENU_READY\n'
+system_menu_closed() { hypr clients -j | jq -e --arg address "$system_menu_address" 'all(.[]; .address != $address)' > /dev/null; }
+wait_daily system_menu_closed
+uenv timeout 5 sleepy-system status > /tmp/sleepy-alpha-system-after-menu.txt
+uenv timeout 5 sleepy-system generations > /tmp/sleepy-alpha-generations-after-menu.txt
+cmp /tmp/sleepy-alpha-system-before-menu.txt /tmp/sleepy-alpha-system-after-menu.txt
+cmp /tmp/sleepy-alpha-generations-before-menu.txt /tmp/sleepy-alpha-generations-after-menu.txt
+printf 'DAILY_SYSTEM_MENU_CANCEL_UNCHANGED_OK\n'
 # The host presses Print and selects a rectangle using actual pointer input.
 install -d -m 0700 /var/lib/sleepy-alpha
 uenv mkdir -p /home/sleepy/Pictures/Screenshots
@@ -756,6 +782,14 @@ printf 'SLEEPY_REPORT_COMPLETE\n'
                 time.sleep(2)
                 machine.screen(f'{stage}-software')
             if getattr(machine, 'daily_usability', False):
+                if b'DAILY_SYSTEM_MENU_READY' in report and 'system-menu' not in daily_sent:
+                    daily_sent.add('system-menu')
+                    machine.qmp.keys('ctrl', 'alt', 'f1')
+                    machine.wait_screen(
+                        ('Sleepy system', 'Current and booted system', 'List recovery generations',
+                         'Apply the configuration', 'Return to the previous'),
+                        f'{stage}-system-menu', timeout=25)
+                    machine.qmp.keys('esc')
                 for marker, action in [
                     (b'DAILY_PRESS_PRINT', 'print'),
                     (b'DAILY_SELECT_AREA', 'select'),
@@ -946,6 +980,8 @@ def main():
             **{f'DAILY_{key}_OK': value for key, value in {
                 'FASTFETCH_ASSET_AND_EXECUTION': 'daily-fastfetch',
                 'GTK_DARK_CONFIG': 'daily-gtk-dark-config',
+                'SYSTEM_STATUS': 'daily-system-status',
+                'SYSTEM_MENU_CANCEL_UNCHANGED': 'daily-system-menu-cancel-unchanged',
                 'DOCTOR_HEALTHY_WITH_VIRTUAL_AUDIO': 'daily-doctor-with-virtual-audio',
                 'SCREENSHOT_SAVED_PNG': 'daily-Print-saved-PNG',
                 'SCREENSHOT_VIEWER_OPEN': 'daily-screenshot-viewer-open',
