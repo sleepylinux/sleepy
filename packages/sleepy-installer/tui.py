@@ -214,12 +214,8 @@ def wizard(dialog):
             subprocess.run(['nmtui'], check=False)
             continue
         if action == 'recovery':
-            dialog.message('Recovery', 'Leave this installer to use the installation terminal.\n'
-                'Restart it with: sleepy-install\n\n'
-                'Read diagnostics with journalctl -b and lsblk -f.\n'
-                'For an installed system, choose a previous Sleepy generation in the UEFI boot menu.\n'
-                'The installation medium can also mount your Btrfs disk for repair.\n\n'
-                'Installation erases the selected disk; recovery cannot undo that erasure.')
+            from recovery_tui import wizard as recovery_wizard
+            recovery_wizard(dialog)
             continue
         try:
             disks = list_disks()
