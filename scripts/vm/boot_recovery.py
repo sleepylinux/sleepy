@@ -56,14 +56,14 @@ def recovery_tui(machine, verify_cancel):
     machine.wait_screen('Recover Sleepy boot', 'recovery-disk')
     machine.qmp.keys('home')  # sole eligible VM disk, independent of safe default
     machine.qmp.keys('ret')
-    machine.wait_screen('Installed Sleepy', 'recovery-inspection')
+    machine.wait_screen(['Installed Sleepy', 'Current generation:', 'Retained generations:'], 'recovery-inspection')
     # Back is deliberately the default: Enter must not perform a repair.
     machine.qmp.keys('ret')
     machine.wait_screen('Recover Sleepy boot', 'recovery-cancelled')
     verify_cancel()
     machine.qmp.keys('home')
     machine.qmp.keys('ret')
-    machine.wait_screen('Installed Sleepy', 'recovery-inspection-again')
+    machine.wait_screen(['Installed Sleepy', 'Current generation:', 'Retained generations:'], 'recovery-inspection-again')
     machine.qmp.keys('up')
     machine.qmp.keys('ret')
     machine.wait_screen('Confirm boot repair', 'recovery-confirmation')

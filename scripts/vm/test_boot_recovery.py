@@ -16,10 +16,29 @@ class RecoveryProtocol(unittest.TestCase):
         check = events.index(('cancel-checked',))
         confirm = events.index(('text', '/dev/vda'))
         self.assertLess(check, confirm)
-        self.assertIn(('screen', 'Installed Sleepy'), events[:check])
+        self.assertIn(('screen', ['Installed Sleepy', 'Current generation:', 'Retained generations:']), events[:check])
         self.assertIn(('screen', 'Recover Sleepy boot'), events[:check])
         self.assertEqual(events.count(('text', '/dev/vda')), 1)
         self.assertEqual(events[-1], ('screen', 'Boot repair complete'))
+
+    def test_inspection_wait_cannot_match_the_disk_selection_prompt(self):
+        waits = []
+        class Machine:
+            def __init__(self): self.qmp = self
+            def wait_screen(self, fragments, name, **kwargs): waits.append((fragments, name))
+            def keys(self, *args): pass
+            def text(self, value): pass
+        boot_recovery.recovery_tui(Machine(), lambda: None)
+        disk = 'Recover Sleepy boot. Inspect an installed Sleepy disk without changing it.'
+        inspection = 'Installed Sleepy. Current generation: 1. Retained generations: 1 (1 total)'
+        inspected = 0
+        for fragments, name in waits:
+            if name in ('recovery-inspection', 'recovery-inspection-again'):
+                parts = [fragments] if isinstance(fragments, str) else fragments
+                self.assertFalse(all(part.lower() in disk.lower() for part in parts))
+                self.assertTrue(all(part.lower() in inspection.lower() for part in parts))
+                inspected += 1
+        self.assertEqual(inspected, 2)
 
     def test_failed_cancel_integrity_check_never_confirms_repair(self):
         texts = []
