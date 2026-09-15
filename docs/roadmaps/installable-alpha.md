@@ -51,7 +51,10 @@ Recent bounded diagnostics on the retained installed disk now cover real
 Software → Flathub Kalk installation and calculation, Print/save/view and
 Shift+Print clipboard, generation-list/menu cancellation, and native dark-locker
 VT return/input/PAM unlock with the scoped Qt fix. These use temporary runtime
-overrides; they do not complete the final-image gate or all portal/keyring checks.
+overrides; Firefox FileChooser and real-password polkit authorization also pass.
+Desktop PR #8 is merged after exact CI and a 20-minute packaged-shell soak
+(121 samples, zero restarts). Final image `bfa319a` is built; clean installation,
+keyring persistence, crash/DPMS wake and update/rollback remain the active gate.
 [Revision-bound evidence](../acceptance/usable-alpha.md).
 
 ## Verification and limits

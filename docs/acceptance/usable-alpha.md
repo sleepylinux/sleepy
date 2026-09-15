@@ -196,3 +196,20 @@ from the installed closure, and stores/compares a fixed nonsecret test value
 without printing it. On subsequent boot it only reads the previous value, so a
 rewrite cannot hide lost persistence. Calls are bounded to ten seconds. Shell
 protocol regressions pass; this new reboot assertion awaits the final VM run.
+
+### Network refresh and daily authentication follow-up
+
+The old shell repeatedly treated `nmcli radio wifi` reads as mutations and
+retained finished Process objects. An actual 6.6 GiB OOM and exec trace
+identified the loop. Desktop `f91f71e` classifies positional commands and destroys
+finished Process objects. The exact packaged shell then completed a 20-minute
+installed-VM soak with zero restarts, about 454 MiB RSS and 27.49 CPU seconds.
+[Samples](assets/usable-alpha/f91-packaged-shell-20min.jsonl) and
+[provenance](assets/usable-alpha/f91-packaged-shell-soak-provenance.json)
+record this temporary runtime override, not a fresh final-image boot.
+
+Firefox opened the saved PNG through the real FileChooser portal (response 0),
+and the native polkit dialog accepted the created password for a read-only
+authorization check. [Trace and screenshot provenance](assets/usable-alpha/candidate7231-network-loop-portal-provenance.json)
+records the earlier diagnostic shell used for those actions. The final image
+remains gated on a clean install, keyring persistence and update/rollback.

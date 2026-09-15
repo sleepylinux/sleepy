@@ -1,0 +1,15 @@
+{
+  "desktop_revision": "f91f71e0ae9a7f4c48f89d51189c43743bbba607",
+  "shell_store_path": "/nix/store/qvg2ai28338by70gc3hqxx4jsmxjqliv-sleepy-shell-0.2.0",
+  "installed_image_source": "7231d4b2bf320440365b0f51a323f3466c724dd1",
+  "temporary_runtime_override": true,
+  "fresh_final_image_boot": false,
+  "duration_seconds": 1200,
+  "samples": 121,
+  "rss_initial_kib": 435744,
+  "rss_peak_kib": 465640,
+  "rss_final_kib": 465308,
+  "cpu_seconds": 27.49,
+  "systemd_nrestarts": 0,
+  "jsonl_sha256": "ae98844b7863d2390e426e799d7d921203768b2a36aa62afb580676451c7bd77"
+}

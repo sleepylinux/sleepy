@@ -1,0 +1,41 @@
+{
+  "installed_image_source": "7231d4b2bf320440365b0f51a323f3466c724dd1",
+  "session_runtime_revision": "4d48082a0ff22cfefa6ebd007f41b6192709aa27",
+  "scope": "Existing disposable installed disk; temporary shell source override removes only radio from the old broad mutation classifier. This confirms the refresh-loop cause; it is not the final production fix or fresh image acceptance. Firefox portal response 0 returns the saved PNG. Polkit pkcheck authenticates the created password; no system action is executed.",
+  "final_desktop_fix_revision": "f91f71e0ae9a7f4c48f89d51189c43743bbba607",
+  "final_packaged_soak": "passed; see f91-packaged-shell-soak-provenance.json (temporary runtime override, existing installed disk)",
+  "files": {
+    "candidate7231-shell-oom-observed.txt": {
+      "source": "work/debug-usability/shell-oom-observed.txt",
+      "sha256": "3d1f8736c09ab941275f5a178c1f317988cc0d2ac03b2b2af893c4549cb56548"
+    },
+    "candidate7231-shell-nmcli-exec-summary.txt": {
+      "source": "work/debug-usability/shell-nmcli-exec-summary.txt",
+      "sha256": "4db256b5fada82bd2621455d0316167032a2ebc2af8dc1be2d68e5a85d4ad196"
+    },
+    "candidate7231-nmcli-radio-single-change-probe.txt": {
+      "source": "work/debug-usability/nmcli-radio-single-change-probe.txt",
+      "sha256": "ac2765fd17f94f2f73d84d6c7409324f8f62d29ab050a503a75fb6c6f6aa4fb0"
+    },
+    "candidate7231-firefox-portal-call-response.txt": {
+      "source": "work/debug-usability/firefox-portal-call-response.txt",
+      "sha256": "603d2dc2eaddb14e265925c4053c83ac687413336b290529fe48925e55159cef"
+    },
+    "candidate7231-polkit-real-password.txt": {
+      "source": "work/debug-usability/polkit-real-password.txt",
+      "sha256": "f2c9a55710a40993c2d9cbd86dc5f618a3f0c4e25bd4a4e8fad222ad5052b84c"
+    },
+    "candidate7231-firefox-open-file-real.png": {
+      "source": "work/vm-usability-1/firefox-open-file-real.png",
+      "sha256": "ee8784102818fab9c3b7a0b06182a4dc5cd3c4d7ee034b5d31274cdb49f511eb"
+    },
+    "candidate7231-firefox-portal-png-success.png": {
+      "source": "work/vm-usability-1/firefox-portal-png-success.png",
+      "sha256": "e2d9c49c2d106c2c60498a2444a2fc5fc3dc544ff790084cec518f3f12f23270"
+    },
+    "candidate7231-polkit-native-password-visible.png": {
+      "source": "work/vm-usability-1/polkit-native-password-visible.png",
+      "sha256": "1fa7441b775645659a5d5c40f73800cb5dd79a0146a755ef7e541b6374c8720e"
+    }
+  }
+}
