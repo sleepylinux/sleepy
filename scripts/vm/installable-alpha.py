@@ -577,6 +577,39 @@ printf 'FLATPAK_SOFTWARE_WINDOW_OK\n'
 '''
 
 
+def keyring_fixture(after_reboot):
+    """Native Secret Service, using an explicitly nonsecret disposable sentinel."""
+    script = r"""
+# PAM should unlock the actual login collection; never drive an extra prompt.
+test "$(uenv timeout 10 busctl --user get-property org.freedesktop.secrets /org/freedesktop/secrets/collection/login org.freedesktop.Secret.Collection Locked)" = 'b false'
+keyring_load=$(uenv timeout 10 systemctl --user show gnome-keyring-daemon.service -p LoadState --value)
+test "$keyring_load" != bad-setting
+# libsecret is already in the installed closure, but its CLI need not be global.
+# Pick the first executable from sorted, store-backed libsecret outputs.
+timeout 10 nix-store --query --requisites /run/current-system > /tmp/sleepy-alpha-system-closure
+secret_tool=
+while IFS= read -r package; do
+  case "$package" in
+    /nix/store/*-libsecret-*)
+      if test -x "$package/bin/secret-tool"; then secret_tool="$package/bin/secret-tool"; break; fi ;;
+  esac
+done < <(sort -u /tmp/sleepy-alpha-system-closure)
+test -n "$secret_tool"
+"""
+    if not after_reboot:
+        script += r"""
+printf %s sleepy-disposable-keyring-regression | uenv timeout 10 "$secret_tool" store --label=Sleepy-VM-regression sleepy-alpha regression
+"""
+    script += r"""
+# Compare in memory; do not print the stored value to guest evidence.
+keyring_value=$(uenv timeout 10 "$secret_tool" lookup sleepy-alpha regression)
+test "$keyring_value" = sleepy-disposable-keyring-regression
+unset keyring_value
+"""
+    return script + ("printf 'DAILY_KEYRING_PERSISTED_UNLOCKED_OK\\n'\n" if after_reboot else
+                     "printf 'DAILY_KEYRING_STORE_LOOKUP_OK\\n'\n")
+
+
 def daily_fixture(after_reboot):
     """Installed default-profile assertions; invoked only by --daily-usability."""
     common = r'''
@@ -619,6 +652,7 @@ jq -e '.ok == true
   and any(.checks[]; .capability == "bluetooth" and .status == "unavailable")' /tmp/sleepy-alpha-doctor.json
 printf 'DAILY_DOCTOR_HEALTHY_WITH_VIRTUAL_AUDIO_OK\n'
 '''
+    common += keyring_fixture(after_reboot)
     if after_reboot:
         return common + r'''
 sha256sum -c /var/lib/sleepy-alpha/screenshot.sha256
@@ -1070,6 +1104,8 @@ def main():
                 'FASTFETCH_ASSET_AND_EXECUTION': 'daily-fastfetch',
                 'GTK_DARK_CONFIG': 'daily-gtk-dark-config',
                 'SYSTEM_STATUS': 'daily-system-status',
+                'KEYRING_STORE_LOOKUP': 'daily-keyring-store-lookup',
+                'KEYRING_PERSISTED_UNLOCKED': 'daily-keyring-persisted-unlocked',
                 'SYSTEM_MENU_CANCEL_UNCHANGED': 'daily-system-menu-cancel-unchanged',
                 'DOCTOR_HEALTHY_WITH_VIRTUAL_AUDIO': 'daily-doctor-with-virtual-audio',
                 'SCREENSHOT_SAVED_PNG': 'daily-Print-saved-PNG',

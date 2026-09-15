@@ -187,3 +187,12 @@ service is healthy. [Exact provenance and source hashes](assets/usable-alpha/can
 distinguish the earlier instrumented Qt build from the clean later library.
 The final combined installation, locked VT roundtrip, update and reboot gate
 remains required.
+
+The existing guest already demonstrated real Secret Service store/lookup with
+its PAM-unlocked login collection before removal of the malformed auxiliary
+keyring unit; no earlier storage failure is claimed. The daily runner now
+requires an unlocked collection, rejects `bad-setting`, discovers `secret-tool`
+from the installed closure, and stores/compares a fixed nonsecret test value
+without printing it. On subsequent boot it only reads the previous value, so a
+rewrite cannot hide lost persistence. Calls are bounded to ten seconds. Shell
+protocol regressions pass; this new reboot assertion awaits the final VM run.
