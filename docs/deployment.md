@@ -9,11 +9,11 @@ fetchable component commits:
 sleepy-sdk      c7d7452163d4fdfa000634e2196212a53d8b159f
 sleepy-session  341d69fcb245f41b56e72e8ac89630a5e1b7d4e2
 sleepy-artwork  ac3feed1e81b4e74a84a326c1f53f3ddaf94aa3e
-sleepy-desktop  43fe4476c415217a342e2b3be39ed0ad93042789
+sleepy-desktop  7958ed0587c63f881814dae51110aab007add278
 ```
 
 The generated candidate lock SHA-256 is
-`5e1be0e88997ccaad6591fa35f8e9a5dab5a99a49771dce4d78f3917d0c4864e`.
+`49f627c594fd9bc5391f1315c698971b09525fc02e63b0bf339c23ea4cde3f9a`.
 Regenerate it only with Nix and validate both the current graph and immutable
 historical M2/M1 graphs. Capture v1 installed-VM acceptance is pending;
 use only a disposable test VM for this candidate. Previous verified installer
