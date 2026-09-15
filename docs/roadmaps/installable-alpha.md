@@ -32,6 +32,19 @@ Generic defaults stay overridable. No custom compositor or package manager.
   exact `27c99c4` CI run 34955692745 passed all jobs, including strict sandbox
   topology tests and production VM checks.
 
+- [x] Reviewed-candidate updates: image `8624092` → candidate `d40861d` passed
+  44 gates and three real-password disk boots, including real builder
+  interruption, candidate selection, saved rebuild, repeated preparation/GC
+  cleanup, offline rollback and future-update validation. These revisions share
+  runtime code; a separate `88a87c5` → `d40861d` changed-runtime test passed
+  43 gates and three password boots. Pinned-tool regressions also prove rollback
+  works with absent/broken saved configuration. Integration and exact CI are
+  tracked in [PR #12](https://github.com/sleepylinux/sleepy/pull/12).
+- [x] Final visual inspection: custom ASCII crescent and compact Fastfetch Disk
+  output fit the actual 1280×800 desktop. Desktop PR #10/session PR #14 merged
+  after full component CI and automated review. The source-copy cleanup check
+  also passes as a non-root user. No public update channel has been promoted.
+
 [Acceptance and exact limits](../acceptance/usable-alpha.md),
 [installation](../runbooks/installable-alpha.md), [recovery](../recovery.md).
 The current installer ISO is 821 MiB. Keep the verified artifact and labelled signed cache;
@@ -47,23 +60,11 @@ remove disposable disks, credentials and the task-owned builder after validation
    assignable IOMMU group exposed; no repository self-hosted runner is registered.
    Do not unbind or alter that host OS. Configuration evaluation and virtual audio
    are useful evidence, not physical GPU or suspend acceptance.
-2. **Reviewed-candidate updates — verified, final integration pending.**
-   Image `8624092` → candidate `d40861d` passed 44 gates and three real-password disk boots,
-   including real builder interruption, candidate selection, saved rebuild,
-   repeated preparation/GC cleanup, offline rollback and future-update validation.
-   Those revisions share runtime code; the separate `88a87c5` → `d40861d`
-   changed-runtime test passed 43 gates and three password boots. The pinned rollback regression now proves absent/broken
-   saved configuration cannot block selecting a retained generation. Fastfetch
-   with the custom ASCII crescent passed actual 1280×800 desktop inspection.
-   Desktop PR #10/session PR #14 merged after full component CI and review. Root
-   PR #12 awaits final CI; its source-copy cleanup now has a non-root regression.
-   Keep failed/interrupted runs labelled. Do not promote a public channel:
-   signing/catalog/promotion policy remains a separate decision.
-3. **Complete the session capture provider.** Print already uses native
+2. **Complete the session capture provider.** Print already uses native
    Quickshell screencopy and Swappy. The separate SDK capture action expects an
    unimplemented helper; keep doctor honest until consent/output contracts and
    actual capture are tested. Do not alias its status to the Print picker.
-4. **Encryption and public distribution.** Add a separate encrypted
+3. **Encryption and public distribution.** Add a separate encrypted
    install/unlock/recovery branch. Prepare reproducible public binary artifacts,
    source revisions/checksums, short docs and honest known issues. Validate a
    current public-only installation. Release publication and public channel

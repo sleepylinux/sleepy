@@ -149,7 +149,12 @@ PNG checks; the absent SDK helper remains a separate limitation.
 The command above creates a new disk and firmware variables, uses KVM when
 accessible and otherwise TCG, drives the visible TUI, and detaches the ISO for
 each installed-disk boot. It authenticates normally with the created password.
-Recovery removes boot-entry configuration only on that disposable disk, proves
+The candidate command boots the installed base, the prepared candidate, then
+the rolled-back base offline. It tests rejected updates, actual builder
+interruption, retained rebuild source and subsequent validation after rollback.
+
+With `--boot-recovery` instead of the candidate arguments, the runner removes
+boot-entry configuration only on that disposable disk, proves
 the no-entry boot, reconnects the ISO, tests mounted-target rejection and
 read-only inspection/cancel, then repairs through the visible TUI. The repaired
 disk boots offline and must retain its profile, configuration and user state.
