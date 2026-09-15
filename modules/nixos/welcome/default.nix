@@ -18,15 +18,11 @@
   };
   systemTools = pkgs.writeShellApplication {
     name = "sleepy-system";
-    runtimeInputs = [config.nix.package config.system.build.nixos-rebuild pkgs.coreutils];
-    text = ''
-      case "''${1:-help}" in
-        generations) exec nix-env --list-generations -p /nix/var/nix/profiles/system ;;
-        rebuild) exec sudo ${config.system.build.nixos-rebuild}/bin/nixos-rebuild switch --flake /etc/nixos#installed ;;
-        rollback) exec sudo ${config.system.build.nixos-rebuild}/bin/nixos-rebuild switch --rollback ;;
-        *) printf '%s\n' 'sleepy-system generations | rebuild | rollback' ;;
-      esac
-    '';
+    runtimeInputs = [config.nix.package config.system.build.nixos-rebuild pkgs.coreutils pkgs.dialog];
+    text = builtins.replaceStrings
+      ["@rebuild@" "@dialogrc@"]
+      ["${config.system.build.nixos-rebuild}/bin/nixos-rebuild" "${../../../packages/sleepy-installer/dialogrc}"]
+      (builtins.readFile ../../../packages/sleepy-system/sleepy-system.sh);
   };
 in {
   environment.systemPackages = [welcome systemTools pkgs.thunar];
