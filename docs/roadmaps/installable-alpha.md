@@ -28,8 +28,9 @@ Generic defaults stay overridable. No custom compositor or package manager.
   separate diagnostics cover Kalk, Firefox portal, polkit and virtual audio.
 - [x] Component fixes and source review, behavioral regressions, packaged tests,
   exact image/checksum/pins and revision-bound VM evidence. Production PR #10
-  merged; [PR #11](https://github.com/sleepylinux/sleepy/pull/11) tracks the guided
-  recovery/safety follow-up and its required CI/integration status.
+  and [PR #11](https://github.com/sleepylinux/sleepy/pull/11) merged; the latter's
+  exact `27c99c4` CI run 34955692745 passed all jobs, including strict sandbox
+  topology tests and production VM checks.
 
 [Acceptance and exact limits](../acceptance/usable-alpha.md),
 [installation](../runbooks/installable-alpha.md), [recovery](../recovery.md).
@@ -52,7 +53,12 @@ remove disposable disks, credentials and the task-owned builder after validation
    built before selection for the next boot. Keep the installation configuration
    unchanged and retain the evaluated source in each generation's closure so
    rollback and the next rebuild agree. Backend, TUI and VM gates are being
-   implemented; no candidate update is verified yet. Gates: rejected
+   implemented. Source253 passed a separate fresh installation and offline TUI
+   repair (40 gates/two password boots). The update run passed invalid hash,
+   invalid config, real builder interruption and candidate password boot, then
+   exposed a lost lock request after daemon reconnection. Fix that stale-generation
+   path with bounded idempotent-lock handling before completing candidate
+   rebuild/GC-root/rollback acceptance; keep the failed run failed. Gates: rejected
    or changed candidate, concurrent config edits, offline/build failure,
    interruption, failed boot and previous-generation password desktop recovery.
    A content hash proves identity, not maintainer approval. Automatic channels
