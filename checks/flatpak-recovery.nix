@@ -1,5 +1,5 @@
 {pkgs}: let
-  lib = pkgs.lib;
+  inherit (pkgs) lib;
   probe = pkgs.writeShellScript "flatpak-registration-probe" ''
     echo attempt >> /var/lib/registration-attempts
     case "$(cat /var/lib/registration-mode)" in
@@ -19,12 +19,14 @@ in
       xdg.portal.extraPortals = [pkgs.xdg-desktop-portal-gtk];
       # Exercise the production unit and real systemd scheduling; replace only
       # the remote server operation, avoiding public-network dependence in CI.
-      systemd.services.sleepy-flathub.serviceConfig.ExecStart = lib.mkForce probe;
-      systemd.tmpfiles.rules = ["f /var/lib/registration-mode 0600 root root - offline"];
-      systemd.timers.sleepy-flathub.timerConfig = {
-        OnBootSec = lib.mkForce "2s";
-        OnUnitInactiveSec = lib.mkForce "2s";
-        AccuracySec = lib.mkForce "100ms";
+      systemd = {
+        services.sleepy-flathub.serviceConfig.ExecStart = lib.mkForce probe;
+        tmpfiles.rules = ["f /var/lib/registration-mode 0600 root root - offline"];
+        timers.sleepy-flathub.timerConfig = {
+          OnBootSec = lib.mkForce "2s";
+          OnUnitInactiveSec = lib.mkForce "2s";
+          AccuracySec = lib.mkForce "100ms";
+        };
       };
       virtualisation.memorySize = 768;
     };

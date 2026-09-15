@@ -13,14 +13,16 @@
     (extendStandaloneHome {
       modules = [
         {
-          programs.fastfetch.settings = {
-            logo.source = "/fixture/custom-logo.txt";
-            display.color.keys = "blue";
-            modules = ["os"];
+          programs = {
+            fastfetch.settings = {
+              logo.source = "/fixture/custom-logo.txt";
+              display.color.keys = "blue";
+              modules = ["os"];
+            };
+            ghostty.settings.background = "202020";
+            fuzzel.settings.main.width = 42;
+            swappy.settings.Default.save_dir = "/fixture/Captures";
           };
-          programs.ghostty.settings.background = "202020";
-          programs.fuzzel.settings.main.width = 42;
-          programs.swappy.settings.Default.save_dir = "/fixture/Captures";
           xdg.mimeApps.defaultApplications."image/png" = ["fixture-viewer.desktop"];
           gtk.theme.name = "Fixture GTK theme";
           gtk.iconTheme.name = "Fixture icons";
