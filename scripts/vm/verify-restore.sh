@@ -226,7 +226,9 @@ trap 'exit 143' TERM
 
 protected_guard &
 protected_guard_pid=$!
-virsh_system event "$domain" --event lifecycle --loop --timestamp >"$protected_event_log" 2>&1 &
+# Own the actual event monitor PID, not a background function's shell wrapper.
+# Cleanup must signal and wait for virsh itself, including on failed drills.
+(exec virsh --connect qemu:///system event "$domain" --event lifecycle --loop --timestamp) >"$protected_event_log" 2>&1 &
 protected_event_pid=$!
 sleep 1
 check_protected_guard

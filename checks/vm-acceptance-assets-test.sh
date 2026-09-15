@@ -133,7 +133,28 @@ for required in \
 done
 
 fixture=$(mktemp -d "${TMPDIR:-/tmp}/sleepy-vm-acceptance.XXXXXX")
-trap 'rm -rf -- "$fixture"' EXIT
+cleanup_fixture() {
+  # A failing regression must not itself leak its fake event monitor. Only
+  # terminate recorded PIDs still executing this test's private fake virsh.
+  if test -f "$fixture/state/event-pids"; then
+    while read -r pid; do
+      if test -r "/proc/$pid/cmdline" && tr '\0' ' ' <"/proc/$pid/cmdline" | grep -F "$fixture/bin/virsh" >/dev/null; then
+        kill "$pid" 2>/dev/null || true
+      fi
+    done <"$fixture/state/event-pids"
+  fi
+  rm -rf -- "$fixture"
+}
+trap cleanup_fixture EXIT
+assert_event_reaped() {
+  test -s "$fixture/state/event-pids"
+  while read -r pid; do
+    if kill -0 "$pid" 2>/dev/null; then
+      printf 'VM acceptance assets: event process %s survived restore cleanup\n' "$pid" >&2
+      return 1
+    fi
+  done <"$fixture/state/event-pids"
+}
 fake_bin="$fixture/bin"
 mkdir -m 0700 "$fake_bin" "$fixture/source"
 test -w "$fixture/source" || {
@@ -382,6 +403,7 @@ ROWS
     fi
     ;;
   event)
+    printf '%s\n' "$$" >>"$FAKE_VM_STATE_DIR/event-pids"
     test "${1:-}" = Sleepy
     trap 'exit 0' TERM INT
     reported=0
@@ -633,6 +655,7 @@ PATH="$fake_bin:$PATH" FAKE_QGA_DELAY_CALLS=2 FAKE_REQUIRE_STORAGE_ACL=1 \
   --bundle "$bundle" \
   --domain Sleepy \
   --verification-domain Sleepy-restore-verification
+assert_event_reaped
 test ! -e "$FAKE_VM_STATE_DIR/defined"
 grep -F $'define\t' "$FAKE_VM_LOG" >/dev/null
 grep -F $'start\tSleepy-restore-verification\t' "$FAKE_VM_LOG" >/dev/null
@@ -656,6 +679,7 @@ assert_rejected protected-start-during-drill env PATH="$fake_bin:$PATH" \
   FAKE_START_PROTECTED_DURING_DRILL=1 \
   "$BASH" "$repo_root/scripts/vm/verify-restore.sh" --bundle "$guard_bundle" --domain Sleepy \
   --verification-domain Sleepy-restore-verification
+assert_event_reaped
 test ! -e "$guard_bundle/restore-verification.json"
 test ! -e "$FAKE_VM_STATE_DIR/defined"
 rm -f -- "$FAKE_VM_STATE_DIR/protected-started" "$FAKE_VM_STATE_DIR/qga-request"
@@ -677,6 +701,7 @@ rm -f -- "$cleanup_bundle/restore-verification.json"
 assert_rejected cleanup-failure env PATH="$fake_bin:$PATH" FAKE_UNDEFINE_FAIL=1 \
   "$BASH" "$repo_root/scripts/vm/verify-restore.sh" --bundle "$cleanup_bundle" --domain Sleepy \
   --verification-domain Sleepy-restore-verification
+assert_event_reaped
 grep -F 'FAILED to remove the identity-checked temporary domain' \
   "$fixture/cleanup-failure.stderr" >/dev/null
 test -e "$FAKE_VM_STATE_DIR/defined"
