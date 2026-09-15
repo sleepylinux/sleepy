@@ -68,7 +68,7 @@ class UpdateTests(unittest.TestCase):
             )
         )
         self.calls = []
-        self.fail = None
+        self.command_failure = None
         self.mutate = None
 
     def system(self, char):
@@ -87,7 +87,7 @@ class UpdateTests(unittest.TestCase):
 
     def fake_run(self, argv, **kwargs):
         self.calls.append(argv)
-        if self.fail and self.fail(argv):
+        if self.command_failure and self.command_failure(argv):
             raise u.UpdateError("injected failure")
         if "metadata" in argv:
             return json.dumps(
@@ -163,7 +163,7 @@ class UpdateTests(unittest.TestCase):
             with self.subTest(failure=failure):
                 self.calls.clear()
                 self.candidate["nar_hash"] = original_hash
-                self.fail = lambda a: "build" in a if failure == "build" else False
+                self.command_failure = lambda a: "build" in a if failure == "build" else False
                 if failure == "hash":
                     self.candidate["nar_hash"] = (
                         "sha256-" + base64.b64encode(b"y" * 32).decode()
@@ -186,7 +186,7 @@ class UpdateTests(unittest.TestCase):
         self.assertFalse(any("--set" in c for c in self.calls))
 
     def test_boot_failure_restores_retained_generation_and_old_boot(self):
-        self.fail = lambda a: a == [
+        self.command_failure = lambda a: a == [
             str(self.new / "bin/switch-to-configuration"),
             "boot",
         ]
@@ -198,12 +198,26 @@ class UpdateTests(unittest.TestCase):
         )
         self.assertEqual(u.status()["phase"], "recovered")
 
+    def test_closed_progress_pipe_after_durable_ready_does_not_undo_selection(self):
+        def closed_at_ready(stage, *_args):
+            if stage == "ready":
+                raise BrokenPipeError("The terminal closed after commit")
+
+        with patch.object(u, "run", side_effect=self.fake_run), patch.object(
+            u, "emit", side_effect=closed_at_ready
+        ):
+            with self.assertRaises(BrokenPipeError):
+                u.prepare("alpha-2")
+        self.assertEqual(u.status()["phase"], "ready")
+        self.assertEqual(self.PROFILE.resolve(), self.new)
+        self.assertFalse(any("--switch-generation" in argv for argv in self.calls))
+
     def test_recovery_failure_remains_pending_and_is_honest(self):
-        self.fail = lambda a: a[-1:] == ["boot"]
+        self.command_failure = lambda a: a[-1:] == ["boot"]
         with self.assertRaisesRegex(u.UpdateError, "recovery"):
             self.prepare()
         self.assertEqual(u.status()["phase"], "recovery-failed")
-        self.fail = None
+        self.command_failure = None
         with patch.object(u, "run", side_effect=self.fake_run), patch.object(u, "emit"):
             u.recover()
         self.assertEqual(u.status()["phase"], "recovered")
@@ -272,10 +286,10 @@ class UpdateTests(unittest.TestCase):
             with self.subTest(failure=failure):
                 if failure == "preselection":
                     self.mutate = lambda: (self.CONFIG / "flake.nix").write_text("changed")
-                    self.fail = None
+                    self.command_failure = None
                 else:
                     self.mutate = None
-                    self.fail = lambda a: a == [str(self.new / "bin/switch-to-configuration"), "boot"]
+                    self.command_failure = lambda a: a == [str(self.new / "bin/switch-to-configuration"), "boot"]
                 with self.assertRaises(u.UpdateError): self.prepare()
                 journal = u.status()
                 self.assertEqual(journal["phase"], "failed" if failure == "preselection" else "recovered")
@@ -283,7 +297,7 @@ class UpdateTests(unittest.TestCase):
                 self.assertEqual(self.PROFILE.resolve(), self.old)
 
     def test_failed_recovery_retains_attempt_root(self):
-        self.fail = lambda a: a[-1:] == ["boot"]
+        self.command_failure = lambda a: a[-1:] == ["boot"]
         with self.assertRaises(u.UpdateError): self.prepare()
         journal = u.status()
         self.assertEqual(journal["phase"], "recovery-failed")
@@ -425,7 +439,7 @@ class UpdateTests(unittest.TestCase):
             u.candidates()
 
     def test_orphaned_previous_build_cannot_replace_new_attempt_result(self):
-        self.fail = lambda command: "build" in command
+        self.command_failure = lambda command: "build" in command
         with self.assertRaises(u.UpdateError):
             self.prepare()
         previous = u.status()
@@ -433,7 +447,7 @@ class UpdateTests(unittest.TestCase):
         u.write_journal(previous)
         old_command = next(command for command in self.calls if "build" in command)
         old_root = Path(old_command[old_command.index("--out-link") + 1])
-        self.fail = None
+        self.command_failure = None
         original = self.fake_run
 
         def overlapping(command, **kwargs):

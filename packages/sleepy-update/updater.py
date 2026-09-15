@@ -582,6 +582,7 @@ def prepare(candidate_id):
         write_journal(journal)
         emit("fetch", "Fetching approved immutable source", 10)
         selected = False
+        committed = False
         try:
             metadata = json.loads(
                 run(
@@ -669,6 +670,9 @@ def prepare(candidate_id):
                 raise UpdateError("Selected system profile changed")
             journal["phase"] = "ready"
             write_journal(journal)
+            # Reporting after the durable commit must not undo a completed
+            # selection if the terminal closes or another signal arrives.
+            committed = True
             release_completed_root(journal)
             emit(
                 "ready",
@@ -676,7 +680,7 @@ def prepare(candidate_id):
                 100,
             )
         except BaseException as error:
-            if selected:
+            if selected and not committed:
                 try:
                     rollback(journal)
                 except BaseException as recovery_error:
@@ -686,7 +690,7 @@ def prepare(candidate_id):
                         "Update failed and automatic recovery failed: "
                         + str(recovery_error)
                     ) from error
-            else:
+            elif not committed:
                 journal["phase"] = "failed"
                 write_journal(journal)
                 release_completed_root(journal)
