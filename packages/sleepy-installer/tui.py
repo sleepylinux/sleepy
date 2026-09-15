@@ -4,11 +4,10 @@ import json
 import locale
 import os
 from pathlib import Path
-import re
 import subprocess
 import sys
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
-from backend import RESERVED_USERS
+from backend import hostname_valid, username_valid
 
 OPTIONS = {
     'nvidia': 'NVIDIA (Turing/newer, open kernel driver)',
@@ -149,12 +148,12 @@ def timezone_valid(value):
 def collect_request(dialog, disk):
     request = {'disk': disk['path'], 'identity': disk['identity']}
     steps = [
-        ('username', '2 / 5   Your account', 'Username\n\nLowercase letters, numbers, hyphens and underscores; start with a letter.', 'sleepy',
-         lambda v: re.fullmatch('[a-z][a-z0-9_-]{0,30}', v) is not None and v not in RESERVED_USERS, False),
+        ('username', '2 / 5   Your account', 'Username\n\nLowercase letters, numbers, hyphens and underscores; start with a letter.\nSystem account names and nixbld / systemd- prefixes are reserved.', 'sleepy',
+         username_valid, False),
         ('password', '2 / 5   Your account', 'Choose your login password.\n\nAt least 8 characters. Your input stays hidden.\nThe installer uses the US keyboard for your password.', '', lambda v: len(v) >= 8, True),
         ('password_confirm', '2 / 5   Your account', 'Type your password again.\n\nYour input stays hidden.', '', lambda v: v == request.get('password'), True),
         ('hostname', '2 / 5   Your account', 'Computer name\n\nA short name for this machine on your network.', 'sleepy',
-         lambda v: re.fullmatch('[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?', v) is not None, False),
+         hostname_valid, False),
     ]
     locale_choices = ['en_US.UTF-8', 'English (United States)', 'ru_RU.UTF-8', 'Русский',
                       'de_DE.UTF-8', 'Deutsch', 'cs_CZ.UTF-8', 'Čeština']

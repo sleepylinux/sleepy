@@ -34,6 +34,35 @@ class WizardTests(unittest.TestCase):
         self.assertIsNone(tui.collect_request(dialog, DISK))
         self.assertTrue(dialog.messages)
 
+    def assert_field_retry(self, answers, retry_index, prompt, field, expected):
+        dialog = ScriptedDialog(answers)
+        original_ask = dialog.ask
+        def ask(*args, **kwargs):
+            if len(dialog.calls) == retry_index:
+                self.assertTrue(args[2].startswith(prompt),
+                                'invalid value advanced to another field')
+            return original_ask(*args, **kwargs)
+        with patch.object(dialog, 'ask', side_effect=ask):
+            result = tui.collect_request(dialog, DISK)
+        self.assertEqual(result[field], expected)
+        self.assertEqual(len(dialog.messages), 1)
+
+    def test_reserved_prefixes_retry_username_before_password_step(self):
+        for invalid in ('rtkit', 'nixbld123', 'systemd-example'):
+            with self.subTest(username=invalid):
+                self.assert_field_retry(
+                    [invalid, 'alice', 'ascii-password', 'ascii-password',
+                     'sleepy', 'en_US.UTF-8', 'us', 'UTC', ''],
+                    1, 'Username', 'username', 'alice')
+
+    def test_trailing_hyphen_retries_hostname_before_region_step(self):
+        for valid in ('a', 'sleepy-01'):
+            with self.subTest(hostname=valid):
+                self.assert_field_retry(
+                    ['alice', 'ascii-password', 'ascii-password',
+                     'sleepy-', valid, 'en_US.UTF-8', 'us', 'UTC', ''],
+                    4, 'Computer name', 'hostname', valid)
+
     def test_keyboard_choice_explains_us_fallback_and_switching(self):
         for keyboard in ('us', 'ru', 'de', 'cz'):
             with self.subTest(keyboard=keyboard):
