@@ -7,7 +7,7 @@ from pathlib import Path
 import subprocess
 import sys
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
-from backend import hostname_valid, username_valid
+from backend import encryption_passphrase_valid, hostname_valid, username_valid
 
 OPTIONS = {
     'nvidia': 'NVIDIA (Turing/newer, open kernel driver)',
@@ -78,17 +78,26 @@ def disk_description(disk):
     return f"{clean(disk['model'])}  ·  {gib:.1f} GiB  ·  serial {clean(disk.get('serial') or 'unavailable')}"
 
 
+def clear_secrets(request, encryption_only=False):
+    fields = ('encryption_passphrase', 'encryption_passphrase_confirm')
+    if not encryption_only:
+        fields += ('password', 'password_confirm')
+    for field in fields:
+        request.pop(field, None)
+
+
 def install(dialog, request):
     """Send secrets through stdin only; display structured backend events."""
-    process = subprocess.Popen(backend_command('--install'), stdin=subprocess.PIPE,
-                               stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+    process = None
     gauge = None
     message = 'Installation did not finish. Open Recovery for diagnostics.'
     completed = False
     try:
+        process = subprocess.Popen(backend_command('--install'), stdin=subprocess.PIPE,
+                                   stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
         process.stdin.write(json.dumps(request, ensure_ascii=True) + '\n')
         process.stdin.close()
-        request.pop('password', None)
+        clear_secrets(request)
         gauge = subprocess.Popen(dialog.command('Installing Sleepy') + [
             '--gauge', 'Preparing your new home…\n\nKeep the computer powered on.', '12', '76', '0'],
             stdin=subprocess.PIPE, env=dialog.env, text=True)
@@ -110,17 +119,18 @@ def install(dialog, request):
                     pass
         success = process.wait() == 0 and completed
     finally:
-        request.pop('password', None)
+        clear_secrets(request)
         if gauge is not None:
             try:
                 gauge.stdin.close()
             except BrokenPipeError:
                 pass
             gauge.wait()
-        if process.poll() is None:
-            process.terminate()
-            process.wait()
-        process.stdout.close()
+        if process is not None:
+            if process.poll() is None:
+                process.terminate()
+                process.wait()
+            process.stdout.close()
     if not success:
         dialog.message('Installation stopped', message + '\n\nThe disk may be partially installed. Erased data cannot be restored by this installer. Return to the menu for network settings or recovery, then retry.')
     return success
@@ -159,7 +169,7 @@ def collect_request(dialog, disk):
                       'de_DE.UTF-8', 'Deutsch', 'cs_CZ.UTF-8', 'Čeština']
     keyboard_choices = ['us', 'English (US)', 'ru', 'US + Russian', 'de', 'US + German', 'cz', 'US + Czech']
     index = 0
-    while index < 8:
+    while index < 11:
         if index < len(steps):
             key, title, prompt, default, validator, secret = steps[index]
             answer = input_step(dialog, title, prompt, request.get(key, default), validator, secret)
@@ -176,7 +186,7 @@ def collect_request(dialog, disk):
             answer = input_step(dialog, '3 / 5   Make it feel familiar',
                                 'Timezone\n\nUse a timezone name, for example Europe/Prague or America/New_York.',
                                 request.get(key, 'UTC'), timezone_valid)
-        else:
+        elif index == 7:
             key = 'options'
             current = request.get(key, {})
             items = [part for name, label in OPTIONS.items()
@@ -187,14 +197,44 @@ def collect_request(dialog, disk):
             if answer is not None:
                 selected = set(answer.splitlines())
                 answer = {name: name in selected for name in OPTIONS}
+        elif index == 8:
+            key = 'encryption'
+            answer = dialog.ask('4 / 5   Protect your files', 'menu',
+                'Optional disk encryption\n\n'
+                'Encryption protects your files when this computer is off.\n'
+                'You must enter a separate disk passphrase at every boot.\n'
+                'Startup and recovery always use the US keyboard.\n'
+                'Keep this passphrase safe: Sleepy cannot recover a forgotten one.\n\n' + FOOTER,
+                'off', 'No encryption — simplest startup',
+                'on', 'Encrypt this disk — passphrase at every boot',
+                default='on' if request.get('encryption', False) else 'off')
+            if answer is not None:
+                answer = answer == 'on'
+                if not answer:
+                    clear_secrets(request, encryption_only=True)
+        else:
+            key = 'encryption_passphrase' if index == 9 else 'encryption_passphrase_confirm'
+            prompt = ('Choose your disk passphrase.\n\n'
+                      '12–128 printable ASCII characters; spaces are allowed.\n'
+                      'Use the US keyboard, also used to unlock the disk at startup.\n'
+                      'Your input stays hidden.' if index == 9 else
+                      'Type your disk passphrase again.\n\nYour input stays hidden. US keyboard.')
+            validator = encryption_passphrase_valid if index == 9 else lambda value: value == request.get('encryption_passphrase')
+            answer = input_step(dialog, '4 / 5   Protect your files', prompt,
+                                validator=validator, secret=True,
+                                invalid_message=('Use 12–128 printable ASCII characters (spaces allowed).' if index == 9 else
+                                                 'The disk passphrases do not match.'))
         if answer is None:
+            if index >= 8:
+                clear_secrets(request, encryption_only=True)
             if index == 0:
                 request.clear()
                 return None
             index -= 1
             continue
         request[key] = answer
-        index += 1
+        index = 11 if key == 'encryption' and not answer else index + 1
+    request.pop('encryption_passphrase_confirm', None)
     request.pop('password_confirm', None)
     return request
 
@@ -216,6 +256,7 @@ def wizard(dialog):
             from recovery_tui import wizard as recovery_wizard
             recovery_wizard(dialog)
             continue
+        request = None
         try:
             disks = list_disks()
             eligible = {disk['path']: disk for disk in disks if disk['eligible']}
@@ -238,14 +279,16 @@ def wizard(dialog):
                        f"Region: {request['locale']} / {request['timezone']}\n"
                        + ("Keyboard: US\n" if request['keyboard'] == 'us' else
                           f"Keyboard: US + {request['keyboard']} (Alt+Shift)\n")
-                       + f"Optional software: {selected}\n\n"
-                       'All existing partitions and files on this disk will be destroyed.\n'
+                       + f"Optional software: {selected}\n"
+                       + ("Encryption: on — disk passphrase at every boot (US keyboard)\n\n" if request.get('encryption', False) else
+                          "Encryption: off\n\n")
+                       + 'All existing partitions and files on this disk will be destroyed.\n'
                        'There is no undo. Check the disk identity above.\n\n'
                        f'Type the full disk path {choice} to begin:')
             confirmation = input_step(dialog, '5 / 5   One last check', summary,
                                       validator=lambda v: v == choice, invalid_message='The disk path does not match. Nothing has been erased.')
             if confirmation is None:
-                request.pop('password', None)
+                clear_secrets(request)
                 continue
             request['confirm_erase'] = confirmation
             if not install(dialog, request):
@@ -260,6 +303,9 @@ def wizard(dialog):
             return
         except (OSError, RuntimeError, ValueError, KeyError) as error:
             dialog.message('Something needs attention', clean(error))
+        finally:
+            if request is not None:
+                clear_secrets(request)
 
 
 def main():

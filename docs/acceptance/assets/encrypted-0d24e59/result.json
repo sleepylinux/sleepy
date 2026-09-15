@@ -1,0 +1,26 @@
+{
+  "status": "failed",
+  "iso": "/home/lazy/orca/workspaces/sleepy/razvitie/work/artifacts/sleepy-encrypted-0d24e59.iso",
+  "iso_sha256": "f89517186fc41f1e24ecd0005094dd8e2a332148f4aa2d5da930ef9c2ee270ca",
+  "acceleration": "kvm",
+  "cache_transport": "http://10.0.2.2:8080",
+  "cache_public_key": "sleepy-local-75e6fa3:SwFBCGRii3DGc3jQoZXDxgNDzyAoW/aKOELIUSBGL2Y=",
+  "image_source_revision": "0d24e593a7072c4940115d417aff225ec069146e",
+  "completed": [
+    "invalid-target-rejected-without-disk-writes",
+    "offline-install-rejected-without-disk-writes",
+    "real-install-SIGTERM-cleanup-and-lock-release",
+    "tui-install-and-shutdown"
+  ],
+  "runner_source_revision": "8e96b09be38f58a3ef9bb75879c44f6f40899f23",
+  "runner_source_dirty": false,
+  "encrypt_install": true,
+  "capture_jobs": true,
+  "flatpak_recovery": false,
+  "daily_usability": true,
+  "keyboard": "ru",
+  "boot_recovery": true,
+  "candidate_revision": null,
+  "candidate_nar_hash": null,
+  "error": "Disk unlock prompt or explicit rejection missing; inspect installed-disk-wrong-passphrase.png"
+}

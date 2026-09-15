@@ -5,7 +5,8 @@ The installer is a network installation image for x86_64 UEFI machines. It uses
 GPT, a 512 MiB FAT32 EFI partition, and a compressed Btrfs root. The validated VM
 configuration uses a 40 GiB disk and 6 GiB RAM. Use that configuration for alpha
 testing; smaller systems are not validated.
-Encryption is not implemented.
+The verified snapshot below is unencrypted. This development branch adds optional
+LUKS2; its actual encrypted VM acceptance is still pending.
 
 Build the verified source with Nix and flakes enabled:
 
@@ -88,6 +89,29 @@ source in `/etc/nixos/sleepy-source`. `sleepy-system rebuild` reapplies that sav
 configuration; it does not promote an untested upstream channel automatically.
 `sleepy-system generations` lists recovery points and `sleepy-system rollback`
 activates the previous system generation. See [recovery](../recovery.md).
+
+## Optional encryption in the development branch
+
+After the software checklist, **Protect your files** offers encryption, off by
+default. Enabling it asks twice for a separate disk passphrase. Use 12–128
+printable ASCII characters; spaces are allowed. Installer, initrd and recovery
+use US keys. The passphrase unlocks the disk at every boot; the account password
+is still required for desktop login. The EFI partition remains unencrypted.
+
+The final erasure confirmation shows whether encryption is selected. Passwords
+are transported to the backend through stdin and are absent from command
+arguments, diagnostics and the generated configuration. Boot repair still
+requires the disk passphrase; it cannot reset or bypass it.
+
+To validate a newly built image from this branch, use a fresh output directory
+and add `--encrypt-install --boot-recovery` to the runner, omitting candidate and
+update-safety arguments. The runner creates a separate private test credential,
+checks wrong-passphrase rejection, and exercises offline repair without changing
+partition contents during inspection. Its unit tests and Nix configuration checks
+pass; **the real encrypted VM run has not passed yet**. Image `0d24e59` installed
+and reached its disk-only unlock prompt, but failed the visible wrong-passphrase
+feedback check. The console-logging fix is configuration-tested and still needs
+a fresh VM run. See [recovery](../recovery.md).
 
 ## Everyday desktop in the accepted snapshot
 

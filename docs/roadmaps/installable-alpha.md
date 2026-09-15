@@ -77,11 +77,19 @@ remove disposable disks, credentials and the task-owned builder after validation
    backend diagnostics and repeat the strict VM gates before accepting capture.
    Keep both failed reports in `docs/acceptance/assets/capture-f279883`. Keep legacy doctor honest and
    do not alias its status to the Print picker.
-3. **Encryption and public distribution.** The separate encrypted
-   install/unlock/recovery branch now has passing packaged installer tests and
-   a built 822 MiB image `0d24e59`; actual encrypted VM installation, wrong-key
-   rejection, disk-only unlock and boot repair remain unverified. Prepare
-   reproducible public binary artifacts,
+3. **Encryption and public distribution.** The separate encrypted-install
+   branch implements optional LUKS2/Btrfs, hidden TUI passphrase entry and
+   generated initrd configuration with a US keyboard. Packaged installer tests
+   pass (92 passed, one root-only check passed separately); configuration
+   evaluates, and the 822 MiB image `0d24e59` builds. Guided encrypted recovery
+   supports read-only inspection and separately confirmed repair. Actual
+   installation reached the disk-only LUKS prompt, but the strict wrong-key
+   feedback gate failed: the prompt repeated without a visible error. Evidence:
+   `docs/acceptance/assets/encrypted-0d24e59`. An encrypted-only cryptsetup drop-in
+   now sends normal error output to the journal and console; targeted tests and
+   generated-unit evaluation pass. A fresh VM must verify this fix, actual unlock,
+   desktop login and encrypted boot repair. Work stopped at the user's request.
+   Prepare reproducible public binary artifacts,
    source revisions/checksums, short docs and honest known issues. Validate a
    current public-only installation. Release publication and public channel
    promotion still require separate authorization.

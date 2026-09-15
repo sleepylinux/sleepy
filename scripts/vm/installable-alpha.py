@@ -9,6 +9,7 @@ import argparse
 import boot_recovery
 import candidate_updates
 import capture_jobs
+import encrypted_install
 import base64
 import hashlib
 import json
@@ -355,6 +356,7 @@ def install(machine, password, timeout, cache_url=None, cache_public_key=None, i
                 machine.qmp.keys('spc')
                 machine.screen('installer-flatpak-selected')
             machine.qmp.text(value + '\n')
+        encrypted_install.select_protection(machine)
         machine.wait_screen('One last check', 'installer-confirmation')
         machine.qmp.text('/dev/vda\n')
         deadline = time.monotonic() + timeout
@@ -1038,7 +1040,7 @@ runuser -u sleepy -- mkdir -p /home/sleepy/.config/sleepy
 runuser -u sleepy -- sh -c 'printf sleepy-alpha-state > /home/sleepy/.config/sleepy/alpha-persistence'
 sync
 printf 'PERSISTENCE_MARKER_WRITTEN\n'
-''') + (flatpak_fixture(after_reboot) if getattr(machine, 'flatpak_recovery', False) else '') + lock_fixture(getattr(machine, 'keyboard', 'us')) + (daily_fixture(after_reboot) + daily_idle_fixture() if getattr(machine, 'daily_usability', False) else '') + (capture_jobs.fixture() if getattr(machine, 'capture_jobs', False) and not after_reboot else '') + update_fixture(update_phase) + boot_recovery.fixture(recovery_phase) + candidate_updates.fixture(candidate_phase, getattr(machine, 'candidate_revision', None), getattr(machine, 'candidate_nar_hash', None)) + (r'''
+''') + (flatpak_fixture(after_reboot) if getattr(machine, 'flatpak_recovery', False) else '') + lock_fixture(getattr(machine, 'keyboard', 'us')) + (daily_fixture(after_reboot) + daily_idle_fixture() if getattr(machine, 'daily_usability', False) else '') + (capture_jobs.fixture() if getattr(machine, 'capture_jobs', False) and not after_reboot else '') + update_fixture(update_phase) + (encrypted_install.fixture() if getattr(machine, 'encrypt_install', False) else '') + boot_recovery.fixture(recovery_phase, encrypted=getattr(machine, 'encrypt_install', False)) + candidate_updates.fixture(candidate_phase, getattr(machine, 'candidate_revision', None), getattr(machine, 'candidate_nar_hash', None)) + (r'''
 cp -p /var/lib/sleepy-alpha/hypr-user.before /home/sleepy/.config/hypr/sleepy-user.conf
 hypr reload
 printf 'USER_SETTING_FIXTURE_RESTORED_OK\n'
@@ -1152,7 +1154,10 @@ printf 'SLEEPY_REPORT_COMPLETE\n'
 
 
 def login_desktop(machine, password, name):
+    encrypted_install.unlock(machine, name)
     machine.wait_screen(('Welcome back', 'User:', 'Session:'), f'{name}-greeter', timeout=300)
+    if getattr(machine, 'encrypt_install', False):
+        machine.encryption_completed.append(name + '-real-disk-unlock')
     if getattr(machine, 'pause_at_greeter', False):
         continuation = machine.output / 'continue-greeter'
         machine.qmp.close()
@@ -1191,6 +1196,7 @@ def main():
     parser.add_argument('--interrupt-install', action='store_true', help='Before visible TUI installation, interrupt a real disposable-disk install after mounting and verify cleanup')
     parser.add_argument('--keyboard', choices=('us', 'ru', 'de', 'cz'), default='us', help='Select the installed keyboard through the real TUI and test lock-screen switching')
     parser.add_argument('--flatpak-recovery', action='store_true', help='Select Flatpak in TUI; prove offline first desktop and real Flathub timer recovery, then launch Software')
+    parser.add_argument('--encrypt-install', action='store_true', help='Select LUKS2 in the real TUI and prove rejected wrong passphrase plus disk unlock on every installed boot')
     parser.add_argument('--capture-jobs', action='store_true', help='Verify actual opt-in capture consent, Escape, region PNG and daemon-crash cleanup on the first installed boot')
     parser.add_argument('--daily-usability', action='store_true', help='Verify installed daily defaults, real Print save/clipboard and PNG persistence; adds virtual audio')
     parser.add_argument('--boot-recovery', action='store_true', help='Damage only disposable ESP entries, prove failed boot, repair through the real ISO TUI and verify unchanged system/user data')
@@ -1232,6 +1238,10 @@ def main():
                   ['git', 'rev-parse', 'HEAD'], capture_output=True, text=True).stdout.strip(),
               'runner_source_dirty': bool(subprocess.run(['git', 'status', '--porcelain'], capture_output=True, text=True).stdout)}
     machine = Machine(output, args.firmware.resolve(), args.memory, acceleration)
+    machine.encrypt_install = args.encrypt_install
+    machine.encryption_completed = []
+    machine.disk_passphrase = encrypted_install.credential(output) if args.encrypt_install else None
+    result['encrypt_install'] = args.encrypt_install
     machine.pause_at_greeter = args.pause_at_greeter
     machine.candidate_revision = args.candidate_revision
     machine.candidate_nar_hash = args.candidate_nar_hash
@@ -1374,6 +1384,7 @@ def main():
             'SECOND_GENERATION_REAL_BOOT_OK': 'second-generation-real-boot',
             'PREVIOUS_GENERATION_SELECTED_FOR_BOOT_OK': 'previous-generation-selected',
             'PREVIOUS_GENERATION_REAL_BOOT_OK': 'previous-generation-real-boot',
+            'ENCRYPTED_ROOT_ACTIVE_OK': 'actual-LUKS2-root-mapping',
             'PERSISTENCE_AFTER_REBOOT_OK': 'user-state-persistence',
             'REAL_HYPRLAND_SETTING_PERSISTED_OK': 'real-Hyprland-setting-persistence',
         }
@@ -1382,6 +1393,7 @@ def main():
             for marker, check in markers.items():
                 if marker in lines and check not in result['completed']:
                     result['completed'].append(check)
+        result['completed'] += [gate for gate in machine.encryption_completed if gate not in result['completed']]
         machine.stop()
         (output / 'result.json').write_text(json.dumps(result, indent=2) + '\n')
     print(f'Result and evidence: {output}', flush=True)

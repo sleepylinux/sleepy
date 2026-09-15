@@ -1,0 +1,119 @@
+[ 0k 1 Started Jourmal Service.
+Starting Create Static Device Nodes in /dev...
+[ Ok 1 Finished Create Static Device Nodes in /dev.
+[ 0K 1 Reached target Preparation for Local File Systens.
+[ 0K 1 Reached target Local File Systems.
+Starting Create System Files and Directories. ..
+Starting Rule-based Manager for Device Events and Files...
+[ Ok 1 Finished Coldplug A1l udev Devices.
+[ Ok 1 Finished Create Systen Files and Directories.
+
+[ 0K 1 Started Rule-based Manager for Device Events and Files.
+Starting Uirtual Console Setup
+
+[ 0K 1 Stopped Virtual Console Setup.
+Starting Virtual Console Setup
+
+[ 0K 1 Finished Load Kernel Modules.
+Starting Apply Kernel Variables.
+
+[ 0K 1 Finished Virtual Console Setup.
+
+[ 0K 1 Finished Apply Kernel Variables.
+
+[ 0K 1 Found device /dev/disk/by-uuid edBd3aBa-cc14-4a9c-b649-bzaSchoebas.
+Starting Cryptography Setup for luks-edBd3aBa-ccl4-4adc-b649-b2ascoeedbas. . .
+
+Please enter passphrase for disk Sleepy (luks-ed8d3aBa-cc14-4a9c-b649-bzaSchoedbas): «
+
+[~ 1(1of2) A start job is running for /dev/mapper/luks-edBd3aBa-cc14-4a9c-bb49-b2aSchcedbas (10s / no limit)
+
+Please enter passphrase for disk Sleepy (luks-edBd3aBa-ccl4-4a9c-b649-b2aScheedbaS): (press TAB for no echo) _
+
+
+[ 0K 1 Started Journal Service.
+Starting Create Static Device Nodes in sdev...
+[ 0K 1 Finished Create Static Device Nodes in sdev.
+[ 0K 1 Reached target Preparation for Local File Systems.
+[ 0K 1 Reached target Local File Systems.
+Starting Create System Files and Directories. ..
+Starting Rule-based Manager for Device Events and Files...
+[ 0K 1 Finished Coldplug All udev Devices.
+[ 0K 1 Finished Create System Files and Directories.
+[ OK 1 Started Rule-based Manager for Device Events and Files.
+Starting Virtual Console Setup...
+[ 0K 1 Stopped Virtual Console Setup.
+Starting Virtual Console Setup...
+[ OK 1 Finished Load Kernel Modules.
+Starting Apply Kernel Variables...
+[ 0K 1 Finished Virtual Console Setup.
+[ OK 1 Finished Apply Kernel Variables.
+[ 0K 1 Found device sdevsdisk/by-uuid/ed8d3a8a-cc14-4a9c-b643-bZ2aScbeceIbas.
+Starting Cryptography Setup for luks-ed8d3a8a-ccl4-4aSc-b649-b2a5cbceTbas. . .
+Please enter passphrase for disk Sleepy (luks-ed8d3aBa-ccl4-4a9c-bb649-b2aSchbceTbaS): sscscsssscsssssssssssssssssssssssss
+L 1 (1 of 2) A start job is rumming for /deus/mapper/luks-ed8d3aBa-ccl4-4a9c-b649-b2a5cbeeIbas (10s ~ no limit)
+Please enter passphrase for disk Sleepy (luks-edB8d3aBa-ccl4-4a9c-bb649-bZ2aScbceIbaS): (press TAB for no echo) _
+
+Started Journal Service.
+
+Starting Create Static Device Nodes in sdev...
+
+Finished Create Static Device Nodes in ~sdev.
+
+Reached target Preparation for Local File Systems.
+
+Reached target Local File Systenms.
+
+Starting Create System Files and Directories. ..
+
+Starting Rule-based Manager for Device Events and Files
+
+Finished Coldplug All udev Devices.
+
+Finished Create System Files and Directories.
+
+Started Rule-based Manager for Device Events and Files.
+
+Starting Virtual Console Setup...
+
+Stopped Virtual Console Setup.
+
+Starting Virtual Console Setup...
+
+Finished Load Kernel Modules.
+
+Starting Apply Kernel Variables...
+
+[
+
+K
+
+]
+
+Finished Virtual Console Setup.
+
+[
+
+K
+
+]
+
+Finished Apply Kernel Variables.
+
+[
+
+K
+
+]
+
+Found device rdevsdisk/by-uuid-sed8d3aB8a-ccl14-4aSc-b649-b2a5cbceTbas.
+
+Starting Cryptography Setup for luks-ed8d3a8a-ccl4-4aSc-b649-b2a5cbceTbas. . .
+
+Please enter passphrase for disk Sleepy (luks-ed8d3aBa-ccl4-4a9c-bb649-b2aSchbceTbaS): sscscsssscsssssssssssssssssssssssss
+
+[
+
+1 (1 of 2) A start job is rumming for /deus/mapper/luks-ed8d3aBa-ccl4-4a9c-b649-b2a5cbeeIbas (10s ~ no limit)
+
+Please enter passphrase for disk Sleepy (luks-edB8d3aBa-ccl4-4a9c-bb649-bZ2aScbceIbaS): (press TAB for no echo) _
