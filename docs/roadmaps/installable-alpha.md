@@ -17,7 +17,8 @@ and Flatpak remain explicit choices. Host preferences remain overridable.
 
 Installer proof: [acceptance](../acceptance/installable-alpha.md).
 Doctor proof and observed provider errors: [acceptance](../acceptance/doctor.md).
-Root doctor PR #9 is awaiting its serial CI run; session PR #10 is merged.
+Root doctor PR #9 and session PR #10 are merged. Root CI run 34910938757
+passed all checks, including fresh production and update-safety VM gates.
 
 ## Next deliverables, in dependency order
 
