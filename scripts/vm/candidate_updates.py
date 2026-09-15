@@ -126,6 +126,23 @@ def interrupt_build(state, marker):
             print(output_path.read_text()[-65536:], end='', flush=True)
 
 
+def verify_reentry(command, profile, live, config, boot):
+    """The real offline prepare must reach hash validation after a booted rollback."""
+    before = (str(profile.resolve()), str(profile.readlink()), str(live.resolve()),
+              tree_state(config), tree_state(boot))
+    assert json.loads(command('sleepy-update', 'status').stdout)['phase'] == 'ready'
+    rejected = command('sleepy-update', 'prepare', 'vm-wrong-hash', timeout=300, ok=False)
+    assert rejected.returncode == 1, 'post-rollback wrong hash must be rejected'
+    messages = [json.loads(line) for line in rejected.stdout.splitlines() if line.strip()]
+    assert any(message.get('stage') == 'error' and message.get('message') ==
+               'Candidate revision or NAR hash does not match catalog' for message in messages), 'prepare did not reach cached source hash validation'
+    assert json.loads(command('sleepy-update', 'status').stdout)['phase'] == 'failed'
+    after = (str(profile.resolve()), str(profile.readlink()), str(live.resolve()),
+             tree_state(config), tree_state(boot))
+    assert after == before, 'post-rollback rejection changed profile/live/config/boot'
+    print('CANDIDATE_POST_ROLLBACK_VALIDATION_PRESERVED_STATE_OK', flush=True)
+
+
 def guest(phase, revision, nar_hash):
     state = Path('/var/lib/sleepy-alpha/candidate-update')
     metadata = Path('/run/current-system/etc/sleepy/source.json')
@@ -264,6 +281,8 @@ def guest(phase, revision, nar_hash):
     elif phase == 'verify':
         assert str(live.resolve()) == before['live']
         assert source == before['source'], 'rollback source metadata differs from original'
+        assert str(profile.resolve()) == before['profile']
+        verify_reentry(command, profile, live, config, Path('/boot'))
         command('sleepy-system', 'rebuild', timeout=1500)
         config_unchanged(before)
         rebuilt = json.loads((profile / 'etc/sleepy/source.json').read_text())
@@ -281,6 +300,6 @@ def fixture(phase, revision, nar_hash):
     if phase not in ('prepare', 'rollback', 'verify'):
         raise ValueError('unknown candidate phase')
     program = 'import base64, contextlib, hashlib, json, os, shlex, stat, subprocess, time, uuid\nfrom pathlib import Path\n'
-    program += '\n'.join(inspect.getsource(function) for function in (tree_state, temporary_configuration, marker_processes, builder_command, interrupt_build, guest))
+    program += '\n'.join(inspect.getsource(function) for function in (tree_state, temporary_configuration, marker_processes, builder_command, interrupt_build, verify_reentry, guest))
     program += '\nguest(' + ', '.join(repr(x) for x in (phase, revision, nar_hash)) + ')\n'
     return '\n"$python" - <<\'SLEEPY_CANDIDATE_PY\'\n' + program + 'SLEEPY_CANDIDATE_PY\n'

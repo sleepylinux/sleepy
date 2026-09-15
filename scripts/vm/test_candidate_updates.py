@@ -187,6 +187,35 @@ class CandidateProtocol(unittest.TestCase):
                 (proc / str(pid) / 'cmdline').write_bytes(data)
             self.assertEqual(m.marker_processes('unique', proc), {101})
 
+    def test_reentry_requires_hash_validation_and_preserves_state(self):
+        m = self.module()
+        self.assertTrue(hasattr(m, 'verify_reentry'), 'post-rollback reentry probe missing')
+        expected = 'Candidate revision or NAR hash does not match catalog'
+        for diagnostic, mutation, phase in [(expected, False, 'failed'),
+                ('Candidate already selected; reboot or explicitly roll back first', False, 'ready'),
+                ('network unavailable', False, 'failed'), (expected, True, 'failed')]:
+            with self.subTest(diagnostic=diagnostic, mutation=mutation), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                config = root / 'config'; config.mkdir(); (config / 'configuration.nix').write_text('original')
+                boot = root / 'boot'; boot.mkdir(); (boot / 'entry.conf').write_text('original')
+                system = root / 'system'; system.mkdir()
+                profile = root / 'profile'; profile.symlink_to(system)
+                live = root / 'live'; live.symlink_to(system)
+                stages = iter(('ready', phase)); calls = []
+                def command(*args, **kwargs):
+                    calls.append(args)
+                    if args == ('sleepy-update', 'status'):
+                        return subprocess.CompletedProcess(args, 0, json.dumps({'phase': next(stages)}))
+                    self.assertEqual(args, ('sleepy-update', 'prepare', 'vm-wrong-hash'))
+                    if mutation: (boot / 'entry.conf').write_text('changed')
+                    return subprocess.CompletedProcess(args, 1, json.dumps({'stage': 'error', 'message': diagnostic}) + '\n')
+                with contextlib.redirect_stdout(io.StringIO()):
+                    if diagnostic == expected and not mutation:
+                        m.verify_reentry(command, profile, live, config, boot)
+                    else:
+                        with self.assertRaises(AssertionError): m.verify_reentry(command, profile, live, config, boot)
+                self.assertIn(('sleepy-update', 'prepare', 'vm-wrong-hash'), calls)
+
     def test_all_guest_phases_compile_and_shell_parse(self):
         m = self.module()
         for phase in ('prepare', 'rollback', 'verify'):
