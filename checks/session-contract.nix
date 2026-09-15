@@ -71,6 +71,10 @@ in
     (value: pkgs.lib.hasPrefix "PATH=" value && builtins.elem "${homeConfig.sleepy.shellPackage}/bin" (pkgs.lib.splitString ":" (pkgs.lib.removePrefix "PATH=" value)))
     session.Service.Environment)
   "enabled capture must resolve the version-matched shell helper";
+  assert pkgs.lib.assertMsg
+  (!homeConfig.sleepy.capture.enable
+    || builtins.elem "LD_LIBRARY_PATH=${pkgs.sleepy-qt-wayland-focus}/lib" session.Service.Environment)
+  "capture consent must inherit the Qt keyboard focus fix used by shell and locker";
   assert pkgs.lib.assertMsg (session.Service.Type == "notify")
   "sleepy-sessiond readiness must use sd_notify";
   assert pkgs.lib.assertMsg

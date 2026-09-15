@@ -64,10 +64,14 @@ remove disposable disks, credentials and the task-owned builder after validation
    Quickshell screencopy and Swappy. The separate SDK capture action expects an
    unimplemented legacy helper. A separate opt-in capture v1 endpoint now has
    typed asynchronous jobs, cancellation and bounded temporary PNG publication;
-   session and SDK changes are in draft review. The existing picker supplies
+   session and SDK changes passed full CI and merged. The existing picker supplies
    visible region consent through an anonymous image descriptor. Native writer,
-   QML lifecycle and real daemon shutdown checks pass; actual installed-VM
-   capture and final packaging remain pending. Keep legacy doctor honest and
+   QML lifecycle, real daemon shutdown and production packaging checks pass.
+   Image `f279883` installed and booted without ISO, but capture acceptance
+   failed: one run returned an unexplained doctor error; a second reproduced
+   Escape failure after a VT roundtrip. The capture service now inherits the
+   existing Qt focus fix, pending rebuilt-image verification. Keep both failed
+   reports in `docs/acceptance/assets/capture-f279883`. Keep legacy doctor honest and
    do not alias its status to the Print picker.
 3. **Encryption and public distribution.** Add a separate encrypted
    install/unlock/recovery branch. Prepare reproducible public binary artifacts,
