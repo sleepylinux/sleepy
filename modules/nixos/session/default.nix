@@ -21,6 +21,7 @@ in {
   imports = [./pam.nix];
 
   programs.hyprland = {
+    package = lib.mkDefault (import ../../../packages/vendor/hyprland-session-redraw {inherit pkgs;});
     enable = true;
     xwayland.enable = true;
     withUWSM = true;

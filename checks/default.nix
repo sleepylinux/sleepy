@@ -202,6 +202,7 @@ in
     home = homeConfiguration.activationPackage;
     nix-private-git = import ./nix-private-git.nix {inherit pkgs;};
     qt-wayland-keyboard-focus = import ../packages/vendor/qt-wayland-focus/check.nix {inherit pkgs;};
+    hyprland-session-activation = import ../packages/vendor/hyprland-session-redraw/check.nix {inherit pkgs;};
     greetd-sessions = import ./greetd-sessions.nix {
       inherit pkgs;
       inherit (nixosConfiguration) config;
