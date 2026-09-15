@@ -767,6 +767,9 @@ printf 'SLEEPY_REPORT_COMPLETE\n'
                 machine.qmp.keys('ctrl', 'alt', 'f1')
                 lock_desktop_shown = True
             if b'LOCK_READY_FOR_REAL_PASSWORD' in report and not lock_input_sent:
+                # tty1/keymap are now confirmed ready, but the VT switch may
+                # leave DPMS off. Ordinary Shift wakes without entering text.
+                machine.qmp.keys('shift')
                 machine.wait_screen('Password', f'{stage}-locked')
                 if getattr(machine, 'keyboard', 'us') != 'us':
                     machine.qmp.keys('alt', 'shift')
@@ -782,6 +785,7 @@ printf 'SLEEPY_REPORT_COMPLETE\n'
             if b'FLATPAK_SOFTWARE_WINDOW_OK' in report and 'software-shown' not in daily_sent:
                 daily_sent.add('software-shown')
                 machine.qmp.keys('ctrl', 'alt', 'f1')
+                machine.qmp.keys('shift')
                 time.sleep(2)
                 machine.screen(f'{stage}-software')
             if getattr(machine, 'daily_usability', False):
