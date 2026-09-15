@@ -255,6 +255,13 @@ def render_configuration(data, luks_uuid=None):
             raise InstallError('Invalid internally generated LUKS UUID')
         features.extend([
             '  console.earlySetup = true;',
+            # Native systemd logging otherwise bypasses stderr and keeps failed
+            # passphrase feedback in the journal, leaving only a repeated prompt.
+            '  boot.initrd.systemd.services."systemd-cryptsetup@" = {',
+            '    overrideStrategy = "asDropin";',
+            '    environment.SYSTEMD_LOG_TARGET = "console";',
+            '    serviceConfig.StandardError = "journal+console";',
+            '  };',
             f'  boot.initrd.luks.devices."luks-{luks_uuid}".device = "/dev/disk/by-uuid/{luks_uuid}";',
         ])
     for name in sorted(OPTIONS):

@@ -209,6 +209,17 @@ class ValidationTests(unittest.TestCase):
         for invalid in [dict(data, encryption=False), dict(data, encryption='yes'), dict(data, mapper='/dev/mapper/user')]:
             with self.assertRaises(backend.InstallError): backend.validate_request(invalid)
 
+    def test_encrypted_boot_reports_unlock_errors_on_console_without_debug_logging(self):
+        data = dict(request(), encryption=True, encryption_passphrase='Correct Horse 123')
+        config = backend.render_configuration(data, luks_uuid='12345678-1234-4234-8234-123456789abc')
+        self.assertIn('boot.initrd.systemd.services."systemd-cryptsetup@"', config)
+        self.assertIn('overrideStrategy = "asDropin";', config)
+        self.assertIn('environment.SYSTEMD_LOG_TARGET = "console";', config)
+        self.assertIn('serviceConfig.StandardError = "journal+console";', config)
+        self.assertNotIn('SYSTEMD_LOG_LEVEL', config)
+        self.assertNotIn(data['encryption_passphrase'], config)
+        self.assertNotIn('systemd-cryptsetup@', backend.render_configuration(request()))
+
     def test_luks_configuration_uses_internal_uuid_and_us_initrd(self):
         data = dict(request(), encryption=True, encryption_passphrase='Correct Horse 123')
         uuid = '12345678-1234-4234-8234-123456789abc'

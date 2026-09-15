@@ -108,7 +108,10 @@ and add `--encrypt-install --boot-recovery` to the runner, omitting candidate an
 update-safety arguments. The runner creates a separate private test credential,
 checks wrong-passphrase rejection, and exercises offline repair without changing
 partition contents during inspection. Its unit tests and Nix configuration checks
-pass; **the real encrypted VM run has not passed yet**. See [recovery](../recovery.md).
+pass; **the real encrypted VM run has not passed yet**. Image `0d24e59` installed
+and reached its disk-only unlock prompt, but failed the visible wrong-passphrase
+feedback check. The console-logging fix is configuration-tested and still needs
+a fresh VM run. See [recovery](../recovery.md).
 
 ## Everyday desktop in the accepted snapshot
 
