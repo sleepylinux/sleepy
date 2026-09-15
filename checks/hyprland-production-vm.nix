@@ -137,7 +137,6 @@ in
 
       testScript = ''
         import json
-        import re
         import shlex
         import tomllib
         from datetime import timedelta
