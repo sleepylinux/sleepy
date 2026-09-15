@@ -562,6 +562,8 @@ grep -Fx "Booted system: $(readlink -e /run/booted-system)" /tmp/sleepy-alpha-sy
 grep -Fx "Selected system profile: $(readlink -e /nix/var/nix/profiles/system)" /tmp/sleepy-alpha-system-status.txt
 printf 'DAILY_SYSTEM_STATUS_OK\n'
 # Only doctor summaries enter evidence, never raw desktop payloads.
+# A structurally valid UPower DisplayDevice with no battery is Unsupported;
+# Bluetooth without a running adapter service is Unavailable.
 set +e
 uenv timeout 5 sleepyctl doctor --json > /tmp/sleepy-alpha-doctor.json
 doctor_status=$?
@@ -570,7 +572,7 @@ cat /tmp/sleepy-alpha-doctor.json
 test "$doctor_status" = 0
 jq -e '.ok == true
   and any(.checks[]; .capability == "audio" and .status == "available")
-  and any(.checks[]; .capability == "battery" and .status == "unavailable")
+  and any(.checks[]; .capability == "battery" and .status == "unsupported")
   and any(.checks[]; .capability == "bluetooth" and .status == "unavailable")' /tmp/sleepy-alpha-doctor.json
 printf 'DAILY_DOCTOR_HEALTHY_WITH_VIRTUAL_AUDIO_OK\n'
 '''
