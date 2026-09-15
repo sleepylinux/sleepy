@@ -28,6 +28,18 @@ Recovery cannot guarantee success after power loss or broken storage. Use the
 start. A successfully prepared candidate waits for reboot or explicit rollback;
 the incomplete-update recovery action does not silently undo it.
 
+The menu's update status describes the last transaction. `ready` means that a
+system was selected for the next boot; check the separately displayed running
+system to see whether you have booted it. It is not a certification that the new
+desktop or hardware works. Closing the terminal after selection or recovery
+has been durably recorded does not reverse the completed operation.
+
+Each attempt uses its own temporary Nix GC root. Completed attempts release
+that reference after recording their result; normal system generations retain
+the selected systems. Incomplete recovery keeps its reference. Historical status
+remains readable after old generations are deliberately removed and garbage
+collected, but recovery still requires its previous generation to be retained.
+
 ## Administrator catalog
 
 Declare `sleepy.updates.candidates.<id>` in the saved configuration with a display
