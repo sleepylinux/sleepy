@@ -35,6 +35,6 @@
     { "type": "cpu", "key": "CPU", "format": "{name}" },
     { "type": "gpu", "key": "GPU" },
     { "type": "memory", "key": "Memory" },
-    { "type": "disk", "key": "Disk", "folders": "/" }
+    { "type": "disk", "key": "Disk", "folders": "/", "format": "{size-used} / {size-total} ({filesystem})" }
   ]
 }
