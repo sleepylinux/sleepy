@@ -121,6 +121,9 @@ def guest(phase, revision, nar_hash):
     if phase == 'rollback':
         assert str(live.resolve()) == before['prepared']
         assert source['nar_hash'] == nar_hash
+        visible_status = command('sleepy-system', 'status').stdout
+        assert 'Sleepy version: ' + source['version'] in visible_status
+        assert 'Source NAR: ' + nar_hash[:19] in visible_status
         print('CANDIDATE_REAL_PASSWORD_BOOT_SOURCE_OK', flush=True)
         command('sleepy-system', 'rebuild', timeout=1500)
         config_unchanged(before)
