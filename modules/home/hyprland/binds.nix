@@ -13,6 +13,8 @@ in {
       "$mod, N, exec, ${ipc} sleepy toggleNexus"
       "$mod, Escape, exec, ${ipc} sleepy openPowerMenu"
       "$mod, L, exec, ${ipc} sleepy lock"
+      ", Print, exec, ${ipc} picker openFreeze"
+      "SHIFT, Print, exec, ${ipc} picker openFreezeClip"
 
       "$mod, Q, killactive"
       "$mod, F, fullscreen, 1"
