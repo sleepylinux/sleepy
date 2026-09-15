@@ -473,6 +473,34 @@ for attempt in $(seq 1 40); do
   sleep 1
 done
 test "$locked" = true
+# Reproduce keyboard removal/re-addition while the native lock owns focus.
+# Guest acknowledgements require the actual kernel VT, not a sent-key assumption.
+printf 'LOCK_SWITCH_TO_CONSOLE\n'
+console_active=false
+for attempt in $(seq 1 30); do
+  if test "$(cat /sys/class/tty/tty0/active)" = tty2; then console_active=true; break; fi
+  sleep 1
+done
+test "$console_active" = true
+printf 'LOCK_CONSOLE_VT_READY\n'
+desktop_active=false
+for attempt in $(seq 1 30); do
+  if test "$(cat /sys/class/tty/tty0/active)" = tty1; then desktop_active=true; break; fi
+  sleep 1
+done
+test "$desktop_active" = true
+printf 'LOCK_RETURNED_GRAPHICAL_VT_READY\n'
+# Re-added devices can reset the group. Require the requested layout again,
+# after ordinary host input wakes the graphical seat, before native password.
+layout_selected=false
+for attempt in $(seq 1 30); do
+  hypr switchxkblayout all __GROUP__
+  if hypr devices -j | jq -e '[.keyboards[] | select(.main) | .active_keymap] | length == 1 and (.[0] __LAYOUT_COMPARISON__ "English (US)")'; then layout_selected=true; break; fi
+  sleep 1
+done
+test "$layout_selected" = true
+test "$(locker_state)" = locked
+printf 'LOCK_VT_ROUNDTRIP_READY\n'
 printf 'LOCK_READY_FOR_REAL_PASSWORD\n'
 unlocked=false
 for attempt in $(seq 1 120); do
@@ -487,6 +515,21 @@ printf 'REAL_PASSWORD_LOCK_UNLOCK_OK\n'
     return script.replace('__LAYOUT__', layout).replace('__GROUP__', '0' if keyboard == 'us' else '1').replace(
         '__SWITCH_MARKER__', '' if keyboard == 'us' else "printf 'LOCK_SCREEN_LAYOUT_SWITCH_OK\\n'").replace(
         '__LAYOUT_COMPARISON__', '==' if keyboard == 'us' else '!=')
+
+
+def advance_locked_vt(qmp, report, sent):
+    """Advance only guest-acknowledged locked VT transitions, once per audit."""
+    transitions = (
+        (b'LOCK_SWITCH_TO_CONSOLE', ('ctrl', 'alt', 'f2')),
+        (b'LOCK_CONSOLE_VT_READY', ('ctrl', 'alt', 'f1')),
+        (b'LOCK_RETURNED_GRAPHICAL_VT_READY', ('shift',)),
+    )
+    for marker, keys in transitions:
+        if marker not in report:
+            break
+        if marker not in sent:
+            qmp.keys(*keys)
+            sent.add(marker)
 
 
 def flatpak_fixture(after_reboot):
@@ -806,6 +849,7 @@ printf 'SLEEPY_REPORT_COMPLETE\n'
                 # Guest confirmed US for this preparatory native unlock.
                 machine.qmp.text(password + '\n')
                 idle_lock_input_sent = True
+            advance_locked_vt(machine.qmp, report, daily_sent)
             if b'LOCK_READY_FOR_REAL_PASSWORD' in report and not lock_input_sent:
                 machine.wait_screen('Password', f'{stage}-locked')
                 if getattr(machine, 'keyboard', 'us') != 'us':
@@ -1033,6 +1077,7 @@ def main():
                 'SCREENSHOT_CLIPBOARD_PNG': 'daily-ShiftPrint-clipboard-PNG',
                 'SCREENSHOT_PERSISTED': 'daily-screenshot-persistence',
             }.items()},
+            'LOCK_VT_ROUNDTRIP_READY': 'locked-VT-roundtrip-keyboard-restored',
             'REAL_PASSWORD_LOCK_UNLOCK_OK': 'real-password-lock-unlock',
             'LOCK_SCREEN_LAYOUT_SWITCH_OK': 'lock-screen-layout-switch',
             'REAL_USER_LOGIN_OK': 'real-password-login',
