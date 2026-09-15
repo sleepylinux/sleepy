@@ -15,7 +15,7 @@ class CaptureProtocolTests(unittest.TestCase):
         machine=Machine();sent=set();advance=capture_jobs.advance
         advance(machine,b'CAPTURE_CANCEL_READY\n',sent,'installed')
         self.assertEqual(actions,[])
-        markers=[b'CAPTURE_RETURN_TO_DESKTOP',b'CAPTURE_CANCEL_READY',b'CAPTURE_SELECT_READY',b'CAPTURE_VIEWER_READY',b'CAPTURE_CRASH_RETURN_TO_DESKTOP',b'CAPTURE_CHECKS_COMPLETE']
+        markers=[b'CAPTURE_RETURN_TO_DESKTOP',b'CAPTURE_CANCEL_READY',b'CAPTURE_CANCEL_CONSOLE_READY',b'CAPTURE_CANCEL_RETURNED_READY',b'CAPTURE_SELECT_READY',b'CAPTURE_VIEWER_READY',b'CAPTURE_CRASH_RETURN_TO_DESKTOP',b'CAPTURE_CHECKS_COMPLETE']
         report=b''
         for marker in markers:
             before=len(actions);advance(machine,report+marker,sent,'installed');self.assertEqual(len(actions),before)
@@ -24,6 +24,10 @@ class CaptureProtocolTests(unittest.TestCase):
         self.assertEqual(actions[0],('keys',('ctrl','alt','f1')))
         self.assertEqual([a for a in actions if a==('keys',('esc',))],[('keys',('esc',))])
         self.assertEqual(actions[-1],('keys',('ctrl','alt','f2')))
+        self.assertEqual([a[1] for a in actions if a[0]=='keys'],[
+            ('ctrl','alt','f1'),('shift',),('ctrl','alt','f2'),
+            ('ctrl','alt','f1'),('shift',),('esc',),('ctrl','alt','f2'),
+            ('ctrl','alt','f1'),('shift',),('ctrl','alt','f2')])
         calls=[a for a in actions if a[0]=='call'];self.assertEqual(len(calls),2)
         self.assertTrue(calls[0][2]['events'][-1]['data']['down']);self.assertFalse(calls[1][2]['events'][-1]['data']['down'])
 

@@ -43,6 +43,8 @@ capture_visible() { hypr layers -j | jq -e '[.. | objects | select(.namespace? =
 capture_hidden() { hypr layers -j | jq -e '[.. | objects | select(.namespace? == "sleepy-capture-job")] | length == 0' > /dev/null; }
 capture_wait() { for attempt in $(seq 1 30); do if "$@"; then return 0; fi; sleep 1; done; return 1; }
 capture_desktop() { test "$(cat /sys/class/tty/tty0/active)" = tty1; }
+capture_console() { test "$(cat /sys/class/tty/tty0/active)" = tty2; }
+capture_keyboard() { hypr devices -j | jq -e 'any(.keyboards[]; .main==true)' > /dev/null; }
 test -S /run/user/$uid/sleepy/capture.sock
 test "$(stat -c %a /run/user/$uid/sleepy/capture.sock)" = 600
 capture_request '{"schemaVersion":1,"command":{"type":"capabilities"}}' | jq -e '.payload.type=="capabilities" and .payload.screenshot==true and .payload.colorPicker==false'
@@ -87,6 +89,12 @@ CAPTURE_RESPONSIVENESS
 test "$(locker_state)" = unlocked
 printf 'CAPTURE_CONSENT_WAIT_RESPONSIVE_OK\n'
 printf 'CAPTURE_CANCEL_READY\n'
+capture_wait capture_console
+printf 'CAPTURE_CANCEL_CONSOLE_READY\n'
+capture_wait capture_desktop
+capture_wait capture_keyboard
+capture_wait capture_visible
+printf 'CAPTURE_CANCEL_RETURNED_READY\n'
 capture_wait_state "$capture_cancel" cancelled
 capture_wait capture_hidden
 test ! -e "$capture_dir/screenshot-$capture_cancel.png"
@@ -116,7 +124,6 @@ capture_viewer() { hypr clients -j | jq -e 'any(.[]; (.class | ascii_downcase | 
 capture_wait capture_viewer
 printf 'CAPTURE_VIEWER_READY\n'
 # Host acknowledges the screenshot by returning to the already-authenticated VT.
-capture_console() { test "$(cat /sys/class/tty/tty0/active)" = tty2; }
 capture_wait capture_console
 printf 'CAPTURE_CRASH_RETURN_TO_DESKTOP\n'
 capture_wait capture_desktop
@@ -158,6 +165,7 @@ printf 'CAPTURE_CHECKS_COMPLETE\n'
 def advance(machine, report, sent, stage):
     """Ordered whole-line acknowledgements; safe when recv coalesces stages."""
     steps = [b'CAPTURE_RETURN_TO_DESKTOP', b'CAPTURE_CANCEL_READY',
+             b'CAPTURE_CANCEL_CONSOLE_READY', b'CAPTURE_CANCEL_RETURNED_READY',
              b'CAPTURE_SELECT_READY', b'CAPTURE_VIEWER_READY',
              b'CAPTURE_CRASH_RETURN_TO_DESKTOP', b'CAPTURE_CHECKS_COMPLETE']
     for index, marker in enumerate(steps):
@@ -167,9 +175,14 @@ def advance(machine, report, sent, stage):
             break
         if index == 0:
             machine.qmp.keys('ctrl', 'alt', 'f1'); machine.qmp.keys('shift')
-        elif index in (1, 2):
+        elif index == 1:
+            machine.wait_screen('Capture requested', f'{stage}-capture-consent-before-vt', timeout=30)
+            machine.qmp.keys('ctrl', 'alt', 'f2')
+        elif index == 2:
+            machine.qmp.keys('ctrl', 'alt', 'f1'); machine.qmp.keys('shift')
+        elif index in (3, 4):
             machine.wait_screen('Capture requested', f'{stage}-capture-consent-{index}', timeout=30)
-            if index == 1:
+            if index == 3:
                 machine.qmp.keys('esc')
             else:
                 for x, y, down in [(10000, 10000, True), (23000, 23000, False)]:
@@ -179,10 +192,10 @@ def advance(machine, report, sent, stage):
                         {'type': 'btn', 'data': {'button': 'left', 'down': down}},
                     ])
                     time.sleep(.3)
-        elif index == 3:
+        elif index == 5:
             machine.screen(f'{stage}-capture-result-viewer')
             machine.qmp.keys('ctrl', 'alt', 'f2')
-        elif index == 4:
+        elif index == 6:
             machine.qmp.keys('ctrl', 'alt', 'f1'); machine.qmp.keys('shift')
         else:
             machine.qmp.keys('ctrl', 'alt', 'f2')
