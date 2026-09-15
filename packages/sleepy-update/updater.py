@@ -48,11 +48,21 @@ def trusted(path, directory=False):
         raise UpdateError("Untrusted file ownership or permissions: " + str(path))
 
 
-def store_entry(value):
+def store_reference(value, system=False):
+    """Validate a historical reference without requiring its retained contents."""
     if not isinstance(value, str):
         raise UpdateError("Invalid store path")
     path = Path(value)
-    if path.parent != STORE or not STORE_NAME.fullmatch(path.name) or path.is_symlink():
+    if str(path) != value or path.parent != STORE or not STORE_NAME.fullmatch(path.name):
+        raise UpdateError("Invalid store path")
+    if system and "-nixos-system-" not in path.name:
+        raise UpdateError("Not a NixOS system output")
+    return path
+
+
+def store_entry(value, system=False):
+    path = store_reference(value, system)
+    if path.is_symlink():
         raise UpdateError("Invalid store path")
     info = path.lstat()
     if not stat.S_ISDIR(info.st_mode) and not stat.S_ISREG(info.st_mode):
@@ -62,11 +72,9 @@ def store_entry(value):
 
 
 def store_path(value, system=False):
-    path = store_entry(value)
+    path = store_entry(value, system)
     trusted(path, True)
     if system:
-        if "-nixos-system-" not in path.name:
-            raise UpdateError("Not a NixOS system output")
         program = path / "bin/switch-to-configuration"
         if not program.is_file() or not os.access(program, os.X_OK):
             raise UpdateError("Missing system boot program")
@@ -320,9 +328,20 @@ def validate_journal(journal):
         or not 1 <= old["generation"] <= 999999999
     ):
         raise UpdateError("Invalid previous generation in journal")
-    store_path(old["system"], True)
+    # Completed/preselection records are history: old generations may have been
+    # pruned normally. Pending selection/recovery still requires trusted live
+    # outputs, and rollback revalidates the retained generation before mutation.
+    pending = journal["phase"] in {
+        "selecting",
+        "selected",
+        "booting",
+        "recovering",
+        "recovery-failed",
+    }
+    validate_system = store_path if pending else store_reference
+    validate_system(old["system"], True)
     if "built" in journal:
-        store_path(journal["built"], True)
+        validate_system(journal["built"], True)
     elif journal["phase"] in {
         "selecting",
         "selected",

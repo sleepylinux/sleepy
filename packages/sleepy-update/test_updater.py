@@ -1,6 +1,7 @@
 import base64
 import json
 import os
+import shutil
 from pathlib import Path
 import tempfile
 import unittest
@@ -206,6 +207,54 @@ class UpdateTests(unittest.TestCase):
         with patch.object(u, "run", side_effect=self.fake_run), patch.object(u, "emit"):
             u.recover()
         self.assertEqual(u.status()["phase"], "recovered")
+
+    def test_completed_or_preselection_journal_survives_previous_generation_gc(self):
+        self.prepare()
+        historical = u.status()
+        self.RUNNING.unlink()
+        self.RUNNING.symlink_to(self.new)
+        (self.PROFILE.parent / "system-1-link").unlink()
+        shutil.rmtree(self.old)
+        for phase in ("ready", "recovered", "failed", "preparing"):
+            with self.subTest(phase=phase):
+                journal = dict(historical, phase=phase)
+                u.write_journal(journal)
+                self.assertEqual(u.status(), journal)
+                self.prepare()
+                self.assertEqual(u.status()["phase"], "ready")
+                self.assertEqual(self.PROFILE.resolve(), self.new)
+
+    def test_pending_recovery_still_refuses_a_pruned_old_system_before_commands(self):
+        self.prepare()
+        historical = u.status()
+        (self.PROFILE.parent / "system-1-link").unlink()
+        shutil.rmtree(self.old)
+        for phase in ("selecting", "selected", "booting", "recovering", "recovery-failed"):
+            with self.subTest(phase=phase):
+                u.write_journal(dict(historical, phase=phase))
+                self.calls.clear()
+                with patch.object(u, "run", side_effect=self.fake_run), patch.object(u, "emit"):
+                    with self.assertRaises((u.UpdateError, OSError)):
+                        u.recover()
+                self.assertEqual(self.calls, [])
+                self.assertEqual(self.PROFILE.resolve(), self.new)
+
+    def test_historical_system_references_remain_strict_without_store_objects(self):
+        self.prepare()
+        historical = u.status()
+        for phase in ("ready", "recovered", "failed", "preparing"):
+            for field in ("old", "built"):
+                for invalid in ("/tmp/untrusted", str(self.STORE / ".." / self.new.name),
+                                str(self.source), 17):
+                    with self.subTest(phase=phase, field=field, invalid=invalid):
+                        journal = dict(historical, phase=phase)
+                        if field == "old":
+                            journal["old"] = dict(historical["old"], system=invalid)
+                        else:
+                            journal["built"] = invalid
+                        u.write_journal(journal)
+                        with self.assertRaises(u.UpdateError):
+                            u.status()
 
     def test_ready_requires_reboot_or_explicit_rollback_before_next_prepare(self):
         self.prepare()
