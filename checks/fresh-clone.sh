@@ -18,4 +18,5 @@ nix build .#nixosConfigurations.sleepy-vm.config.system.build.toplevel \
   --no-link \
   --no-write-lock-file
 cmp --silent -- flake.lock "$clone_root/flake.lock"
+nix develop --command bash checks/installed-source.sh
 test -z "$(git status --porcelain=v1 --untracked-files=all)"
