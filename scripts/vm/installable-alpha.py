@@ -592,6 +592,45 @@ def advance_locked_vt(qmp, report, sent):
             sent.add(marker)
 
 
+def daily_menu_focus_fixture():
+    """Wait for the real graphical seat before accepting menu key input."""
+    return r'''
+system_menu_input_ready() {
+  test "$(cat /sys/class/tty/tty0/active)" = tty1 || return 1
+  if test "${system_menu_vt_announced:-false}" != true; then
+    system_menu_vt_announced=true
+    printf 'DAILY_SYSTEM_MENU_VT_READY\n'
+  fi
+  hypr devices -j | jq -e '[.keyboards[] | select(.main)] | length == 1' > /dev/null || return 1
+  hypr dispatch focuswindow "address:$system_menu_address" > /dev/null || return 1
+  hypr activewindow -j | jq -e --arg address "$system_menu_address" '.address == $address' > /dev/null
+}
+wait_daily system_menu_input_ready
+printf 'DAILY_SYSTEM_MENU_READY\n'
+'''
+
+
+def advance_daily_menu(machine, report, sent, stage):
+    """Wake the mapped menu's seat, then send Escape only after guest readback."""
+    if b'DAILY_SYSTEM_MENU_MAPPED\n' not in report:
+        return
+    if 'system-menu-wake' not in sent:
+        sent.add('system-menu-wake')
+        machine.qmp.keys('ctrl', 'alt', 'f1')
+    if b'DAILY_SYSTEM_MENU_VT_READY\n' not in report:
+        return
+    if 'system-menu-seat-wake' not in sent:
+        sent.add('system-menu-seat-wake')
+        machine.qmp.keys('shift')
+    if b'DAILY_SYSTEM_MENU_READY\n' in report and 'system-menu' not in sent:
+        sent.add('system-menu')
+        machine.wait_screen(
+            ('Sleepy system', 'Current and booted system', 'List recovery generations',
+             'Apply the configuration', 'Return to the previous'),
+            f'{stage}-system-menu', timeout=25)
+        machine.qmp.keys('esc')
+
+
 def flatpak_fixture(after_reboot):
     """Public Flathub registration through the installed timer, without mocks."""
     if after_reboot:
@@ -742,8 +781,8 @@ system_menu_visible() {
   test -n "$system_menu_address"
 }
 wait_daily system_menu_visible
-hypr dispatch focuswindow "address:$system_menu_address"
-printf 'DAILY_SYSTEM_MENU_READY\n'
+printf 'DAILY_SYSTEM_MENU_MAPPED\n'
+''' + daily_menu_focus_fixture() + r'''
 system_menu_closed() { hypr clients -j | jq -e --arg address "$system_menu_address" 'all(.[]; .address != $address)' > /dev/null; }
 wait_daily system_menu_closed
 uenv timeout 5 sleepy-system status > /tmp/sleepy-alpha-system-after-menu.txt
@@ -1024,14 +1063,7 @@ printf 'SLEEPY_REPORT_COMPLETE\n'
                 time.sleep(2)
                 machine.screen(f'{stage}-software')
             if getattr(machine, 'daily_usability', False):
-                if b'DAILY_SYSTEM_MENU_READY' in report and 'system-menu' not in daily_sent:
-                    daily_sent.add('system-menu')
-                    machine.qmp.keys('ctrl', 'alt', 'f1')
-                    machine.wait_screen(
-                        ('Sleepy system', 'Current and booted system', 'List recovery generations',
-                         'Apply the configuration', 'Return to the previous'),
-                        f'{stage}-system-menu', timeout=25)
-                    machine.qmp.keys('esc')
+                advance_daily_menu(machine, report, daily_sent, stage)
                 for marker, action in [
                     (b'DAILY_PRESS_PRINT', 'print'),
                     (b'DAILY_SELECT_AREA', 'select'),
