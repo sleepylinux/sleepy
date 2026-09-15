@@ -944,7 +944,6 @@ printf 'SLEEPY_REPORT_COMPLETE\n'
                 machine.qmp.text(password + '\n')
                 idle_lock_input_sent = True
             advance_locked_vt(machine.qmp, report, daily_sent)
-            advance_daily_idle(machine.qmp, report, daily_sent)
             if b'LOCK_READY_FOR_REAL_PASSWORD' in report and not lock_input_sent:
                 machine.wait_screen('Password', f'{stage}-locked')
                 if getattr(machine, 'keyboard', 'us') != 'us':
@@ -1001,6 +1000,9 @@ printf 'SLEEPY_REPORT_COMPLETE\n'
                 if b'DAILY_SCREENSHOT_CLIPBOARD_PNG_OK' in report and 'finished' not in daily_sent:
                     daily_sent.add('finished')
                     machine.screen(f'{stage}-daily-screenshot-viewer')
+            # Coalesced unlock/UI markers may return to VT2; idle acknowledgement
+            # must run last so the new sampling phase remains on the desktop.
+            advance_daily_idle(machine.qmp, report, daily_sent)
             if len(report) > 1024 * 1024: raise RuntimeError('Guest audit exceeded 1 MiB output bound')
     finally:
         channel.close()

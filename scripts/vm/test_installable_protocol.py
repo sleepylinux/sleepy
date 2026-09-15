@@ -152,6 +152,28 @@ class IdleSamplingProtocol(unittest.TestCase):
         self.assertEqual(calls[-1], ('ctrl', 'alt', 'f2'))
         self.assertEqual(len(calls), 3)
 
+    def test_actual_dispatch_keeps_coalesced_unlock_and_idle_markers_on_desktop(self):
+        # Execute the actual host dispatch statements, not a copy of their order.
+        loop = next(node for node in ast.walk(FUNCTIONS['guest_report'])
+                    if isinstance(node, ast.While) and 'SLEEPY_REPORT_COMPLETE' in ast.unparse(node.test))
+        first_if = next(i for i, node in enumerate(loop.body) if isinstance(node, ast.If)
+                        and 'LOCK_RETURN_TO_DESKTOP' in ast.unparse(node.test))
+        dispatch = ast.Module(body=loop.body[first_if:], type_ignores=[])
+        calls = []
+        class QMP:
+            def keys(self, *keys): calls.append(keys)
+        class Machine:
+            qmp = QMP()
+            daily_usability = True
+            def screen(self, name): pass
+        namespace = dict(NAMESPACE, machine=Machine(), report=(
+            b'REAL_PASSWORD_LOCK_UNLOCK_OK\nDAILY_IDLE_SAMPLE_READY\n'),
+            daily_sent=set(), lock_desktop_shown=False, lock_graphical_woken=False,
+            idle_lock_input_sent=False, lock_input_sent=False,
+            lock_returned_to_console=False, stage='fixture')
+        exec(compile(dispatch, str(SOURCE), 'exec'), namespace)
+        self.assertEqual(calls, [('ctrl', 'alt', 'f2'), ('ctrl', 'alt', 'f1'), ('shift',)])
+
     def test_idle_fixture_shell_and_embedded_python_parse(self):
         script = NAMESPACE['daily_idle_fixture']()
         subprocess.run(['bash', '-n'], input=script, text=True, check=True)
