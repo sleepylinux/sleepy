@@ -198,6 +198,37 @@ class UpdateTests(unittest.TestCase):
         )
         self.assertEqual(u.status()["phase"], "recovered")
 
+    def test_closed_progress_pipe_after_automatic_recovery_preserves_commit(self):
+        self.command_failure = lambda a: a == [str(self.new / "bin/switch-to-configuration"), "boot"]
+        def closed_at_recovered(stage, *_args):
+            if stage == "recovered": raise BrokenPipeError("Terminal closed after recovery")
+        with patch.object(u, "run", side_effect=self.fake_run), patch.object(u, "emit", side_effect=closed_at_recovered):
+            with self.assertRaises(BrokenPipeError):
+                u.prepare("alpha-2")
+        self.assertEqual(u.status()["phase"], "recovered")
+        self.assertEqual(self.PROFILE.resolve(), self.old)
+        self.assertFalse(Path(u.status()["gc_root"]).is_symlink())
+        self.command_failure = None
+        self.prepare()
+        self.assertEqual(u.status()["phase"], "ready")
+
+    def test_closed_progress_pipe_after_explicit_recovery_preserves_commit(self):
+        self.prepare()
+        journal = u.status()
+        journal["phase"] = "booting"
+        Path(journal["gc_root"]).symlink_to(self.new)
+        u.write_journal(journal)
+        def closed_at_recovered(stage, *_args):
+            if stage == "recovered": raise BrokenPipeError("Terminal closed after recovery")
+        with patch.object(u, "run", side_effect=self.fake_run), patch.object(u, "emit", side_effect=closed_at_recovered):
+            with self.assertRaises(BrokenPipeError):
+                u.recover()
+        self.assertEqual(u.status()["phase"], "recovered")
+        self.assertEqual(self.PROFILE.resolve(), self.old)
+        self.assertFalse(Path(journal["gc_root"]).is_symlink())
+        self.prepare()
+        self.assertEqual(u.status()["phase"], "ready")
+
     def test_closed_progress_pipe_after_durable_ready_does_not_undo_selection(self):
         def closed_at_ready(stage, *_args):
             if stage == "ready":

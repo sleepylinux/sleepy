@@ -515,6 +515,11 @@ def rollback(journal):
         raise UpdateError("Previous generation was not restored")
     journal["phase"] = "recovered"
     write_journal(journal)
+
+
+def report_recovered(journal):
+    # Called outside rollback failure handling: cleanup/output cannot invalidate
+    # the already durable recovered selection, even if the terminal closes.
     release_completed_root(journal)
     emit("recovered", "Previous generation restored for next boot", 100)
 
@@ -539,6 +544,7 @@ def recover():
                 "Automatic recovery failed; retain the log and use installer recovery: "
                 + str(error)
             ) from error
+        report_recovered(journal)
 
 
 def prepare(candidate_id):
@@ -690,6 +696,7 @@ def prepare(candidate_id):
                         "Update failed and automatic recovery failed: "
                         + str(recovery_error)
                     ) from error
+                report_recovered(journal)
             elif not committed:
                 journal["phase"] = "failed"
                 write_journal(journal)
