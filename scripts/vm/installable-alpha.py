@@ -438,6 +438,7 @@ for attempt in $(seq 1 30); do
   sleep 1
 done
 test "$desktop_active" = true
+printf 'LOCK_GRAPHICAL_VT_READY\n'
 layout_selected=false
 for attempt in $(seq 1 30); do
   hypr switchxkblayout all __GROUP__
@@ -753,6 +754,7 @@ printf 'SLEEPY_REPORT_COMPLETE\n'
     daily_sent = set()
     lock_desktop_shown = False
     lock_input_sent = False
+    lock_graphical_woken = False
     lock_returned_to_console = False
     deadline = time.monotonic() + audit_timeout
     report_file = (machine.output / f'{stage}-guest-report.txt').open('wb')
@@ -766,10 +768,12 @@ printf 'SLEEPY_REPORT_COMPLETE\n'
             if b'LOCK_RETURN_TO_DESKTOP' in report and not lock_desktop_shown:
                 machine.qmp.keys('ctrl', 'alt', 'f1')
                 lock_desktop_shown = True
-            if b'LOCK_READY_FOR_REAL_PASSWORD' in report and not lock_input_sent:
-                # tty1/keymap are now confirmed ready, but the VT switch may
-                # leave DPMS off. Ordinary Shift wakes without entering text.
+            if b'LOCK_GRAPHICAL_VT_READY' in report and not lock_graphical_woken:
+                # The kernel VT is ready; ordinary input resumes compositor
+                # keyboards and DPMS before the guest selects its keymap.
                 machine.qmp.keys('shift')
+                lock_graphical_woken = True
+            if b'LOCK_READY_FOR_REAL_PASSWORD' in report and not lock_input_sent:
                 machine.wait_screen('Password', f'{stage}-locked')
                 if getattr(machine, 'keyboard', 'us') != 'us':
                     machine.qmp.keys('alt', 'shift')
