@@ -1,0 +1,5 @@
+Earlier read-only login1 queries on the same installed VM:
+busctl call org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager CanSuspendThenHibernate
+s "na"
+busctl get-property org.freedesktop.login1 /org/freedesktop/login1 org.freedesktop.login1.Manager PreparingForSleep
+b false

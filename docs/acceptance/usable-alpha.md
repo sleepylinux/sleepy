@@ -97,3 +97,54 @@ the dconf writer service needed by standalone Home Manager.
 are preserved. Reproduce with
 `nix build github:sleepylinux/sleepy/d3252c67f09618414ca2d33aeb776e75246c3f26#checks.x86_64-linux.update-safety-vm --max-jobs 1 -L`.
 This is a migration fixture VM, not the final installed-desktop acceptance.
+
+## Follow-up screenshot and system-menu diagnostics
+
+On the same `7231d4b` installed disk, with the temporary session `2e85655`
+package above, actual Print input opened the existing area picker and Swappy.
+Saving produced a complete PNG, and `xdg-open` mapped imv. Shift+Print then
+replaced a fresh text-only clipboard sentinel with a complete PNG. The
+[execution markers](assets/usable-alpha/candidate7231-screenshots-live.txt),
+[Swappy screenshot](assets/usable-alpha/candidate7231-screenshots-live-3.png), and
+[viewer/clipboard screenshot](assets/usable-alpha/candidate7231-screenshots-live-completed.png)
+record this bounded live UI check. PNG persistence across reboot was not tested
+in this diagnostic. The unavailable SDK screenshot helper is a separate path.
+
+The same session ran the explicitly transferred signed package
+`/nix/store/qlv3rzwssa10fi8sqwvkqp6sj5m9kllh-sleepy-system` as the ordinary user.
+Status and generation listing succeeded, its actual terminal menu appeared,
+and Esc closed it without changing generations.
+[Execution markers](assets/usable-alpha/candidate7231-system-menu-live.txt) and
+[visible menu](assets/usable-alpha/candidate7231-system-menu-live-0.png) are retained.
+This check did not invoke rebuild or rollback.
+
+Later, a temporary `ExecStart` override loaded session
+`4d48082a0ff22cfefa6ebd007f41b6192709aa27` from signed package
+`/nix/store/w3ayrd6cmyx178pk01iwb3ggdr4x3sws-sleepy-session-0.1.0`.
+An actual typed suspend-then-hibernate request was rejected without locking.
+The [response and assertion](assets/usable-alpha/candidate7231-session4d48082-unsupported-sleep.txt)
+and [earlier login1 capability response](assets/usable-alpha/candidate7231-sleep-capability.txt)
+record the unsupported operation (`CanSuspendThenHibernate` returned `na`).
+This does not prove a supported suspend/resume cycle.
+
+These are separate diagnostics on the old disk, with runtime overrides and
+locker instrumentation. They do not replace its failed combined acceptance,
+and do not demonstrate the pending Qt keyboard-focus fix. Exact component
+revisions, package paths and source-log/script hashes are in the
+[provenance manifest](assets/usable-alpha/candidate7231-daily-ui-provenance.json).
+
+## Fresh production greeter regression
+
+Public root `2f3755622c5af450046dc57dfe51e9b01ef8f2d2` passed a fresh
+`hyprland-production-vm` in 118.93 seconds. The gate checks visible ReGreet
+readiness, exact persisted session selection, actual UWSM launch and its user
+unit, shell/daemon socket ownership and restart recovery, plus migration-state
+preservation. It avoids using OCR of small text as a session identity check;
+regressions still reject the direct Hyprland session and wrong user.
+
+[Compact execution proof](assets/usable-alpha/2f37556-production-vm.txt) is retained.
+Reproduce with
+`nix build github:sleepylinux/sleepy/2f3755622c5af450046dc57dfe51e9b01ef8f2d2#checks.x86_64-linux.hyprland-production-vm --max-jobs 1 --cores 1 -L`.
+This existing fixture uses credential-free test-only PAM. Its pass is separate
+from real-password installed-disk acceptance and does not complete the final
+combined usability gate.

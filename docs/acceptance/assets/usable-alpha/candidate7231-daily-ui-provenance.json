@@ -1,0 +1,25 @@
+{
+  "installed_image_source": "7231d4b2bf320440365b0f51a323f3466c724dd1",
+  "screenshots_and_menu_session": "2e85655df116851781b79fc80403381eedef99c3",
+  "screenshots_and_menu_session_package": "/nix/store/6h6xv9jwvirbhgkxsjh7v3qamgcq61v5-sleepy-session-0.1.0",
+  "menu_package": "/nix/store/qlv3rzwssa10fi8sqwvkqp6sj5m9kllh-sleepy-system",
+  "menu_package_root": "7187af4a8a88b34dbe4df282e01af11ecfaa6ed6",
+  "unsupported_sleep_session": "4d48082a0ff22cfefa6ebd007f41b6192709aa27",
+  "unsupported_sleep_session_package": "/nix/store/w3ayrd6cmyx178pk01iwb3ggdr4x3sws-sleepy-session-0.1.0",
+  "unsupported_sleep_package_root": "be3aba96e4b5fd4caf6e25ff074ac8de0d8597f4",
+  "fresh_production_vm_root": "2f3755622c5af450046dc57dfe51e9b01ef8f2d2",
+  "fresh_production_vm_output": "/nix/store/354xbwcn4rgm54197fsbddkfy6x1q9gy-vm-test-run-sleepy-hyprland-production",
+  "source_sha256": {
+    "work/debug-usability/screenshots-live-report.txt": "00e6f57bbddf7d2a3a9d8d1526c0069d37928dc3d9e634ab8f2cd44723a645bd",
+    "work/debug-usability/system-menu-live-report.txt": "eb249f632c67bef95cf4d5eb70acb0e7d687c25b1fba62f4fec8ed5193ff3fc6",
+    "work/vm-usability-1/screenshots-live-3.png": "f480bf776d9b51d5b826ddb9661eb89b7f1eedcc54928230e718ca8047308076",
+    "work/vm-usability-1/screenshots-live-completed.png": "fdcd1484c45cc09a92f733a6476cb923a21f87387fdcc52bfd24655e04316cf1",
+    "work/vm-usability-1/system-menu-live-0.png": "3817fec0c1232b6bb63034b029bf9ba7bec89a37fe6e911008d2a8cc49f8b667",
+    "work/debug-usability/unsupported-sleep-actual-vm.txt": "14ebf8a5cc29c5375309d722962c9a10912968cd96340f8d9022a383251d9b75",
+    "work/debug-usability/focus-and-suspend-report.txt": "b21902f8a69183f73471f7cf8098d8c79c419df8c60aedc098dee648c3871ad7",
+    "work/debug-usability/exercise_screenshots_live.py": "2d054bf8a07c0280824e40168953208d48fae329a852417f32d1be27b797a628",
+    "work/debug-usability/exercise_system_menu_live.py": "54e13cd98c3813609075d3816aa590d232ebed0b197463a01b5ad1ad49952cc5",
+    "/tmp/sleepy-production-ocr-fixed.log": "7892bc91985d4310fd6539d1dea395a74f84e8ed80225c89131fdc165556648a"
+  },
+  "scope": "Same old installed disk diagnostics, signed runtime overrides and locker instrumentation; separate fresh production fixture. No fresh combined installation acceptance or Qt fix demonstrated."
+}

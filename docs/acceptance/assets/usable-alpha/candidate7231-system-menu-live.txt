@@ -1,0 +1,7 @@
+Current system: /nix/store/psbp0yrpp3bipw04x2lic9ra4pc3c7rh-nixos-system-sleepy-26.11.20260822.2c423e0
+Booted system: /nix/store/psbp0yrpp3bipw04x2lic9ra4pc3c7rh-nixos-system-sleepy-26.11.20260822.2c423e0
+Selected system profile: /nix/store/psbp0yrpp3bipw04x2lic9ra4pc3c7rh-nixos-system-sleepy-26.11.20260822.2c423e0
+DAILY_SYSTEM_STATUS_OK
+DAILY_SYSTEM_MENU_READY
+DAILY_SYSTEM_MENU_CANCEL_UNCHANGED_OK
+DAILY_FINISHED:0
