@@ -29,6 +29,32 @@ different artifact checksum. This is a tested alpha snapshot, not a published
 release. Its full VM run used a separately supplied signed local binary cache;
 a public-cache-only installation has not been validated.
 
+For the retained local artifacts, start the signed dependency cache on loopback:
+
+```sh
+python3 -m http.server 8080 --bind 127.0.0.1 \
+  --directory work/artifacts/sleepy-cache-97830de
+```
+
+In another terminal, use runner revision `0d534265c83b0767e79bb93dd132d7fe6f956292`
+or a reviewed successor:
+
+```sh
+python3 scripts/vm/installable-alpha.py \
+  --iso work/artifacts/sleepy-usability-97830de.iso \
+  --image-source-revision 97830de29099483356a7cff1a28751edfcc538d9 \
+  --output work/fresh-acceptance --memory 8192 \
+  --keyboard ru --interrupt-install --flatpak-recovery --daily-usability --update-safety \
+  --cache-url http://10.0.2.2:8080 \
+  --cache-public-key "$(cat work/artifacts/sleepy-cache-97830de/public-key)"
+```
+
+The cache contains signed dependency closures, not a complete offline system;
+public network access remains necessary. Its `verification.json` records 1177
+verified signatures. The signing private key is not distributed. The runner
+needs QEMU/OVMF, KVM access, Python pexpect/Pillow and Tesseract; use `--help` for
+firmware paths. Choose a new output directory: it creates disposable disks.
+
 Boot the ISO in a UEFI VM with a new disposable disk. Secure Boot is not supported
 by this alpha. Connect Ethernet, or choose Network in the TUI to configure Wi-Fi.
 Choose Install, identify the target disk, enter account and regional settings,
@@ -59,10 +85,10 @@ configuration; it does not promote an untested upstream channel automatically.
 `sleepy-system generations` lists recovery points and `sleepy-system rollback`
 activates the previous system generation. See [recovery](../recovery.md).
 
-## Everyday desktop in the current candidate
+## Everyday desktop in the accepted snapshot
 
-The following additions are implemented in the usability branch; the immutable
-`9bca73c` ISO above predates them. Combined installed-VM acceptance is pending.
+These workflows are included in the `97830de` snapshot above. The acceptance
+record distinguishes its full installed-VM run from earlier diagnostic checks.
 
 Open a terminal with `Super+Return`, or the application launcher with `Super+D`.
 
@@ -109,8 +135,8 @@ unavailable when `sleepy-capture-helper` is absent. That status describes the
 [daemon helper path](https://github.com/sleepylinux/sleepy-session/blob/004e81dbfd10ebcec569129aa9eb6ae1559dab5f/src/desktop/utilities.rs),
 not a test of the [native shell picker](../architecture/shell-runtime-integrations.md).
 Neither status alone proves a successful capture; check the saved image or
-clipboard result. These instructions describe implemented behavior, not a
-successful combined VM acceptance run.
+clipboard result. The accepted snapshot includes real saved-image and clipboard
+PNG checks; the absent SDK helper remains a separate limitation.
 
 ## Reproduce the real VM gate
 
@@ -121,8 +147,9 @@ vary by distribution; override `--firmware` and `--vars` as needed.
 python3 scripts/vm/installable-alpha.py \
   --iso "$PWD/result-installer/iso/sleepy-0.1.0-alpha-x86_64-linux.iso" \
   --output "$PWD/work/vm-alpha-run-1" \
-  --image-source-revision "$(git rev-parse HEAD)" \
-  --interrupt-install --update-safety --keyboard ru --pause-at-greeter
+  --image-source-revision 97830de29099483356a7cff1a28751edfcc538d9 \
+  --memory 8192 --interrupt-install --update-safety --keyboard ru \
+  --flatpak-recovery --daily-usability --pause-at-greeter
 ```
 
 The output directory must not exist. The runner creates its own disk and firmware
@@ -149,7 +176,9 @@ For repeated local validation, the runner accepts `--cache-url` and
 the disposable image's running Nix daemon configuration, retains signature checks,
 and avoids downloading already built components again. It is not a release cache.
 
-Status: the complete installed-disk gate passed at
-`9bca73cdc125bbf7704e8038dc46cc383cd36fd3`, including native password lock/unlock
-and offline rollback. See the [acceptance record](../acceptance/installable-alpha.md)
+Status: the complete installed-disk gate passed at image source
+`97830de29099483356a7cff1a28751edfcc538d9` with runner
+`0d534265c83b0767e79bb93dd132d7fe6f956292`: 47 gates and three installed-disk
+boots, including native password lock/unlock, daily desktop, a development
+generation and offline rollback. See the [acceptance record](../acceptance/usable-alpha.md)
 for the ISO checksum, exact revisions, screenshots and remaining limitations.

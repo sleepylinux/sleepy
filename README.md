@@ -21,6 +21,6 @@ Start with:
 - [real VM runbook](docs/runbooks/sleepy-vm-hyprland.md);
 - [acceptance record](docs/acceptance/hyprland-sleepy-desktop.md);
 - [active usable-alpha roadmap](docs/roadmaps/installable-alpha.md);
-- [daily desktop validation in progress](docs/acceptance/usable-alpha.md).
+- [verified daily desktop snapshot and remaining limits](docs/acceptance/usable-alpha.md).
 
 Sleepy Linux is licensed under `GPL-3.0-only`; see [LICENSE](LICENSE).
