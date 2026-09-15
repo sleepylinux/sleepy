@@ -5,7 +5,13 @@ set -euo pipefail
 
 repo_root=$(git -C "$(dirname "${BASH_SOURCE[0]}")/.." rev-parse --show-toplevel)
 fixture=$(mktemp -d "${TMPDIR:-/tmp}/sleepy-installed-source.XXXXXX")
-trap 'rm -rf -- "$fixture"' EXIT
+cleanup() {
+  # cp -a preserves read-only Nix-store modes. Make only this private copy's
+  # directories removable; never follow links back into the store or elsewhere.
+  find -P "$fixture" -type d -exec chmod u+w -- {} +
+  rm -rf -- "$fixture"
+}
+trap cleanup EXIT
 source=$(nix flake metadata --json --no-write-lock-file "$repo_root" | jq -r .path)
 cp -a -- "$source" "$fixture/sleepy-source"
 cat > "$fixture/flake.nix" <<'NIX'

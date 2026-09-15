@@ -2,6 +2,7 @@
 set -euo pipefail
 
 repo_root=$(git -C "$(dirname "${BASH_SOURCE[0]}")/.." rev-parse --show-toplevel)
+python3 "$repo_root/checks/test_installed_source_cleanup.py"
 clone_root=$(mktemp -d "${TMPDIR:-/tmp}/sleepy-fresh-clone.XXXXXX")
 trap 'rm -rf -- "$clone_root"' EXIT
 
