@@ -54,6 +54,18 @@ class UpdateTests(unittest.TestCase):
             "nar_hash": "sha256-" + base64.b64encode(b"x" * 32).decode(),
         }
         (self.CATALOG / "alpha-2.json").write_text(json.dumps(self.candidate))
+        (self.new / "etc/sleepy").mkdir(parents=True)
+        (self.new / "etc/sleepy/source.json").write_text(
+            json.dumps(
+                {
+                    "schema": 1,
+                    "source_path": str(self.source),
+                    "nar_hash": self.candidate["nar_hash"],
+                    "revision": None,
+                    "version": "0.2",
+                }
+            )
+        )
         self.calls = []
         self.fail = None
         self.mutate = None
@@ -88,7 +100,7 @@ class UpdateTests(unittest.TestCase):
         if "build" in argv:
             if self.mutate:
                 self.mutate()
-            link = self.STATE / "built-system"
+            link = Path(argv[argv.index("--out-link") + 1])
             link.unlink(missing_ok=True)
             link.symlink_to(self.new)
             return ""
@@ -259,11 +271,17 @@ class UpdateTests(unittest.TestCase):
         self.assertEqual(u.candidates(), [self.candidate])
 
         metadata_file = self.STORE / ("g" * 32 + "-sleepy-source.json")
-        metadata_file.write_text(json.dumps({
-            "schema": 1, "source_path": str(self.source),
-            "nar_hash": self.candidate["nar_hash"],
-            "revision": None, "version": "0.2",
-        }))
+        metadata_file.write_text(
+            json.dumps(
+                {
+                    "schema": 1,
+                    "source_path": str(self.source),
+                    "nar_hash": self.candidate["nar_hash"],
+                    "revision": None,
+                    "version": "0.2",
+                }
+            )
+        )
         metadata_file.chmod(0o444)
         self.SOURCE_METADATA.symlink_to(metadata_file)
         self.assertEqual(u.running_source(), str(self.source))
@@ -286,6 +304,41 @@ class UpdateTests(unittest.TestCase):
         path.symlink_to(outside)
         with self.assertRaises(u.UpdateError):
             u.candidates()
+
+    def test_orphaned_previous_build_cannot_replace_new_attempt_result(self):
+        self.fail = lambda command: "build" in command
+        with self.assertRaises(u.UpdateError):
+            self.prepare()
+        previous = u.status()
+        previous["phase"] = "preparing"
+        u.write_journal(previous)
+        old_command = next(command for command in self.calls if "build" in command)
+        old_root = Path(old_command[old_command.index("--out-link") + 1])
+        self.fail = None
+        original = self.fake_run
+
+        def overlapping(command, **kwargs):
+            result = original(command, **kwargs)
+            if "build" in command:
+                new_root = Path(command[command.index("--out-link") + 1])
+                self.assertNotEqual(new_root, old_root)
+                old_root.unlink(missing_ok=True)
+                old_root.symlink_to(self.old)
+            return result
+
+        with patch.object(u, "run", side_effect=overlapping), patch.object(u, "emit"):
+            u.prepare("alpha-2")
+        self.assertEqual(self.PROFILE.resolve(), self.new)
+        self.assertEqual(old_root.resolve(), self.old)
+
+    def test_built_source_attestation_must_match_approved_source(self):
+        path = self.new / "etc/sleepy/source.json"
+        value = json.loads(path.read_text())
+        value["nar_hash"] = "sha256-" + base64.b64encode(b"z" * 32).decode()
+        path.write_text(json.dumps(value))
+        with self.assertRaisesRegex(u.UpdateError, "Built system source"):
+            self.prepare()
+        self.assertFalse(any("--set" in command for command in self.calls))
 
     def test_selection_failure_after_mutation_recovers(self):
         original = self.fake_run

@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import re
 import selectors
+import secrets
 import signal
 import stat
 import subprocess
@@ -123,17 +124,21 @@ def validate_common(value):
         raise UpdateError("Invalid source NAR hash") from None
 
 
-def running_source():
-    if not SOURCE_METADATA.exists() and not SOURCE_METADATA.is_symlink():
-        return ""
-    value = read_json(SOURCE_METADATA)
+def source_metadata(path):
+    value = read_json(path)
     if set(value) != {"schema", "source_path", "nar_hash", "revision", "version"}:
         raise UpdateError("Invalid running source metadata")
     validate_common(value)
     source = store_path(value["source_path"])
     if not (source / "flake.nix").is_file():
         raise UpdateError("Running source has no flake")
-    return str(source)
+    return value
+
+
+def running_source():
+    if not SOURCE_METADATA.exists() and not SOURCE_METADATA.is_symlink():
+        return ""
+    return source_metadata(SOURCE_METADATA)["source_path"]
 
 
 def candidates():
@@ -273,12 +278,24 @@ def validate_journal(journal):
         "ready",
     }
     if (
-        set(journal) - {"schema", "phase", "candidate", "old", "configuration", "built"}
+        set(journal)
+        - {"schema", "phase", "candidate", "old", "configuration", "built", "gc_root"}
         or type(journal.get("schema")) is not int
         or journal.get("schema") != 1
         or journal.get("phase") not in phases
     ):
         raise UpdateError("Invalid update journal")
+    gc_root = journal.get("gc_root")
+    if not isinstance(gc_root, str):
+        raise UpdateError("Missing transaction GC root")
+    root = Path(gc_root)
+    if (
+        root.parent.parent != STATE
+        or root.name != "built-system"
+        or not re.fullmatch(r"attempt-[0-9a-f]{32}", root.parent.name)
+    ):
+        raise UpdateError("Invalid transaction GC root")
+    trusted(root.parent, True)
     candidate = journal.get("candidate")
     if not isinstance(candidate, dict) or set(candidate) != {
         "schema",
@@ -496,12 +513,18 @@ def prepare(candidate_id):
             raise UpdateError("Candidate is not in the approved catalog")
         before = configuration_snapshot()
         old = profile()
+        # A SIGKILL can orphan nix build. Give every attempt its own output
+        # root so an older process cannot overwrite a later transaction's result.
+        attempt = STATE / ("attempt-" + secrets.token_hex(16))
+        attempt.mkdir(mode=0o700)
+        link = attempt / "built-system"
         journal = dict(
             schema=1,
             phase="preparing",
             candidate=candidate,
             old=old,
             configuration=before,
+            gc_root=str(link),
         )
         write_journal(journal)
         emit("fetch", "Fetching approved immutable source", 10)
@@ -540,7 +563,7 @@ def prepare(candidate_id):
                     "nix",
                     "build",
                     "--out-link",
-                    str(STATE / "built-system"),
+                    str(link),
                     "--no-write-lock-file",
                     "--override-input",
                     "sleepy",
@@ -553,11 +576,19 @@ def prepare(candidate_id):
                 capture=False,
                 progress_stage="build",
             )
-            link = STATE / "built-system"
             built = store_path(str(link.resolve()), True)
             run(
                 ["nix-store", "--check-validity", str(built)], timeout=30, capture=False
             )
+            attestation = source_metadata(built / "etc/sleepy/source.json")
+            if (
+                attestation["source_path"] != str(source)
+                or attestation["nar_hash"] != candidate["nar_hash"]
+                or attestation["revision"] not in {None, candidate["revision"]}
+            ):
+                raise UpdateError(
+                    "Built system source does not match the approved candidate"
+                )
             journal["built"] = str(built)
             if configuration_snapshot() != before or profile() != old:
                 raise UpdateError(
