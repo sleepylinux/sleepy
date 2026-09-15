@@ -428,7 +428,6 @@ with socket.socket(socket.AF_UNIX) as peer:
  assert reply in (b"locked\n",b"unlocked\n"), repr(reply)
  print(reply.decode().strip())' "/run/user/$uid/sleepy/locker.sock"
 }
-test "$(locker_state)" = unlocked
 printf 'LOCK_RETURN_TO_DESKTOP\n'
 # VT2 is the authenticated audit console. Hyprland's keyboards become usable
 # only after the runner returns to its real graphical VT and input resumes.
@@ -439,6 +438,26 @@ for attempt in $(seq 1 30); do
 done
 test "$desktop_active" = true
 printf 'LOCK_GRAPHICAL_VT_READY\n'
+# A long offline-registration wait may legitimately trigger the normal idle
+# lock. Authenticate it first; the explicit unlocked->lock test still follows.
+if test "$(locker_state)" = locked; then
+  idle_layout_ready=false
+  for attempt in $(seq 1 30); do
+    hypr switchxkblayout all 0
+    if hypr devices -j | jq -e '[.keyboards[] | select(.main) | .active_keymap] == ["English (US)"]'; then idle_layout_ready=true; break; fi
+    sleep 1
+  done
+  test "$idle_layout_ready" = true
+  printf 'IDLE_LOCK_PASSWORD_READY\n'
+  idle_unlocked=false
+  for attempt in $(seq 1 120); do
+    if test "$(locker_state)" = unlocked; then idle_unlocked=true; break; fi
+    sleep 1
+  done
+  test "$idle_unlocked" = true
+  printf 'IDLE_LOCK_NATIVE_UNLOCK_OK\n'
+fi
+test "$(locker_state)" = unlocked
 layout_selected=false
 for attempt in $(seq 1 30); do
   hypr switchxkblayout all __GROUP__
@@ -763,6 +782,7 @@ printf 'SLEEPY_REPORT_COMPLETE\n'
     lock_desktop_shown = False
     lock_input_sent = False
     lock_graphical_woken = False
+    idle_lock_input_sent = False
     lock_returned_to_console = False
     deadline = time.monotonic() + audit_timeout
     report_file = (machine.output / f'{stage}-guest-report.txt').open('wb')
@@ -781,6 +801,11 @@ printf 'SLEEPY_REPORT_COMPLETE\n'
                 # keyboards and DPMS before the guest selects its keymap.
                 machine.qmp.keys('shift')
                 lock_graphical_woken = True
+            if b'IDLE_LOCK_PASSWORD_READY' in report and not idle_lock_input_sent:
+                machine.wait_screen('Password', f'{stage}-idle-locked', timeout=30)
+                # Guest confirmed US for this preparatory native unlock.
+                machine.qmp.text(password + '\n')
+                idle_lock_input_sent = True
             if b'LOCK_READY_FOR_REAL_PASSWORD' in report and not lock_input_sent:
                 machine.wait_screen('Password', f'{stage}-locked')
                 if getattr(machine, 'keyboard', 'us') != 'us':
@@ -992,6 +1017,7 @@ def main():
             if check not in result['completed']: result['completed'].append(check)
         # Preserve verified substeps even if a later update or reboot gate fails.
         markers = {
+            'IDLE_LOCK_NATIVE_UNLOCK_OK': 'preexisting-idle-lock-native-password-unlock',
             'FLATPAK_OFFLINE_DESKTOP_AND_FAILED_REGISTRATION_OK': 'flatpak-offline-first-desktop',
             'FLATPAK_REAL_FLATHUB_TIMER_RECOVERY_OK': 'flatpak-real-Flathub-timer-recovery',
             'FLATPAK_SOFTWARE_WINDOW_OK': 'flatpak-Software-window',
