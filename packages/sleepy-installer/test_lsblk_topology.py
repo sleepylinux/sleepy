@@ -12,9 +12,11 @@ import backend
 import recovery
 
 
-@unittest.skipUnless(shutil.which('lsblk'), 'util-linux lsblk is required')
 class LsblkTopologyTests(unittest.TestCase):
     def setUp(self):
+        for program in ('lsblk', 'proot'):
+            if shutil.which(program) is None:
+                raise RuntimeError(f'Topology tests require {program}; run the Nix installer check')
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
@@ -41,7 +43,12 @@ class LsblkTopologyTests(unittest.TestCase):
         command = [arg for arg in argv if arg != '/dev/vda']
         # The fixture contains exactly one whole disk; no real device stat is needed.
         command[command.index('blkid')] = 'file'
-        return subprocess.check_output(command + ['--sysroot', str(self.root)], text=True)
+        # util-linux 2.42.2 checks /sys/dev/block before using --sysroot.
+        # Supply the same synthetic sysfs at that absolute path without mounts,
+        # elevated privileges, or changing the real lsblk executable. No host
+        # sysfs or block devices participate, including inside the Nix sandbox.
+        isolated = ['proot', '-b', str(self.root / 'sys') + ':/sys']
+        return subprocess.check_output(isolated + command + ['--sysroot', str(self.root)], text=True)
 
     def listing(self, swaps=''):
         original_read = Path.read_text
