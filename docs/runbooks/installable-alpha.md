@@ -56,6 +56,24 @@ configuration; it does not promote an untested upstream channel automatically.
 `sleepy-system generations` lists recovery points and `sleepy-system rollback`
 activates the previous system generation. See [recovery](../recovery.md).
 
+## Everyday desktop in the current candidate
+
+The following additions are implemented in the usability branch; the immutable
+`9bca73c` ISO above predates them. Combined installed-VM acceptance is pending.
+
+- `Print` selects a screen region and opens Swappy; press `Ctrl+S` to save in
+  `~/Pictures/Screenshots`. `Shift+Print` copies a region as a PNG to the clipboard.
+- Open saved images from Thunar; imv is the default image viewer. Press `q` to
+  close it. Both the viewer and MIME defaults can be overridden by host profiles.
+- Run `fastfetch` for system information and the Sleepy crescent. It does not run
+  automatically each time a terminal opens.
+- GTK applications use the shared dark theme and icons. Host theme, terminal,
+  launcher and Fastfetch settings remain overridable.
+- When Flatpak was selected during installation, open Software from the launcher.
+  Flathub setup starts shortly after boot and retries every five minutes after
+  a connection failure. Login does not wait for it. Public-network registration
+  and graphical app installation still require the combined VM check.
+
 ## Reproduce the real VM gate
 
 Requires QEMU, OVMF, Python with pexpect and Pillow, and Tesseract. Firmware paths
