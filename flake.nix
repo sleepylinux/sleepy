@@ -14,7 +14,7 @@
     };
 
     sleepy-session = {
-      url = "github:sleepylinux/sleepy-session/004e81dbfd10ebcec569129aa9eb6ae1559dab5f";
+      url = "github:sleepylinux/sleepy-session/2e85655df116851781b79fc80403381eedef99c3";
       inputs = {
         nixpkgs.follows = "nixpkgs";
         sleepy-sdk.follows = "sleepy-sdk";

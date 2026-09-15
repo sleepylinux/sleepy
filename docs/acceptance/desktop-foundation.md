@@ -7,12 +7,12 @@ The root integration pins this exact reviewed public component graph:
 | Component | Reviewed revision |
 |---|---|
 | `sleepy-sdk` | `dff28bb596950d862ae5d219e478460dfa13e8f4` |
-| `sleepy-session` | `004e81dbfd10ebcec569129aa9eb6ae1559dab5f` |
+| `sleepy-session` | `2e85655df116851781b79fc80403381eedef99c3` |
 | `sleepy-artwork` | `ac3feed1e81b4e74a84a326c1f53f3ddaf94aa3e` |
 | `sleepy-desktop` | `008d8bc662c6b10045a24a4bd05f0852837fa5e9` |
 
 The generated `flake.lock` SHA-256 is
-`216ae1913362066dfd1fae1949a918528b6eddd1fc728be7ffae6e62ad089ebc`. This candidate includes the SDK UTF-8 fix, deterministic session process tests,
+`ae4ca4d6c2e61f6ea46ef7f49eea43d307aeef7bf931a2dd6c9f83206ed66f1d`. This candidate includes the SDK UTF-8 fix, deterministic session process tests,
 consistent Hyprland command readback deadlines, and the native locker unlock fix.
 Component review and CI are tracked in
 [SDK PR #8](https://github.com/sleepylinux/sleepy-sdk/pull/8),
@@ -31,6 +31,7 @@ Its package and installed-VM diagnostics are recorded separately in
 [doctor acceptance](doctor.md); the previous installer ISO does not contain
 this command. This candidate additionally includes conservative absent-hardware
 classification from [session PR #11](https://github.com/sleepylinux/sleepy-session/pull/11)
+including the captured UPower 1.91.3 `power supply: no` regression fix,
 and the terminal crescent from [artwork PR #6](https://github.com/sleepylinux/sleepy-artwork/pull/6).
 Their component tests pass; installed-VM verification of the combined candidate
 is pending. The older doctor evidence records the provider errors before these fixes.

@@ -17,7 +17,7 @@ expected=$(mktemp /tmp/sleepy-current-component-pins.XXXXXX.json)
 deployment_candidate=$(mktemp /tmp/sleepy-deployment-candidate.XXXXXX.md)
 acceptance_candidate=$(mktemp /tmp/sleepy-acceptance-candidate.XXXXXX.md)
 trap 'rm -f -- "$expected" "$deployment_candidate" "$acceptance_candidate"' EXIT
-approved_lock_sha=216ae1913362066dfd1fae1949a918528b6eddd1fc728be7ffae6e62ad089ebc
+approved_lock_sha=ae4ca4d6c2e61f6ea46ef7f49eea43d307aeef7bf931a2dd6c9f83206ed66f1d
 
 cat >"$expected" <<'EOF'
 {
@@ -29,8 +29,8 @@ cat >"$expected" <<'EOF'
       "revision": "dff28bb596950d862ae5d219e478460dfa13e8f4"
     },
     "sleepy-session": {
-      "url": "github:sleepylinux/sleepy-session/004e81dbfd10ebcec569129aa9eb6ae1559dab5f",
-      "revision": "004e81dbfd10ebcec569129aa9eb6ae1559dab5f"
+      "url": "github:sleepylinux/sleepy-session/2e85655df116851781b79fc80403381eedef99c3",
+      "revision": "2e85655df116851781b79fc80403381eedef99c3"
     },
     "sleepy-artwork": {
       "url": "github:sleepylinux/sleepy-artwork/ac3feed1e81b4e74a84a326c1f53f3ddaf94aa3e",
@@ -104,7 +104,7 @@ fi
 
 for expected_line in \
   'sleepy-sdk      dff28bb596950d862ae5d219e478460dfa13e8f4' \
-  'sleepy-session  004e81dbfd10ebcec569129aa9eb6ae1559dab5f' \
+  'sleepy-session  2e85655df116851781b79fc80403381eedef99c3' \
   'sleepy-artwork  ac3feed1e81b4e74a84a326c1f53f3ddaf94aa3e' \
   'sleepy-desktop  008d8bc662c6b10045a24a4bd05f0852837fa5e9'; do
   if test "$(grep -Fxc -- "$expected_line" "$deployment_candidate")" -ne 1; then
@@ -132,7 +132,7 @@ while IFS=$'\t' read -r component revision; do
   fi
 done <<'EOF'
 sleepy-sdk	dff28bb596950d862ae5d219e478460dfa13e8f4
-sleepy-session	004e81dbfd10ebcec569129aa9eb6ae1559dab5f
+sleepy-session	2e85655df116851781b79fc80403381eedef99c3
 sleepy-artwork	ac3feed1e81b4e74a84a326c1f53f3ddaf94aa3e
 sleepy-desktop	008d8bc662c6b10045a24a4bd05f0852837fa5e9
 EOF
@@ -169,23 +169,23 @@ if test "${SLEEPY_CURRENT_PINS_FIXTURE:-0}" != 1; then
     fi
   }
 
-  sed -i '0,/216ae1913362066dfd1fae1949a918528b6eddd1fc728be7ffae6e62ad089ebc/s//0000000000000000000000000000000000000000000000000000000000000000/' \
+  sed -i '0,/ae4ca4d6c2e61f6ea46ef7f49eea43d307aeef7bf931a2dd6c9f83206ed66f1d/s//0000000000000000000000000000000000000000000000000000000000000000/' \
     "$fixture/docs/deployment.md"
   assert_rejected deployment-lock-sha
   install -m 0600 "$repo_root/docs/deployment.md" "$fixture/docs/deployment.md"
 
-  sed -i '0,/216ae1913362066dfd1fae1949a918528b6eddd1fc728be7ffae6e62ad089ebc/s//0000000000000000000000000000000000000000000000000000000000000000/' \
+  sed -i '0,/ae4ca4d6c2e61f6ea46ef7f49eea43d307aeef7bf931a2dd6c9f83206ed66f1d/s//0000000000000000000000000000000000000000000000000000000000000000/' \
     "$fixture/docs/acceptance/desktop-foundation.md"
   assert_rejected acceptance-lock-sha
   install -m 0600 "$repo_root/docs/acceptance/desktop-foundation.md" \
     "$fixture/docs/acceptance/desktop-foundation.md"
 
-  sed -i '/^sleepy-session  004e81dbfd10ebcec569129aa9eb6ae1559dab5f$/a sleepy-session  6f1857bd786323ad89ac91c250a8485f944eb39c' \
+  sed -i '/^sleepy-session  2e85655df116851781b79fc80403381eedef99c3$/a sleepy-session  6f1857bd786323ad89ac91c250a8485f944eb39c' \
     "$fixture/docs/deployment.md"
   assert_rejected deployment-stale-duplicate
   install -m 0600 "$repo_root/docs/deployment.md" "$fixture/docs/deployment.md"
 
-  sed -i '/^| `sleepy-session` | `004e81dbfd10ebcec569129aa9eb6ae1559dab5f` |$/a | `sleepy-session` | `6f1857bd786323ad89ac91c250a8485f944eb39c` |' \
+  sed -i '/^| `sleepy-session` | `2e85655df116851781b79fc80403381eedef99c3` |$/a | `sleepy-session` | `6f1857bd786323ad89ac91c250a8485f944eb39c` |' \
     "$fixture/docs/acceptance/desktop-foundation.md"
   assert_rejected acceptance-stale-duplicate
   install -m 0600 "$repo_root/docs/acceptance/desktop-foundation.md" \
@@ -196,7 +196,7 @@ if test "${SLEEPY_CURRENT_PINS_FIXTURE:-0}" != 1; then
   assert_rejected flake-sdk-pin
   install -m 0600 "$repo_root/flake.nix" "$fixture/flake.nix"
 
-  sed -i '0,/004e81dbfd10ebcec569129aa9eb6ae1559dab5f/s//0000000000000000000000000000000000000000/' \
+  sed -i '0,/2e85655df116851781b79fc80403381eedef99c3/s//0000000000000000000000000000000000000000/' \
     "$fixture/components/desktop-m1.json"
   assert_rejected manifest-session-pin
   install -m 0600 "$repo_root/components/desktop-m1.json" \
