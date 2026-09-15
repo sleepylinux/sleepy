@@ -559,14 +559,20 @@ def prepare(candidate_id):
             "recovery-failed",
         }:
             raise UpdateError("Incomplete update: run sleepy-update recover first")
-        if (
-            phase == "ready"
-            and str(RUNNING.resolve()) != previous["built"]
-            and profile() != previous["old"]
-        ):
-            raise UpdateError(
-                "Candidate already selected; reboot or explicitly roll back first"
+        if phase == "ready":
+            selected_profile = profile()
+            booted_selection = selected_profile["system"] == str(RUNNING.resolve())
+            explicit_rollback = (
+                selected_profile == previous["old"]
+                and previous["old"]["system"] != previous["built"]
             )
+            # A booted retained generation resolves the prior selection, even
+            # after a deeper rollback. Merely running the previous candidate
+            # does not authorize replacing a different pending profile.
+            if not booted_selection and not explicit_rollback:
+                raise UpdateError(
+                    "Candidate already selected; reboot or explicitly roll back first"
+                )
         candidate = next((c for c in candidates() if c["id"] == candidate_id), None)
         if candidate is None:
             raise UpdateError("Candidate is not in the approved catalog")

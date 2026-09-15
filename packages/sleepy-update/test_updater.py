@@ -379,6 +379,71 @@ class UpdateTests(unittest.TestCase):
         self.RUNNING.symlink_to(self.new)
         self.prepare()
 
+    def test_repeated_candidate_then_booted_older_rollback_allows_prepare(self):
+        self.prepare()
+        self.RUNNING.unlink()
+        self.RUNNING.symlink_to(self.new)
+        self.prepare()
+        self.assertEqual(u.status()["old"]["system"], str(self.new))
+        self.assertEqual(u.status()["built"], str(self.new))
+        self.select(1, self.old)
+        self.RUNNING.unlink()
+        self.RUNNING.symlink_to(self.old)
+        self.prepare()
+        self.assertEqual(u.status()["phase"], "ready")
+        self.assertEqual(u.status()["old"]["system"], str(self.old))
+        self.assertEqual(self.PROFILE.resolve(), self.new)
+
+    def test_booted_rollback_older_than_previous_generation_allows_prepare(self):
+        self.prepare()
+        previous = u.status()
+        previous["old"] = u.profile()
+        third = self.system("f")
+        self.select(3, third)
+        previous["built"] = str(third)
+        u.write_journal(previous)
+        self.select(1, self.old)
+        # Generation A is running and selected after the later B -> C update.
+        self.prepare()
+        self.assertEqual(u.status()["old"]["system"], str(self.old))
+        self.assertEqual(self.PROFILE.resolve(), self.new)
+
+    def test_running_candidate_does_not_authorize_unrelated_pending_profile(self):
+        self.prepare()
+        self.RUNNING.unlink()
+        self.RUNNING.symlink_to(self.new)
+        unrelated = self.system("f")
+        self.select(3, unrelated)
+        before = u.status()
+        self.calls.clear()
+        with self.assertRaisesRegex(u.UpdateError, "reboot"):
+            self.prepare()
+        self.assertFalse(self.calls)
+        self.assertEqual(self.PROFILE.resolve(), unrelated)
+        self.assertEqual(u.status(), before)
+
+    def test_same_candidate_journal_is_not_a_rollback_of_unbooted_profile(self):
+        self.prepare()
+        self.RUNNING.unlink()
+        self.RUNNING.symlink_to(self.new)
+        self.prepare()
+        self.RUNNING.unlink()
+        self.RUNNING.symlink_to(self.old)
+        self.calls.clear()
+        with self.assertRaisesRegex(u.UpdateError, "reboot"):
+            self.prepare()
+        self.assertFalse(self.calls)
+        self.assertEqual(self.PROFILE.resolve(), self.new)
+
+    def test_explicit_rollback_to_previous_generation_still_allows_prepare(self):
+        self.prepare()
+        self.RUNNING.unlink()
+        self.RUNNING.symlink_to(self.new)
+        self.select(1, self.old)
+        self.prepare()
+        self.assertEqual(u.status()["phase"], "ready")
+        self.assertEqual(u.status()["old"]["system"], str(self.old))
+
     def test_pending_recovery_rejects_unrelated_profile(self):
         self.prepare()
         journal = u.status()
