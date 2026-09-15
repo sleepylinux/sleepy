@@ -1,0 +1,7 @@
+{
+  "elapsed": 220,
+  "password_visible_before": false,
+  "before": "locker_state; cat /sys/class/tty/tty0/active; hypr monitors -j | jq \"map({name,dpmsStatus})\"; printf '\\nSLEEPY_COMMAND_DONE:%s\\n' \"$?\"\nlocked\ntty2\n[\n  {\n    \"name\": \"Virtual-1\",\n    \"dpmsStatus\": true\n  }\n]\n",
+  "damage": "border=$(hypr getoption general:border_size -j | jq .int); hypr keyword general:border_size \"$border\"; printf '\\nSLEEPY_COMMAND_DONE:%s\\n' \"$?\"\nok\n",
+  "password_visible_after": true
+}

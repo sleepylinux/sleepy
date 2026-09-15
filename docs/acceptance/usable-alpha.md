@@ -258,3 +258,48 @@ Session [PR #12](https://github.com/sleepylinux/sleepy-session/pull/12) merged a
 `f7ce52d5e315f9494620425029a455a35907031f` after exact-head CI and automated
 review. This A/B used a temporary user-service override and does not replace
 fresh-image or physical audio-device acceptance.
+
+
+### Hyprland activation frame: actual compositor A/B
+
+On the retained `bfa319a` disk, restarting shell/session while VT2 was active,
+then waiting 220 seconds for the normal native idle lock, reproduced the stale
+unlocked desktop framebuffer with upstream Hyprland `298g6zl01njspqvc6c6dgj6vxrhjnfhl`.
+The protocol reported locked and DPMS was already on. Reapplying the unchanged
+border size requested damage and immediately displayed the native password
+view. [Baseline discriminator](assets/usable-alpha/hyprland-activation-baseline-damage.json)
+records this diagnostic workaround; it is not part of acceptance.
+
+The downstream activation-frame package `vab6yfkk554x20wrmv2pafax1c23mvxa`
+passed the same cold-lock scenario with ordinary VT return and Shift: the
+password view appeared without explicit damage or DPMS repair, and the actual
+created password unlocked it. A subsequent native lock survived shell SIGKILL,
+DPMS off/input wake and a locked VT roundtrip, followed by real-password unlock.
+[Runtime proof](assets/usable-alpha/hyprland-activation-runtime-ab.json),
+[cold lock](assets/usable-alpha/patched-cold-idle-return.png),
+[shell crash/input wake](assets/usable-alpha/patched-shell-crash-dpms-wake.png), and
+[locked VT return](assets/usable-alpha/patched-active-lock-vt-return.png) are retained.
+
+The actual `/proc` executable path was checked. An earlier override changed
+only `start-hyprland`, which selected the old compositor from PATH; that attempt
+is excluded. This successful comparison preserves UWSM but uses a temporary
+service override. A fresh install of the corrected production graph remains
+required. The downstream patch is version-bound and is not upstream accepted.
+
+
+### Empty Wayland app metadata: same-window A/B
+
+The upstream `hyprland-update-screen --new-version 0.56.2` window has an empty
+class and a valid address/title. With session `a13aa9f`, this degraded the entire
+Hyprland provider to `parse` and made doctor fail. Without closing or changing
+that window, exact package `q479igblj0wa9gylwh77qg64xcqgcpqm` from session
+`210cbaad7a50280e4406281f90cbe36def50086c` reported `available` and doctor passed.
+[Actual executable, unchanged window and before/after doctor](assets/usable-alpha/session-210-popup-runtime-ab.json)
+record the temporary runtime comparison. The adapter substitutes `unknown` only
+for an empty app ID and preserves address/title and malformed-input rejection.
+
+Session [PR #13](https://github.com/sleepylinux/sleepy-session/pull/13) merged as
+`eed9230732f1062dba908e63f70279f80fa6d6ad` after 501 release tests (2 existing
+ignored), exact-head CI, independent review and this VM comparison. The final
+production image also suppresses upstream update news through an overridable
+Hyprland option, leaving the Sleepy welcome as its first-login introduction.

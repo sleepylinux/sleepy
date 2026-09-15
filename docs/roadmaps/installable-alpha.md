@@ -56,8 +56,11 @@ Desktop PR #8 is merged after exact CI and a 20-minute packaged-shell soak
 (121 samples, zero restarts). Image `bfa319a` completed fresh TUI installation, disk-only boot, real login
 and Flathub retry, then failed to display an idle lock created on an inactive
 VT. The PipeWire observation-client loop is fixed and verified in an installed-VM
-A/B (session PR #12 merged). Active blocker: recover the compositor activation
-frame; a downstream correction is undergoing the same-disk comparison. Keyring persistence, crash/DPMS wake
+A/B (session PR #12 merged). The compositor activation correction passed cold idle-lock, real-password and
+shell-crash/DPMS/VT comparisons and is now wired into the production default.
+Empty Wayland app metadata no longer rejects the entire provider (session PR #13
+merged). Next: freeze the corrected source graph and repeat fresh installation
+and the full daily/update/rollback gate. Keyring persistence, crash/DPMS wake
 and update/rollback still require the corrected final image gate.
 [Revision-bound evidence](../acceptance/usable-alpha.md).
 
