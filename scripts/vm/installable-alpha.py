@@ -8,6 +8,7 @@ This is an integration runner, not a replacement for a successful VM result.
 import argparse
 import boot_recovery
 import candidate_updates
+import capture_jobs
 import base64
 import hashlib
 import json
@@ -925,6 +926,8 @@ def guest_report(machine, password, stage, after_reboot=False, update_phase=None
         audit_timeout += 510
     if getattr(machine, 'daily_usability', False):
         audit_timeout += 90  # 30s graphical VT acknowledgement + 60s idle samples.
+    if getattr(machine, 'capture_jobs', False) and not after_reboot:
+        audit_timeout += 180  # Separate opt-in consent/PNG/crash phases, no global timeout change.
     channel.settimeout(audit_timeout)
     channel.connect(str(machine.output / 'report.sock'))
     script = r'''#!/usr/bin/env bash
@@ -1006,7 +1009,7 @@ runuser -u sleepy -- mkdir -p /home/sleepy/.config/sleepy
 runuser -u sleepy -- sh -c 'printf sleepy-alpha-state > /home/sleepy/.config/sleepy/alpha-persistence'
 sync
 printf 'PERSISTENCE_MARKER_WRITTEN\n'
-''') + (flatpak_fixture(after_reboot) if getattr(machine, 'flatpak_recovery', False) else '') + lock_fixture(getattr(machine, 'keyboard', 'us')) + (daily_fixture(after_reboot) + daily_idle_fixture() if getattr(machine, 'daily_usability', False) else '') + update_fixture(update_phase) + boot_recovery.fixture(recovery_phase) + candidate_updates.fixture(candidate_phase, getattr(machine, 'candidate_revision', None), getattr(machine, 'candidate_nar_hash', None)) + (r'''
+''') + (flatpak_fixture(after_reboot) if getattr(machine, 'flatpak_recovery', False) else '') + lock_fixture(getattr(machine, 'keyboard', 'us')) + (daily_fixture(after_reboot) + daily_idle_fixture() if getattr(machine, 'daily_usability', False) else '') + (capture_jobs.fixture() if getattr(machine, 'capture_jobs', False) and not after_reboot else '') + update_fixture(update_phase) + boot_recovery.fixture(recovery_phase) + candidate_updates.fixture(candidate_phase, getattr(machine, 'candidate_revision', None), getattr(machine, 'candidate_nar_hash', None)) + (r'''
 cp -p /var/lib/sleepy-alpha/hypr-user.before /home/sleepy/.config/hypr/sleepy-user.conf
 hypr reload
 printf 'USER_SETTING_FIXTURE_RESTORED_OK\n'
@@ -1104,6 +1107,8 @@ printf 'SLEEPY_REPORT_COMPLETE\n'
             # Coalesced unlock/UI markers may return to VT2; idle acknowledgement
             # must run last so the new sampling phase remains on the desktop.
             advance_daily_idle(machine.qmp, report, daily_sent)
+            if getattr(machine, 'capture_jobs', False) and not after_reboot:
+                capture_jobs.advance(machine, report, daily_sent, stage)
             if len(report) > 1024 * 1024: raise RuntimeError('Guest audit exceeded 1 MiB output bound')
     finally:
         channel.close()
@@ -1157,6 +1162,7 @@ def main():
     parser.add_argument('--interrupt-install', action='store_true', help='Before visible TUI installation, interrupt a real disposable-disk install after mounting and verify cleanup')
     parser.add_argument('--keyboard', choices=('us', 'ru', 'de', 'cz'), default='us', help='Select the installed keyboard through the real TUI and test lock-screen switching')
     parser.add_argument('--flatpak-recovery', action='store_true', help='Select Flatpak in TUI; prove offline first desktop and real Flathub timer recovery, then launch Software')
+    parser.add_argument('--capture-jobs', action='store_true', help='Verify actual opt-in capture consent, Escape, region PNG and daemon-crash cleanup on the first installed boot')
     parser.add_argument('--daily-usability', action='store_true', help='Verify installed daily defaults, real Print save/clipboard and PNG persistence; adds virtual audio')
     parser.add_argument('--boot-recovery', action='store_true', help='Damage only disposable ESP entries, prove failed boot, repair through the real ISO TUI and verify unchanged system/user data')
     parser.add_argument('--update-safety', action='store_true', help='Also test failed rebuild boot safety, boot a second generation, then rollback and boot the original')
@@ -1201,6 +1207,8 @@ def main():
     machine.candidate_revision = args.candidate_revision
     machine.candidate_nar_hash = args.candidate_nar_hash
     machine.keyboard = args.keyboard
+    machine.capture_jobs = args.capture_jobs
+    result['capture_jobs'] = args.capture_jobs
     machine.daily_usability = args.daily_usability
     machine.flatpak_recovery = args.flatpak_recovery
     result['flatpak_recovery'] = args.flatpak_recovery
@@ -1292,6 +1300,7 @@ def main():
             if check not in result['completed']: result['completed'].append(check)
         # Preserve verified substeps even if a later update or reboot gate fails.
         markers = {
+            **capture_jobs.MARKERS,
             'CANDIDATE_POST_ROLLBACK_VALIDATION_PRESERVED_STATE_OK': 'candidate-post-rollback-validation-preserved-state',
             'CANDIDATE_COMPLETED_GC_ROOT_RELEASED_OTHERS_PRESERVED_OK': 'candidate-completed-gc-root-released-others-preserved',
             'CANDIDATE_INVALID_CONFIG_PRESERVED_BOOT_CONFIG_OK': 'candidate-invalid-config-preserved-boot-config',
