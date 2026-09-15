@@ -64,13 +64,20 @@ remove disposable disks, credentials and the task-owned builder after validation
    Quickshell screencopy and Swappy. The separate SDK capture action expects an
    unimplemented legacy helper. A separate opt-in capture v1 endpoint now has
    typed asynchronous jobs, cancellation and bounded temporary PNG publication;
-   session and SDK changes are in draft review. The existing picker supplies
+   session and SDK changes have passed full CI and merged. The existing picker supplies
    visible region consent through an anonymous image descriptor. Native writer,
-   QML lifecycle and real daemon shutdown checks pass; actual installed-VM
-   capture and final packaging remain pending. Keep legacy doctor honest and
+   QML lifecycle, real daemon shutdown and production packaging checks pass.
+   Desktop component CI is green; a fresh `f279883` installer VM is running,
+   so installed-VM capture acceptance remains pending. Keep legacy doctor honest and
    do not alias its status to the Print picker.
-3. **Encryption and public distribution.** Add a separate encrypted
-   install/unlock/recovery branch. Prepare reproducible public binary artifacts,
+3. **Encryption and public distribution.** The separate encrypted-install
+   branch implements optional LUKS2/Btrfs, hidden TUI passphrase entry and
+   generated initrd configuration with a US keyboard. The full packaged installer suite, including real lsblk and ncurses,
+   passes (90 passed, one root-only skip); generated NixOS configuration
+   evaluates. Guided encrypted recovery implements read-only inspection and
+   separately confirmed repair. Actual install/unlock/reboot/recovery
+   acceptance remains pending. These checks do not
+   yet prove a bootable encrypted installation. Prepare reproducible public binary artifacts,
    source revisions/checksums, short docs and honest known issues. Validate a
    current public-only installation. Release publication and public channel
    promotion still require separate authorization.
