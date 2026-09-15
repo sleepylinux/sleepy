@@ -551,7 +551,12 @@ wait_daily() {
   return 1
 }
 picker_visible() { hypr layers -j | jq -e '.. | objects | select(.namespace? == "sleepy-area-picker")' > /dev/null; }
+picker_hidden() { hypr layers -j | jq -e '[.. | objects | select(.namespace? == "sleepy-area-picker")] | length == 0' > /dev/null; }
 swappy_visible() { hypr clients -j | jq -e 'any(.[]; (.class | ascii_downcase | contains("swappy")) and .mapped)' > /dev/null; }
+complete_png() {
+  test "$(od -An -tx1 -N8 "$1" | tr -d ' \n')" = 89504e470d0a1a0a &&
+    test "$(tail -c 12 "$1" | od -An -tx1 | tr -d ' \n')" = 0000000049454e44ae426082
+}
 # The host presses Print and selects a rectangle using actual pointer input.
 install -d -m 0700 /var/lib/sleepy-alpha
 uenv mkdir -p /home/sleepy/Pictures/Screenshots
@@ -561,13 +566,19 @@ wait_daily picker_visible
 printf 'DAILY_SELECT_AREA\n'
 wait_daily swappy_visible
 printf 'DAILY_SAVE_SWAPPY\n'
-new_png() {
+last_png_hash=''
+stable_new_png() {
   screenshot=$(find /home/sleepy/Pictures/Screenshots -maxdepth 1 -name '*.png' -newer /tmp/sleepy-alpha-before-screenshot -print -quit)
-  test -n "$screenshot" && test -s "$screenshot"
+  test -n "$screenshot" && complete_png "$screenshot" || return 1
+  current_png_hash=$(sha256sum "$screenshot") || return 1
+  if test "$current_png_hash" != "$last_png_hash"; then
+    last_png_hash=$current_png_hash
+    return 1
+  fi
 }
-wait_daily new_png
-test "$(od -An -tx1 -N8 "$screenshot" | tr -d ' \n')" = 89504e470d0a1a0a
-sha256sum "$screenshot" > /var/lib/sleepy-alpha/screenshot.sha256
+# The PNG end chunk and two equal hashes a poll apart exclude partial saves.
+wait_daily stable_new_png
+printf '%s\n' "$last_png_hash" > /var/lib/sleepy-alpha/screenshot.sha256
 printf 'DAILY_SCREENSHOT_SAVED_PNG_OK\n'
 # Explicit graphical opening must produce a new mapped client. The screenshot records what actually rendered.
 hypr clients -j | jq '[.[] | .address]' > /tmp/sleepy-alpha-before-open.json
@@ -575,14 +586,22 @@ hypr dispatch exec "xdg-open $screenshot"
 viewer_visible() { hypr clients -j | jq -e --slurpfile before /tmp/sleepy-alpha-before-open.json 'any(.[]; .mapped and (.class | ascii_downcase | contains("imv")) and (.address as $a | $before[0] | index($a) | not))' > /dev/null; }
 wait_daily viewer_visible
 printf 'DAILY_SCREENSHOT_VIEWER_OPEN_OK\n'
+wait_daily picker_hidden
+wayland_display=$(uenv systemctl --user show-environment | sed -n 's/^WAYLAND_DISPLAY=//p')
+test -n "$wayland_display"
+# Replace any previous image with known text before the real key press. A stale
+# PNG must never satisfy the clipboard screenshot acceptance marker.
+printf 'sleepy-alpha-clipboard-sentinel' | uenv env WAYLAND_DISPLAY="$wayland_display" timeout 2 wl-copy --type text/plain
+test "$(uenv env WAYLAND_DISPLAY="$wayland_display" timeout 2 wl-paste --type text/plain --no-newline)" = sleepy-alpha-clipboard-sentinel
+clipboard_types=$(uenv env WAYLAND_DISPLAY="$wayland_display" timeout 2 wl-paste --list-types)
+! printf '%s\n' "$clipboard_types" | grep -Fx image/png
 printf 'DAILY_PRESS_CLIPBOARD\n'
 wait_daily picker_visible
 printf 'DAILY_SELECT_CLIPBOARD_AREA\n'
-wayland_display=$(uenv systemctl --user show-environment | sed -n 's/^WAYLAND_DISPLAY=//p')
-test -n "$wayland_display"
+wait_daily picker_hidden
 clipboard_png() {
   uenv env WAYLAND_DISPLAY="$wayland_display" timeout 2 wl-paste --type image/png > /tmp/sleepy-alpha-clipboard.png 2>/dev/null || return 1
-  test "$(od -An -tx1 -N8 /tmp/sleepy-alpha-clipboard.png | tr -d ' \n')" = 89504e470d0a1a0a
+  complete_png /tmp/sleepy-alpha-clipboard.png
 }
 wait_daily clipboard_png
 printf 'DAILY_SCREENSHOT_CLIPBOARD_PNG_OK\n'
