@@ -16,7 +16,7 @@ The generated `flake.lock` SHA-256 is
 consistent Hyprland command readback deadlines, typed audio monitor events,
 empty Wayland application metadata normalization, and the native locker unlock fix. The current desktop adds a dark native lock
 view and hides optional panels without data; its offscreen QML checks pass,
-while actual installed-VM visual acceptance of this revision is pending.
+and the combined installed-VM acceptance now passes for image `97830de`.
 Component review and CI are tracked in
 [SDK PR #8](https://github.com/sleepylinux/sleepy-sdk/pull/8),
 [session PR #9](https://github.com/sleepylinux/sleepy-session/pull/9),
@@ -26,10 +26,10 @@ Component review and CI are tracked in
 [desktop PR #8](https://github.com/sleepylinux/sleepy-desktop/pull/8), and
 [desktop PR #9](https://github.com/sleepylinux/sleepy-desktop/pull/9).
 The current desktop also retires NetworkManager command processes when their
-executable fails to start. This reviewed public PR head is a candidate pin;
-its local packaged checks passed, while exact-head CI and merge remain pending.
+executable fails to start. Its packaged checks and exact-head CI passed;
+desktop PR #9 is merged.
 
-The installer acceptance remains bound to root `9bca73c` and session `8edee2e`:
+The historical installer acceptance remains bound to root `9bca73c` and session `8edee2e`:
 installation, real password login, desktop startup, crash recovery, failed-update
 preservation and three installed-disk boots passed. See the immutable
 [Installable Sleepy acceptance](installable-alpha.md) and
@@ -44,8 +44,10 @@ classification from [session PR #11](https://github.com/sleepylinux/sleepy-sessi
 including the captured UPower 1.91.3 `power supply: no` regression fix
 and a logind capability preflight before acquiring a suspend locker hold,
 and the terminal crescent from [artwork PR #6](https://github.com/sleepylinux/sleepy-artwork/pull/6).
-Their component tests pass; installed-VM verification of the combined candidate
-is pending. The older doctor evidence records the provider errors before these fixes.
+Their component tests and the combined `97830de` installed-VM run pass. See
+[the final usable-alpha result](usable-alpha.md) for 47 gates across three
+installed-disk boots and the remaining hardware/public-cache limits. The older
+doctor evidence records the provider errors before these fixes.
 
 The older 2026-09-04 baseline, CI interpreter correction, and protected-VM
 acceptance remain historical records in

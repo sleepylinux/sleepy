@@ -19,12 +19,15 @@ sha256sum result-installer/iso/*.iso
 To reproduce the accepted artifact from its public source revision:
 
 ```sh
-nix build github:sleepylinux/sleepy/9bca73cdc125bbf7704e8038dc46cc383cd36fd3#installer-iso \
+nix build github:sleepylinux/sleepy/97830de29099483356a7cff1a28751edfcc538d9#installer-iso \
   --out-link result-installer
 ```
 
-That public flake evaluates to the same ISO derivation as the clean source used
-for VM acceptance. A later checkout may produce a different artifact checksum.
+The [current accepted snapshot](../acceptance/usable-alpha.md) records its SHA256,
+component graph and clean runner revision. A later checkout may produce a
+different artifact checksum. This is a tested alpha snapshot, not a published
+release. Its full VM run used a separately supplied signed local binary cache;
+a public-cache-only installation has not been validated.
 
 Boot the ISO in a UEFI VM with a new disposable disk. Secure Boot is not supported
 by this alpha. Connect Ethernet, or choose Network in the TUI to configure Wi-Fi.
