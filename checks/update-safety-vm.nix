@@ -13,6 +13,9 @@ pkgs.testers.runNixOSTest {
       isNormalUser = true;
       home = "/home/lazy";
     };
+    # Match the system prerequisite present in both the old Niri and current
+    # Sleepy base: standalone Home Manager needs the D-Bus dconf writer.
+    programs.dconf.enable = true;
     environment.systemPackages = [pkgs.niri sessionPackage];
     virtualisation.additionalPaths = [baselineActivationPackage baselineSessionPackage activationPackage];
   };
@@ -35,6 +38,7 @@ pkgs.testers.runNixOSTest {
         )
 
     def assert_candidate_files():
+        assert machine.succeed("sudo -u lazy HOME=/home/lazy ${pkgs.dconf}/bin/dconf read /org/gnome/desktop/interface/color-scheme").strip() == "'prefer-dark'"
         machine.succeed("test -L /home/lazy/.config/hypr/hyprland.conf")
         machine.succeed("test -f /home/lazy/.config/hypr/sleepy-user.conf && test ! -L /home/lazy/.config/hypr/sleepy-user.conf")
         machine.succeed("test $(stat -c %a /home/lazy/.config/hypr/sleepy-user.conf) = 600")

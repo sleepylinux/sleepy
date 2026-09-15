@@ -1,0 +1,20 @@
+{
+  "status": "failed",
+  "iso": "/home/lazy/orca/workspaces/sleepy/daily-usability/work/artifacts/sleepy-usability-52d44f7.iso",
+  "iso_sha256": "79a0e50d279ec883df411b33c6f956b011a2ebfdb0dd1b502b3202a7556d7f18",
+  "acceleration": "kvm",
+  "cache_transport": "http://10.0.2.2:8080",
+  "cache_public_key": "sleepy-local-75e6fa3:SwFBCGRii3DGc3jQoZXDxgNDzyAoW/aKOELIUSBGL2Y=",
+  "image_source_revision": "52d44f767009630b9e5616e4e85267c3f0df1c62",
+  "completed": [
+    "invalid-target-rejected-without-disk-writes",
+    "offline-install-rejected-without-disk-writes",
+    "real-install-SIGTERM-cleanup-and-lock-release"
+  ],
+  "runner_source_revision": "52d44f767009630b9e5616e4e85267c3f0df1c62",
+  "runner_source_dirty": false,
+  "flatpak_recovery": true,
+  "daily_usability": true,
+  "keyboard": "ru",
+  "error": "Real installer failed; inspect VM diagnostics"
+}

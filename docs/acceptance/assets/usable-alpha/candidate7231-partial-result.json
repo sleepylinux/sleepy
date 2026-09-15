@@ -1,0 +1,32 @@
+{
+  "status": "failed",
+  "iso": "/home/lazy/orca/workspaces/sleepy/daily-usability/work/artifacts/sleepy-usability-7231d4b.iso",
+  "iso_sha256": "8237aeac149bc6d281a13b55bd01da1fa5cc998768525efb3bd52048af1a8608",
+  "acceleration": "kvm",
+  "cache_transport": "http://10.0.2.2:8080",
+  "cache_public_key": "sleepy-local-75e6fa3:SwFBCGRii3DGc3jQoZXDxgNDzyAoW/aKOELIUSBGL2Y=",
+  "image_source_revision": "7231d4b2bf320440365b0f51a323f3466c724dd1",
+  "completed": [
+    "invalid-target-rejected-without-disk-writes",
+    "offline-install-rejected-without-disk-writes",
+    "real-install-SIGTERM-cleanup-and-lock-release",
+    "tui-install-and-shutdown",
+    "flatpak-offline-first-desktop",
+    "flatpak-real-Flathub-timer-recovery",
+    "flatpak-Software-window",
+    "real-password-login",
+    "first-boot-welcome-dismissed",
+    "installed-disk-boot",
+    "desktop-units-and-socket",
+    "terminal-and-file-manager-windows",
+    "shell-SIGKILL-recovery",
+    "session-daemon-SIGKILL-recovery",
+    "real-Hyprland-setting-applied"
+  ],
+  "runner_source_revision": "25eb37f77a8875d5ad3c340def8b939b27a25e4b",
+  "runner_source_dirty": false,
+  "flatpak_recovery": true,
+  "daily_usability": true,
+  "keyboard": "ru",
+  "error": "Screen did not show 'Password'; inspect installed-locked.png"
+}

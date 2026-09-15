@@ -127,10 +127,19 @@ class Machine:
                    '-device', 'virtio-serial-pci',
                    '-chardev', f'socket,id=report,path={self.output / "report.sock"},server=on,wait=off',
                    '-device', 'virtserialport,chardev=report,name=org.sleepy.test']
+        if getattr(self, 'daily_usability', False):
+            command += ['-audiodev', 'none,id=audio0', '-device', 'intel-hda',
+                        '-device', 'hda-duplex,audiodev=audio0', '-device', 'qemu-xhci',
+                        '-device', 'usb-tablet']
         if iso: command += ['-cdrom', str(iso), '-boot', 'order=d']
         else: command += ['-boot', 'order=c']
+        offline_start = getattr(self, 'flatpak_recovery', False) and phase == 'installed'
+        if offline_start: command += ['-S']
         self.process = subprocess.Popen(command, stdout=self.log, stderr=subprocess.STDOUT)
         self.qmp = QMP(self.output / 'qmp.sock')
+        if offline_start:
+            self.qmp.call('set_link', name='nic0', up=False)
+            self.qmp.call('cont')
         return self
 
     def stop(self):
@@ -302,6 +311,10 @@ def install(machine, password, timeout, cache_url=None, cache_public_key=None, i
                 for _ in range(('us', 'ru', 'de', 'cz').index(keyboard)):
                     machine.qmp.keys('down')
                 machine.screen('installer-keyboard-selected')
+            if screenshot == 'installer-options' and getattr(machine, 'flatpak_recovery', False):
+                for _ in range(3): machine.qmp.keys('down')
+                machine.qmp.keys('spc')
+                machine.screen('installer-flatpak-selected')
             machine.qmp.text(value + '\n')
         machine.wait_screen('One last check', 'installer-confirmation')
         machine.qmp.text('/dev/vda\n')
@@ -333,9 +346,14 @@ def install(machine, password, timeout, cache_url=None, cache_public_key=None, i
 
 
 def update_fixture(phase):
+    user_environment = r'''
+development_user() { runuser -u sleepy -- env HOME=/home/sleepy XDG_CONFIG_HOME=/home/sleepy/.config PATH=/etc/profiles/per-user/sleepy/bin:/home/sleepy/.nix-profile/bin:/run/current-system/sw/bin "$@"; }
+'''
     if phase == 'seed':
-        return r'''
+        return user_environment + r'''
 state=/var/lib/sleepy-alpha
+development_user sh -c 'cd "$HOME"; ! command -v direnv'
+printf 'DEVELOPMENT_ABSENT_IN_BASE_GENERATION_OK\n'
 install -d -m 0700 "$state"
 config=/etc/nixos/configuration.nix
 head -n 1 "$config" | grep -Fx '{ ... }: {'
@@ -355,7 +373,7 @@ test "$(readlink -f /nix/var/nix/profiles/system)" = "$(cat "$state/profile.befo
 sha256sum /boot/loader/loader.conf /boot/loader/entries/*.conf | sort > "$state/boot.after"
 cmp "$state/boot.before" "$state/boot.after"
 printf 'FAILED_UPDATE_PRESERVED_SYSTEM_AND_BOOT_OK\n'
-printf '%s\n' '{ ... }: { environment.etc."sleepy-alpha-generation".text = "generation-2"; }' > /etc/nixos/alpha-update.nix
+printf '%s\n' '{ ... }: { sleepy.features.development.enable = true; environment.etc."sleepy-alpha-generation".text = "generation-2"; }' > /etc/nixos/alpha-update.nix
 nixos-rebuild boot --flake /etc/nixos#installed > "$state/generation2-build.log" 2>&1
 readlink -f /nix/var/nix/profiles/system > "$state/generation2"
 test "$(cat "$state/generation2")" != "$(cat "$state/generation1")"
@@ -364,21 +382,51 @@ trap - EXIT
 printf 'SECOND_GENERATION_PREPARED_OK\n'
 '''
     if phase == 'rollback':
-        return r'''
+        return user_environment + r'''
 state=/var/lib/sleepy-alpha
 test "$(readlink -f /run/current-system)" = "$(cat "$state/generation2")"
 test "$(cat /etc/sleepy-alpha-generation)" = generation-2
 printf 'SECOND_GENERATION_REAL_BOOT_OK\n'
+development_user git --version
+development_user direnv version
+development_user sh -c 'cd "$HOME"; ! command -v python3'
+# Reuse the installed system's locked nixpkgs source, without a registry lookup.
+nixpkgs_source=$(timeout 60 nix eval --impure --raw --expr '(builtins.getFlake "path:/etc/nixos").inputs.nixpkgs.outPath')
+case "$nixpkgs_source" in /nix/store/*-source) ;; *) exit 1;; esac
+test -f "$nixpkgs_source/flake.nix"
+project=/home/sleepy/Projects/sleepy-alpha-dev
+test ! -e "$project"
+development_user mkdir -p "$project"
+development_user tee "$project/flake.nix" > /dev/null <<NIX
+{
+  inputs.nixpkgs.url = "path:$nixpkgs_source";
+  outputs = { nixpkgs, ... }: {
+    devShells.x86_64-linux.default = (import nixpkgs { system = "x86_64-linux"; }).mkShell {
+      packages = [ (import nixpkgs { system = "x86_64-linux"; }).python3 ];
+      shellHook = "export SLEEPY_ALPHA_DEV_SHELL=ready";
+    };
+  };
+}
+NIX
+printf 'use flake\n' | development_user tee "$project/.envrc" > /dev/null
+# Explicitly authorize only this fixed, user-owned disposable test project.
+development_user timeout 10 direnv allow "$project"
+development_user timeout 180 direnv exec "$project" bash -c 'set -e; test "$SLEEPY_ALPHA_DEV_SHELL" = ready; test "$(python3 -c "print(6 * 7)")" = 42'
+development_user sh -c 'cd "$HOME"; ! command -v python3'
+printf 'DEVELOPMENT_PINNED_DIRENV_PROJECT_OK\n'
 nix-env --profile /nix/var/nix/profiles/system --rollback
 /nix/var/nix/profiles/system/bin/switch-to-configuration boot
 test "$(readlink -f /nix/var/nix/profiles/system)" = "$(cat "$state/generation1")"
 printf 'PREVIOUS_GENERATION_SELECTED_FOR_BOOT_OK\n'
 '''
     if phase == 'verify':
-        return r'''
+        return user_environment + r'''
 test "$(readlink -f /run/current-system)" = "$(cat /var/lib/sleepy-alpha/generation1)"
 test ! -e /etc/sleepy-alpha-generation
 cmp /etc/nixos/configuration.nix /var/lib/sleepy-alpha/configuration.before
+development_user sh -c 'cd "$HOME"; ! command -v direnv'
+development_user sh -c 'cd "$HOME"; ! command -v python3'
+printf 'DEVELOPMENT_REMOVED_AFTER_ROLLBACK_OK\n'
 printf 'PREVIOUS_GENERATION_REAL_BOOT_OK\n'
 '''
     return ''
@@ -415,7 +463,6 @@ with socket.socket(socket.AF_UNIX) as peer:
  assert reply in (b"locked\n",b"unlocked\n"), repr(reply)
  print(reply.decode().strip())' "/run/user/$uid/sleepy/locker.sock"
 }
-test "$(locker_state)" = unlocked
 printf 'LOCK_RETURN_TO_DESKTOP\n'
 # VT2 is the authenticated audit console. Hyprland's keyboards become usable
 # only after the runner returns to its real graphical VT and input resumes.
@@ -425,6 +472,27 @@ for attempt in $(seq 1 30); do
   sleep 1
 done
 test "$desktop_active" = true
+printf 'LOCK_GRAPHICAL_VT_READY\n'
+# A long offline-registration wait may legitimately trigger the normal idle
+# lock. Authenticate it first; the explicit unlocked->lock test still follows.
+if test "$(locker_state)" = locked; then
+  idle_layout_ready=false
+  for attempt in $(seq 1 30); do
+    hypr switchxkblayout all 0
+    if hypr devices -j | jq -e '[.keyboards[] | select(.main) | .active_keymap] == ["English (US)"]'; then idle_layout_ready=true; break; fi
+    sleep 1
+  done
+  test "$idle_layout_ready" = true
+  printf 'IDLE_LOCK_PASSWORD_READY\n'
+  idle_unlocked=false
+  for attempt in $(seq 1 120); do
+    if test "$(locker_state)" = unlocked; then idle_unlocked=true; break; fi
+    sleep 1
+  done
+  test "$idle_unlocked" = true
+  printf 'IDLE_LOCK_NATIVE_UNLOCK_OK\n'
+fi
+test "$(locker_state)" = unlocked
 layout_selected=false
 for attempt in $(seq 1 30); do
   hypr switchxkblayout all __GROUP__
@@ -440,6 +508,58 @@ for attempt in $(seq 1 40); do
   sleep 1
 done
 test "$locked" = true
+# A fresh shell has no remembered idle-resume transition. Compositor input
+# must still wake its locked display; never repair this with `dpms on`.
+locked_shell_pid=$(usystem show sleepy-shell.service -P MainPID)
+test "$locked_shell_pid" -gt 0
+usystem kill --kill-whom=main --signal=KILL sleepy-shell.service
+locked_shell_recovered=false
+for attempt in $(seq 1 40); do
+  next_shell_pid=$(usystem show sleepy-shell.service -P MainPID)
+  if test "$next_shell_pid" -gt 0 && test "$next_shell_pid" != "$locked_shell_pid" && usystem is-active --quiet sleepy-shell.service; then locked_shell_recovered=true; break; fi
+  sleep 1
+done
+test "$locked_shell_recovered" = true
+test "$(locker_state)" = locked
+hypr dispatch dpms off
+hypr monitors -j | jq -e 'length > 0 and all(.[]; .dpmsStatus == false)'
+printf 'LOCK_SHELL_CRASH_WAKE_READY\n'
+locked_display_awake=false
+for attempt in $(seq 1 30); do
+  if hypr monitors -j | jq -e 'length > 0 and all(.[]; .dpmsStatus == true)'; then locked_display_awake=true; break; fi
+  sleep 1
+done
+test "$locked_display_awake" = true
+test "$(locker_state)" = locked
+printf 'LOCK_SHELL_CRASH_INPUT_WAKE_OK\n'
+# Reproduce keyboard removal/re-addition while the native lock owns focus.
+# Guest acknowledgements require the actual kernel VT, not a sent-key assumption.
+printf 'LOCK_SWITCH_TO_CONSOLE\n'
+console_active=false
+for attempt in $(seq 1 30); do
+  if test "$(cat /sys/class/tty/tty0/active)" = tty2; then console_active=true; break; fi
+  sleep 1
+done
+test "$console_active" = true
+printf 'LOCK_CONSOLE_VT_READY\n'
+desktop_active=false
+for attempt in $(seq 1 30); do
+  if test "$(cat /sys/class/tty/tty0/active)" = tty1; then desktop_active=true; break; fi
+  sleep 1
+done
+test "$desktop_active" = true
+printf 'LOCK_RETURNED_GRAPHICAL_VT_READY\n'
+# Re-added devices can reset the group. Require the requested layout again,
+# after ordinary host input wakes the graphical seat, before native password.
+layout_selected=false
+for attempt in $(seq 1 30); do
+  hypr switchxkblayout all __GROUP__
+  if hypr devices -j | jq -e '[.keyboards[] | select(.main) | .active_keymap] | length == 1 and (.[0] __LAYOUT_COMPARISON__ "English (US)")'; then layout_selected=true; break; fi
+  sleep 1
+done
+test "$layout_selected" = true
+test "$(locker_state)" = locked
+printf 'LOCK_VT_ROUNDTRIP_READY\n'
 printf 'LOCK_READY_FOR_REAL_PASSWORD\n'
 unlocked=false
 for attempt in $(seq 1 120); do
@@ -456,6 +576,290 @@ printf 'REAL_PASSWORD_LOCK_UNLOCK_OK\n'
         '__LAYOUT_COMPARISON__', '==' if keyboard == 'us' else '!=')
 
 
+def advance_locked_vt(qmp, report, sent):
+    """Advance only guest-acknowledged locked VT transitions, once per audit."""
+    transitions = (
+        (b'LOCK_SHELL_CRASH_WAKE_READY', ('shift',)),
+        (b'LOCK_SWITCH_TO_CONSOLE', ('ctrl', 'alt', 'f2')),
+        (b'LOCK_CONSOLE_VT_READY', ('ctrl', 'alt', 'f1')),
+        (b'LOCK_RETURNED_GRAPHICAL_VT_READY', ('shift',)),
+    )
+    for marker, keys in transitions:
+        if marker not in report:
+            break
+        if marker not in sent:
+            qmp.keys(*keys)
+            sent.add(marker)
+
+
+def flatpak_fixture(after_reboot):
+    """Public Flathub registration through the installed timer, without mocks."""
+    if after_reboot:
+        return r'''
+flatpak remotes --system --columns=name,url | grep -E '^flathub[[:space:]]+https://dl.flathub.org/repo/$'
+printf 'FLATPAK_REMOTE_PERSISTED_OK\n'
+'''
+    return r'''
+systemctl is-active multi-user.target
+usystem is-active graphical-session.target
+! flatpak remotes --system --columns=name | grep -Fx flathub
+# NIC has been down since before guest firmware execution. Wait for the real
+# registration attempt to fail, without shortening its production timeout.
+registration_failed=false
+for attempt in $(seq 1 60); do
+  if systemctl is-failed --quiet sleepy-flathub.service; then registration_failed=true; break; fi
+  sleep 1
+done
+test "$registration_failed" = true
+systemctl is-active multi-user.target
+usystem is-active graphical-session.target
+printf 'FLATPAK_OFFLINE_DESKTOP_AND_FAILED_REGISTRATION_OK\n'
+printf 'FLATPAK_ENABLE_NETWORK\n'
+# Natural five-minute timer; never manually start/restart the service here.
+registered=false
+for attempt in $(seq 1 210); do
+  if systemctl is-active --quiet sleepy-flathub.service && flatpak remotes --system --columns=name,url | grep -Eq '^flathub[[:space:]]+https://dl.flathub.org/repo/$'; then registered=true; break; fi
+  sleep 2
+done
+journalctl -b -u sleepy-flathub.service --no-pager -n 30
+test "$registered" = true
+printf 'FLATPAK_REAL_FLATHUB_TIMER_RECOVERY_OK\n'
+hypr dispatch exec gnome-software
+software_open=false
+for attempt in $(seq 1 30); do
+  if hypr clients -j | jq -e 'any(.[]; .mapped and (.class | ascii_downcase | contains("gnome.software")))' > /dev/null; then software_open=true; break; fi
+  sleep 1
+done
+test "$software_open" = true
+printf 'FLATPAK_SOFTWARE_WINDOW_OK\n'
+# Application installation is a separate manual GUI acceptance step. This
+# marker asserts only the mapped Software window, not a downloaded application.
+'''
+
+
+def keyring_fixture(after_reboot):
+    """Native Secret Service, using an explicitly nonsecret disposable sentinel."""
+    script = r"""
+# PAM should unlock the actual login collection; never drive an extra prompt.
+test "$(uenv timeout 10 busctl --user get-property org.freedesktop.secrets /org/freedesktop/secrets/collection/login org.freedesktop.Secret.Collection Locked)" = 'b false'
+keyring_load=$(uenv timeout 10 systemctl --user show gnome-keyring-daemon.service -p LoadState --value)
+test "$keyring_load" != bad-setting
+# libsecret is already in the installed closure, but its CLI need not be global.
+# Pick the first executable from sorted, store-backed libsecret outputs.
+timeout 10 nix-store --query --requisites /run/current-system > /tmp/sleepy-alpha-system-closure
+secret_tool=
+while IFS= read -r package; do
+  case "$package" in
+    /nix/store/*-libsecret-*)
+      if test -x "$package/bin/secret-tool"; then secret_tool="$package/bin/secret-tool"; break; fi ;;
+  esac
+done < <(sort -u /tmp/sleepy-alpha-system-closure)
+test -n "$secret_tool"
+"""
+    if not after_reboot:
+        script += r"""
+printf %s sleepy-disposable-keyring-regression | uenv timeout 10 "$secret_tool" store --label=Sleepy-VM-regression sleepy-alpha regression
+"""
+    script += r"""
+# Compare in memory; do not print the stored value to guest evidence.
+keyring_value=$(uenv timeout 10 "$secret_tool" lookup sleepy-alpha regression)
+test "$keyring_value" = sleepy-disposable-keyring-regression
+unset keyring_value
+"""
+    return script + ("printf 'DAILY_KEYRING_PERSISTED_UNLOCKED_OK\\n'\n" if after_reboot else
+                     "printf 'DAILY_KEYRING_STORE_LOOKUP_OK\\n'\n")
+
+
+def daily_fixture(after_reboot):
+    """Installed default-profile assertions; invoked only by --daily-usability."""
+    common = r'''
+uenv() { runuser -u sleepy -- env HOME=/home/sleepy PATH="/etc/profiles/per-user/sleepy/bin:/home/sleepy/.nix-profile/bin:$PATH" XDG_RUNTIME_DIR=/run/user/$uid DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$uid/bus "$@"; }
+fast_config=/home/sleepy/.config/fastfetch/config.jsonc
+logo=$(jq -er '.logo.source' "$fast_config")
+test -s "$logo"
+case "$logo" in /nix/store/*/share/sleepy-artwork/branding/fastfetch.txt) ;; *) exit 1;; esac
+grep -F 'S L E E P Y' "$logo"
+uenv timeout 20 fastfetch > /tmp/sleepy-alpha-fastfetch.txt
+grep -F 'S L E E P Y' /tmp/sleepy-alpha-fastfetch.txt
+printf 'DAILY_FASTFETCH_ASSET_AND_EXECUTION_OK\n'
+grep -F 'gtk-theme-name=adw-gtk3-dark' /home/sleepy/.config/gtk-3.0/settings.ini
+grep -F 'gtk-icon-theme-name=Papirus-Dark' /home/sleepy/.config/gtk-3.0/settings.ini
+# The installed system exports dconf. Query the actual user's database with
+# the graphical session's data paths, not sudo's root Flatpak environment.
+dconf_tool=/run/current-system/sw/bin/dconf
+test -x "$dconf_tool"
+session_data_dirs=$(uenv systemctl --user show-environment | sed -n 's/^XDG_DATA_DIRS=//p')
+test -n "$session_data_dirs"
+test "$(uenv env XDG_CONFIG_HOME=/home/sleepy/.config XDG_DATA_DIRS="$session_data_dirs" "$dconf_tool" read /org/gnome/desktop/interface/color-scheme)" = "'prefer-dark'"
+printf 'DAILY_GTK_DARK_CONFIG_OK\n'
+uenv timeout 5 sleepy-system status > /tmp/sleepy-alpha-system-status.txt
+grep -Fx "Current system: $(readlink -e /run/current-system)" /tmp/sleepy-alpha-system-status.txt
+grep -Fx "Booted system: $(readlink -e /run/booted-system)" /tmp/sleepy-alpha-system-status.txt
+grep -Fx "Selected system profile: $(readlink -e /nix/var/nix/profiles/system)" /tmp/sleepy-alpha-system-status.txt
+printf 'DAILY_SYSTEM_STATUS_OK\n'
+# Only doctor summaries enter evidence, never raw desktop payloads.
+# A structurally valid UPower DisplayDevice with no battery is Unsupported;
+# Bluetooth without a running adapter service is Unavailable.
+set +e
+uenv timeout 5 sleepyctl doctor --json > /tmp/sleepy-alpha-doctor.json
+doctor_status=$?
+set -e
+cat /tmp/sleepy-alpha-doctor.json
+test "$doctor_status" = 0
+jq -e '.ok == true
+  and any(.checks[]; .capability == "audio" and .status == "available")
+  and any(.checks[]; .capability == "battery" and .status == "unsupported")
+  and any(.checks[]; .capability == "bluetooth" and .status == "unavailable")' /tmp/sleepy-alpha-doctor.json
+printf 'DAILY_DOCTOR_HEALTHY_WITH_VIRTUAL_AUDIO_OK\n'
+'''
+    common += keyring_fixture(after_reboot)
+    if after_reboot:
+        return common + r'''
+sha256sum -c /var/lib/sleepy-alpha/screenshot.sha256
+printf 'DAILY_SCREENSHOT_PERSISTED_OK\n'
+'''
+    return common + r'''
+wait_daily() {
+  for attempt in $(seq 1 30); do if "$@"; then return 0; fi; sleep 1; done
+  return 1
+}
+picker_visible() { hypr layers -j | jq -e '.. | objects | select(.namespace? == "sleepy-area-picker")' > /dev/null; }
+picker_hidden() { hypr layers -j | jq -e '[.. | objects | select(.namespace? == "sleepy-area-picker")] | length == 0' > /dev/null; }
+swappy_visible() { hypr clients -j | jq -e 'any(.[]; (.class | ascii_downcase | contains("swappy")) and .mapped)' > /dev/null; }
+complete_png() {
+  test "$(od -An -tx1 -N8 "$1" | tr -d ' \n')" = 89504e470d0a1a0a &&
+    test "$(tail -c 12 "$1" | od -An -tx1 | tr -d ' \n')" = 0000000049454e44ae426082
+}
+# Open the actual packaged menu in a new, readable terminal; only Escape is
+# sent by the host. Comparing both targets and generation listings detects any
+# unintended system change without exercising rebuild/rollback during this gate.
+uenv timeout 5 sleepy-system status > /tmp/sleepy-alpha-system-before-menu.txt
+uenv timeout 5 sleepy-system generations > /tmp/sleepy-alpha-generations-before-menu.txt
+hypr clients -j | jq '[.[] | .address]' > /tmp/sleepy-alpha-before-system-menu.json
+hypr dispatch exec '[float; size 90% 90%; center] ghostty -e sleepy-system'
+system_menu_visible() {
+  system_menu_address=$(hypr clients -j | jq -r --slurpfile before /tmp/sleepy-alpha-before-system-menu.json '[.[] | select(.mapped and (.class | ascii_downcase | contains("ghostty")) and (.address as $a | $before[0] | index($a) | not))] | .[0].address // empty')
+  test -n "$system_menu_address"
+}
+wait_daily system_menu_visible
+hypr dispatch focuswindow "address:$system_menu_address"
+printf 'DAILY_SYSTEM_MENU_READY\n'
+system_menu_closed() { hypr clients -j | jq -e --arg address "$system_menu_address" 'all(.[]; .address != $address)' > /dev/null; }
+wait_daily system_menu_closed
+uenv timeout 5 sleepy-system status > /tmp/sleepy-alpha-system-after-menu.txt
+uenv timeout 5 sleepy-system generations > /tmp/sleepy-alpha-generations-after-menu.txt
+cmp /tmp/sleepy-alpha-system-before-menu.txt /tmp/sleepy-alpha-system-after-menu.txt
+cmp /tmp/sleepy-alpha-generations-before-menu.txt /tmp/sleepy-alpha-generations-after-menu.txt
+printf 'DAILY_SYSTEM_MENU_CANCEL_UNCHANGED_OK\n'
+# The host presses Print and selects a rectangle using actual pointer input.
+install -d -m 0700 /var/lib/sleepy-alpha
+uenv mkdir -p /home/sleepy/Pictures/Screenshots
+touch /tmp/sleepy-alpha-before-screenshot
+printf 'DAILY_PRESS_PRINT\n'
+wait_daily picker_visible
+printf 'DAILY_SELECT_AREA\n'
+wait_daily swappy_visible
+printf 'DAILY_SAVE_SWAPPY\n'
+last_png_hash=''
+stable_new_png() {
+  screenshot=$(find /home/sleepy/Pictures/Screenshots -maxdepth 1 -name '*.png' -newer /tmp/sleepy-alpha-before-screenshot -print -quit)
+  test -n "$screenshot" && complete_png "$screenshot" || return 1
+  current_png_hash=$(sha256sum "$screenshot") || return 1
+  if test "$current_png_hash" != "$last_png_hash"; then
+    last_png_hash=$current_png_hash
+    return 1
+  fi
+}
+# The PNG end chunk and two equal hashes a poll apart exclude partial saves.
+wait_daily stable_new_png
+printf '%s\n' "$last_png_hash" > /var/lib/sleepy-alpha/screenshot.sha256
+printf 'DAILY_SCREENSHOT_SAVED_PNG_OK\n'
+# Explicit graphical opening must produce a new mapped client. The screenshot records what actually rendered.
+hypr clients -j | jq '[.[] | .address]' > /tmp/sleepy-alpha-before-open.json
+hypr dispatch exec "xdg-open $screenshot"
+viewer_visible() { hypr clients -j | jq -e --slurpfile before /tmp/sleepy-alpha-before-open.json 'any(.[]; .mapped and (.class | ascii_downcase | contains("imv")) and (.address as $a | $before[0] | index($a) | not))' > /dev/null; }
+wait_daily viewer_visible
+printf 'DAILY_SCREENSHOT_VIEWER_OPEN_OK\n'
+wait_daily picker_hidden
+wayland_display=$(uenv systemctl --user show-environment | sed -n 's/^WAYLAND_DISPLAY=//p')
+test -n "$wayland_display"
+# Replace any previous image with known text before the real key press. A stale
+# PNG must never satisfy the clipboard screenshot acceptance marker.
+printf 'sleepy-alpha-clipboard-sentinel' | uenv env WAYLAND_DISPLAY="$wayland_display" timeout 2 wl-copy --type text/plain
+test "$(uenv env WAYLAND_DISPLAY="$wayland_display" timeout 2 wl-paste --type text/plain --no-newline)" = sleepy-alpha-clipboard-sentinel
+clipboard_types=$(uenv env WAYLAND_DISPLAY="$wayland_display" timeout 2 wl-paste --list-types)
+! printf '%s\n' "$clipboard_types" | grep -Fx image/png
+printf 'DAILY_PRESS_CLIPBOARD\n'
+wait_daily picker_visible
+printf 'DAILY_SELECT_CLIPBOARD_AREA\n'
+wait_daily picker_hidden
+clipboard_png() {
+  uenv env WAYLAND_DISPLAY="$wayland_display" timeout 2 wl-paste --type image/png > /tmp/sleepy-alpha-clipboard.png 2>/dev/null || return 1
+  complete_png /tmp/sleepy-alpha-clipboard.png
+}
+wait_daily clipboard_png
+printf 'DAILY_SCREENSHOT_CLIPBOARD_PNG_OK\n'
+'''
+
+
+def advance_daily_idle(qmp, report, sent):
+    if b'DAILY_IDLE_SAMPLE_READY\n' in report and 'idle-sampling' not in sent:
+        sent.add('idle-sampling')
+        qmp.keys('ctrl', 'alt', 'f1')
+        qmp.keys('shift')
+    if ('idle-sampling' in sent and b'DAILY_IDLE_SHELL_STABLE_OK\n' in report
+            and 'idle-complete' not in sent):
+        sent.add('idle-complete')
+        qmp.keys('ctrl', 'alt', 'f2')
+
+
+def daily_idle_fixture():
+    # A fixed 8 GiB, 1280px software-rendered VM normally uses well below 1 GiB
+    # for the shell. 128 MiB/min leaves cache warm-up headroom while rejecting
+    # the observed feedback loop (approximately 600 MiB/min). Not an OS limit.
+    return r'''
+printf 'DAILY_IDLE_SAMPLE_READY\n'
+for attempt in $(seq 1 30); do
+  test "$(cat /sys/class/tty/tty0/active)" = tty1 && break
+  sleep 1
+done
+test "$(cat /sys/class/tty/tty0/active)" = tty1
+shell_pid=$(usystem show sleepy-shell.service -P MainPID)
+shell_restarts=$(usystem show sleepy-shell.service -P NRestarts)
+"$python" - "$shell_pid" <<'IDLE_PY'
+import json, os, pathlib, sys, time
+pid = int(sys.argv[1])
+assert pid > 1, "shell has no running MainPID"
+base = pathlib.Path('/proc') / str(pid)
+def sample():
+    # comm may contain spaces or parentheses; fields start after its final ')'.
+    fields = (base / 'stat').read_text().rsplit(')', 1)[1].split()
+    rss = int(next(line.split()[1] for line in (base / 'status').read_text().splitlines() if line.startswith('VmRSS:')))
+    return {'pid': pid, 'start_ticks': int(fields[19]), 'rss_kib': rss,
+            'cpu_ticks': int(fields[11]) + int(fields[12]), 'threads': int(fields[17])}
+start = time.monotonic()
+first = sample()
+peak = first['rss_kib']
+for index in range(7):
+    if index:
+        time.sleep(max(0, start + index * 10 - time.monotonic()))
+    current = sample()
+    current['elapsed_seconds'] = round(time.monotonic() - start, 3)
+    current['cpu_seconds'] = (current['cpu_ticks'] - first['cpu_ticks']) / os.sysconf('SC_CLK_TCK')
+    peak = max(peak, current['rss_kib'])
+    print('DAILY_IDLE_SAMPLE ' + json.dumps(current, sort_keys=True), flush=True)
+    assert current['start_ticks'] == first['start_ticks'], "shell PID was reused"
+    assert current['rss_kib'] <= 1024 * 1024, "shell exceeded 1 GiB resident memory"
+    assert peak - first['rss_kib'] <= 128 * 1024, "shell grew over 128 MiB within one minute"
+assert time.monotonic() - start >= 60
+IDLE_PY
+usystem is-active sleepy-shell.service
+test "$(usystem show sleepy-shell.service -P MainPID)" = "$shell_pid"
+test "$(usystem show sleepy-shell.service -P NRestarts)" = "$shell_restarts"
+printf 'DAILY_IDLE_SHELL_STABLE_OK\n'
+'''
+
+
 def guest_report(machine, password, stage, after_reboot=False, update_phase=None, final=False):
     """Authenticate on a real VT, then explicitly sudo fixed disposable-VM checks."""
     machine.qmp.keys('ctrl', 'alt', 'f2')
@@ -468,6 +872,11 @@ def guest_report(machine, password, stage, after_reboot=False, update_phase=None
     machine.wait_screen('SLEEPY_AUTH_OK', f'{stage}-authenticated')
     channel = socket.socket(socket.AF_UNIX)
     audit_timeout = 1800 if update_phase else 180
+    if getattr(machine, 'flatpak_recovery', False) and not after_reboot:
+        # One production attempt (60s), natural retry (420s), Software (30s).
+        audit_timeout += 510
+    if getattr(machine, 'daily_usability', False):
+        audit_timeout += 90  # 30s graphical VT acknowledgement + 60s idle samples.
     channel.settimeout(audit_timeout)
     channel.connect(str(machine.output / 'report.sock'))
     script = r'''#!/usr/bin/env bash
@@ -549,7 +958,7 @@ runuser -u sleepy -- mkdir -p /home/sleepy/.config/sleepy
 runuser -u sleepy -- sh -c 'printf sleepy-alpha-state > /home/sleepy/.config/sleepy/alpha-persistence'
 sync
 printf 'PERSISTENCE_MARKER_WRITTEN\n'
-''') + lock_fixture(getattr(machine, 'keyboard', 'us')) + update_fixture(update_phase) + (r'''
+''') + (flatpak_fixture(after_reboot) if getattr(machine, 'flatpak_recovery', False) else '') + lock_fixture(getattr(machine, 'keyboard', 'us')) + (daily_fixture(after_reboot) + daily_idle_fixture() if getattr(machine, 'daily_usability', False) else '') + update_fixture(update_phase) + (r'''
 cp -p /var/lib/sleepy-alpha/hypr-user.before /home/sleepy/.config/hypr/sleepy-user.conf
 hypr reload
 printf 'USER_SETTING_FIXTURE_RESTORED_OK\n'
@@ -566,8 +975,11 @@ printf 'SLEEPY_REPORT_COMPLETE\n'
     machine.qmp.text(password + '\n')
     channel.sendall(script.encode())
     report = b''
+    daily_sent = set()
     lock_desktop_shown = False
     lock_input_sent = False
+    lock_graphical_woken = False
+    idle_lock_input_sent = False
     lock_returned_to_console = False
     deadline = time.monotonic() + audit_timeout
     report_file = (machine.output / f'{stage}-guest-report.txt').open('wb')
@@ -581,6 +993,17 @@ printf 'SLEEPY_REPORT_COMPLETE\n'
             if b'LOCK_RETURN_TO_DESKTOP' in report and not lock_desktop_shown:
                 machine.qmp.keys('ctrl', 'alt', 'f1')
                 lock_desktop_shown = True
+            if b'LOCK_GRAPHICAL_VT_READY' in report and not lock_graphical_woken:
+                # The kernel VT is ready; ordinary input resumes compositor
+                # keyboards and DPMS before the guest selects its keymap.
+                machine.qmp.keys('shift')
+                lock_graphical_woken = True
+            if b'IDLE_LOCK_PASSWORD_READY' in report and not idle_lock_input_sent:
+                machine.wait_screen('Password', f'{stage}-idle-locked', timeout=30)
+                # Guest confirmed US for this preparatory native unlock.
+                machine.qmp.text(password + '\n')
+                idle_lock_input_sent = True
+            advance_locked_vt(machine.qmp, report, daily_sent)
             if b'LOCK_READY_FOR_REAL_PASSWORD' in report and not lock_input_sent:
                 machine.wait_screen('Password', f'{stage}-locked')
                 if getattr(machine, 'keyboard', 'us') != 'us':
@@ -591,6 +1014,55 @@ printf 'SLEEPY_REPORT_COMPLETE\n'
                 machine.screen(f'{stage}-unlocked')
                 machine.qmp.keys('ctrl', 'alt', 'f2')
                 lock_returned_to_console = True
+            if b'FLATPAK_ENABLE_NETWORK' in report and 'network-enabled' not in daily_sent:
+                daily_sent.add('network-enabled')
+                machine.qmp.call('set_link', name='nic0', up=True)
+            if b'FLATPAK_SOFTWARE_WINDOW_OK' in report and 'software-shown' not in daily_sent:
+                daily_sent.add('software-shown')
+                machine.qmp.keys('ctrl', 'alt', 'f1')
+                machine.qmp.keys('shift')
+                time.sleep(2)
+                machine.screen(f'{stage}-software')
+            if getattr(machine, 'daily_usability', False):
+                if b'DAILY_SYSTEM_MENU_READY' in report and 'system-menu' not in daily_sent:
+                    daily_sent.add('system-menu')
+                    machine.qmp.keys('ctrl', 'alt', 'f1')
+                    machine.wait_screen(
+                        ('Sleepy system', 'Current and booted system', 'List recovery generations',
+                         'Apply the configuration', 'Return to the previous'),
+                        f'{stage}-system-menu', timeout=25)
+                    machine.qmp.keys('esc')
+                for marker, action in [
+                    (b'DAILY_PRESS_PRINT', 'print'),
+                    (b'DAILY_SELECT_AREA', 'select'),
+                    (b'DAILY_SAVE_SWAPPY', 'save'),
+                    (b'DAILY_PRESS_CLIPBOARD', 'clipboard'),
+                    (b'DAILY_SELECT_CLIPBOARD_AREA', 'select-clipboard'),
+                ]:
+                    if marker not in report or marker in daily_sent: continue
+                    daily_sent.add(marker)
+                    machine.qmp.keys('ctrl', 'alt', 'f1')
+                    time.sleep(1)
+                    machine.screen(f'{stage}-{action}-before')
+                    if action in ('print', 'clipboard'):
+                        if action == 'clipboard': machine.qmp.keys('shift', 'print')
+                        else: machine.qmp.keys('print')
+                    elif action == 'save':
+                        machine.qmp.keys('ctrl', 's')
+                    else:
+                        for x, y, down in [(10000, 10000, True), (23000, 23000, False)]:
+                            machine.qmp.call('input-send-event', events=[
+                                {'type': 'abs', 'data': {'axis': 'x', 'value': x}},
+                                {'type': 'abs', 'data': {'axis': 'y', 'value': y}},
+                                {'type': 'btn', 'data': {'button': 'left', 'down': down}},
+                            ])
+                            time.sleep(.3)
+                if b'DAILY_SCREENSHOT_CLIPBOARD_PNG_OK' in report and 'finished' not in daily_sent:
+                    daily_sent.add('finished')
+                    machine.screen(f'{stage}-daily-screenshot-viewer')
+            # Coalesced unlock/UI markers may return to VT2; idle acknowledgement
+            # must run last so the new sampling phase remains on the desktop.
+            advance_daily_idle(machine.qmp, report, daily_sent)
             if len(report) > 1024 * 1024: raise RuntimeError('Guest audit exceeded 1 MiB output bound')
     finally:
         channel.close()
@@ -643,6 +1115,8 @@ def main():
     parser.add_argument('--install-timeout', type=int, default=10800)
     parser.add_argument('--interrupt-install', action='store_true', help='Before visible TUI installation, interrupt a real disposable-disk install after mounting and verify cleanup')
     parser.add_argument('--keyboard', choices=('us', 'ru', 'de', 'cz'), default='us', help='Select the installed keyboard through the real TUI and test lock-screen switching')
+    parser.add_argument('--flatpak-recovery', action='store_true', help='Select Flatpak in TUI; prove offline first desktop and real Flathub timer recovery, then launch Software')
+    parser.add_argument('--daily-usability', action='store_true', help='Verify installed daily defaults, real Print save/clipboard and PNG persistence; adds virtual audio')
     parser.add_argument('--update-safety', action='store_true', help='Also test failed rebuild boot safety, boot a second generation, then rollback and boot the original')
     parser.add_argument('--pause-at-greeter', action='store_true', help='Pause and release QMP before first graphical login for field inspection; see printed continuation instructions')
     parser.add_argument('--cache-url', help='Optional signed binary cache reachable inside VM (e.g. http://10.0.2.2:8080)')
@@ -675,6 +1149,10 @@ def main():
     machine = Machine(output, args.firmware.resolve(), args.memory, acceleration)
     machine.pause_at_greeter = args.pause_at_greeter
     machine.keyboard = args.keyboard
+    machine.daily_usability = args.daily_usability
+    machine.flatpak_recovery = args.flatpak_recovery
+    result['flatpak_recovery'] = args.flatpak_recovery
+    result['daily_usability'] = args.daily_usability
     result['keyboard'] = args.keyboard
     try:
         print('Booting installer and driving the visible tty1 TUI.', flush=True)
@@ -739,6 +1217,27 @@ def main():
             if check not in result['completed']: result['completed'].append(check)
         # Preserve verified substeps even if a later update or reboot gate fails.
         markers = {
+            'IDLE_LOCK_NATIVE_UNLOCK_OK': 'preexisting-idle-lock-native-password-unlock',
+            'FLATPAK_OFFLINE_DESKTOP_AND_FAILED_REGISTRATION_OK': 'flatpak-offline-first-desktop',
+            'FLATPAK_REAL_FLATHUB_TIMER_RECOVERY_OK': 'flatpak-real-Flathub-timer-recovery',
+            'FLATPAK_SOFTWARE_WINDOW_OK': 'flatpak-Software-window',
+            'FLATPAK_REMOTE_PERSISTED_OK': 'flatpak-remote-persistence',
+            **{f'DAILY_{key}_OK': value for key, value in {
+                'FASTFETCH_ASSET_AND_EXECUTION': 'daily-fastfetch',
+                'GTK_DARK_CONFIG': 'daily-gtk-dark-config',
+                'SYSTEM_STATUS': 'daily-system-status',
+                'KEYRING_STORE_LOOKUP': 'daily-keyring-store-lookup',
+                'KEYRING_PERSISTED_UNLOCKED': 'daily-keyring-persisted-unlocked',
+                'SYSTEM_MENU_CANCEL_UNCHANGED': 'daily-system-menu-cancel-unchanged',
+                'DOCTOR_HEALTHY_WITH_VIRTUAL_AUDIO': 'daily-doctor-with-virtual-audio',
+                'SCREENSHOT_SAVED_PNG': 'daily-Print-saved-PNG',
+                'SCREENSHOT_VIEWER_OPEN': 'daily-screenshot-viewer-open',
+                'SCREENSHOT_CLIPBOARD_PNG': 'daily-ShiftPrint-clipboard-PNG',
+                'SCREENSHOT_PERSISTED': 'daily-screenshot-persistence',
+                'IDLE_SHELL_STABLE': 'daily-idle-shell-memory-and-process-stability',
+            }.items()},
+            'LOCK_SHELL_CRASH_INPUT_WAKE_OK': 'locked-shell-SIGKILL-input-DPMS-wake',
+            'LOCK_VT_ROUNDTRIP_READY': 'locked-VT-roundtrip-keyboard-restored',
             'REAL_PASSWORD_LOCK_UNLOCK_OK': 'real-password-lock-unlock',
             'LOCK_SCREEN_LAYOUT_SWITCH_OK': 'lock-screen-layout-switch',
             'REAL_USER_LOGIN_OK': 'real-password-login',
@@ -751,6 +1250,9 @@ def main():
             'CRASH_RECOVERY_OK sleepy-session.service': 'session-daemon-SIGKILL-recovery',
             'REAL_HYPRLAND_SETTING_APPLIED_OK': 'real-Hyprland-setting-applied',
             'FAILED_UPDATE_PRESERVED_SYSTEM_AND_BOOT_OK': 'failed-update-preserved-boot',
+            'DEVELOPMENT_ABSENT_IN_BASE_GENERATION_OK': 'development-disabled-base-generation',
+            'DEVELOPMENT_PINNED_DIRENV_PROJECT_OK': 'development-pinned-direnv-project',
+            'DEVELOPMENT_REMOVED_AFTER_ROLLBACK_OK': 'development-removed-after-rollback',
             'SECOND_GENERATION_PREPARED_OK': 'second-generation-prepared',
             'SECOND_GENERATION_REAL_BOOT_OK': 'second-generation-real-boot',
             'PREVIOUS_GENERATION_SELECTED_FOR_BOOT_OK': 'previous-generation-selected',

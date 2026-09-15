@@ -96,6 +96,32 @@ assert_activation_reference_rejected activation-launcher \
 assert_activation_reference_rejected activation-notifications \
   '.local/state/sleepy/notifications/active.json'
 
+# Static repository defaults are legitimate evaluation inputs. Mutable Sleepy
+# filenames remain forbidden even when a source references them relatively.
+immutable="$fixture/immutable-defaults"
+mkdir -p "$immutable/home-files" "$immutable/sources"
+: >"$immutable/activate"
+printf '%s\n' '{}' >"$immutable/sources/defaults.json"
+cat >"$immutable/sources/default.nix" <<'EOF'
+builtins.fromJSON (builtins.readFile ./defaults.json)
+EOF
+bash "$contract" "$immutable/home-files" "$immutable/activate" "$immutable/sources"
+
+for reference in \
+  'builtins.readFile ./settings.json' \
+  'builtins.readFile ./presets.json' \
+  'builtins.readFile ./overrides.json' \
+  'builtins.readFile ./launcher.json' \
+  'xdg.configFile."sleepy/themes/custom.json".text = "{}";' \
+  'xdg.configFile."sleepy/notifications/custom.json".text = "{}";' \
+  'xdg.configFile."anything".force = true;'; do
+  printf '%s\n' "$reference" >"$immutable/sources/default.nix"
+  if bash "$contract" "$immutable/home-files" "$immutable/activate" "$immutable/sources" >/dev/null 2>&1; then
+    printf 'update safety contract accepted unsafe Home Manager source: %s\n' "$reference" >&2
+    exit 1
+  fi
+done
+
 approved_initializer="$fixture/approved-initializer"
 mkdir -p "$approved_initializer/home-files" "$approved_initializer/sources"
 cat >"$approved_initializer/activate" <<'EOF'

@@ -11,22 +11,14 @@
       state="''${XDG_STATE_HOME:-$HOME/.local/state}/sleepy"
       mkdir -p "$state"
       if dialog --title ' Welcome to Sleepy ' --msgbox \
-        'Your desktop is ready to explore.\n\nSuper + Return: terminal\nSuper + D: launcher\nSuper + Q: close a window\n\nNetwork and audio controls live in the shell.\nPersonal Hyprland changes: ~/.config/hypr/sleepy-user.conf\n\nsleepy-system generations: list recovery points\nsleepy-system rebuild: apply your saved system configuration\nsleepy-system rollback: return to the previous generation\n\nIf login fails, reboot and choose an older generation in the boot menu (hold Space). The installer also has a Recovery entry.\n\nThis is alpha software. Keep backups of important files.' 23 76; then
+        'Your desktop is ready to explore.\n\nSuper + Return: terminal\nSuper + D: launcher\nSuper + Q: close window; Print: select and save a screenshot\nShift + Print: copy a screen region\nNetwork and audio controls live in the shell.\nPersonal Hyprland changes: ~/.config/hypr/sleepy-user.conf\n\nsleepy-system: system settings and recovery menu\nView generations, apply saved settings, or roll back.\n\nIf login fails, reboot and choose an older generation in the boot menu (hold Space). The installer also has a Recovery entry.\n\nThis is alpha software. Keep backups of important files.' 23 76; then
         touch "$state/welcome-seen"
       fi
     '';
   };
-  systemTools = pkgs.writeShellApplication {
-    name = "sleepy-system";
-    runtimeInputs = [config.nix.package config.system.build.nixos-rebuild pkgs.coreutils];
-    text = ''
-      case "''${1:-help}" in
-        generations) exec nix-env --list-generations -p /nix/var/nix/profiles/system ;;
-        rebuild) exec sudo ${config.system.build.nixos-rebuild}/bin/nixos-rebuild switch --flake /etc/nixos#installed ;;
-        rollback) exec sudo ${config.system.build.nixos-rebuild}/bin/nixos-rebuild switch --rollback ;;
-        *) printf '%s\n' 'sleepy-system generations | rebuild | rollback' ;;
-      esac
-    '';
+  systemTools = pkgs.callPackage ../../../packages/sleepy-system {
+    nix = config.nix.package;
+    nixos-rebuild = config.system.build.nixos-rebuild;
   };
 in {
   environment.systemPackages = [welcome systemTools pkgs.thunar];

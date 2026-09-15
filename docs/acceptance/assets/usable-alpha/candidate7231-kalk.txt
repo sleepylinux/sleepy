@@ -1,0 +1,10 @@
+app/org.kde.kalk/x86_64/stable
+32a973be521071b7923689cadbe491dc493a1ecda78f0b40ba6c461d91a65184
+flathub
+[
+  {
+    "class": "org.kde.kalk",
+    "title": "Kalk — Calculator",
+    "mapped": true
+  }
+]

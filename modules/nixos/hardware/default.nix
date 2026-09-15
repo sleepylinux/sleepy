@@ -53,12 +53,26 @@ in {
       environment.systemPackages = [pkgs.gnome-software];
       systemd.services.sleepy-flathub = {
         description = "Configure the selected Flathub application source";
-        wantedBy = ["multi-user.target"];
-        wants = ["network-online.target"];
-        after = ["network-online.target"];
+        # The timer owns startup: registration never holds up login or waits
+        # for network-online.target, which does not guarantee Internet access.
+        after = ["network.target"];
         serviceConfig = {
           Type = "oneshot";
+          RemainAfterExit = true;
+          TimeoutStartSec = "45s";
+          TimeoutStopSec = "5s";
           ExecStart = "${pkgs.flatpak}/bin/flatpak remote-add --system --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo";
+        };
+      };
+      systemd.timers.sleepy-flathub = {
+        description = "Retry the selected Flathub source after an offline boot";
+        wantedBy = ["timers.target"];
+        timerConfig = {
+          OnBootSec = "15s";
+          OnUnitInactiveSec = "5min";
+          AccuracySec = "15s";
+          # Successful registration remains active, so the timer stops retrying.
+          Unit = "sleepy-flathub.service";
         };
       };
     })

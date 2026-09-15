@@ -1,4 +1,5 @@
 {
+  extendStandaloneHome,
   integratedHomeConfig,
   nixosConfig,
   pkgs,
@@ -8,7 +9,93 @@
   standaloneGhostty = standaloneHomeConfig.programs.ghostty.package;
   expectedIntegratedTerminal = "${integratedGhostty}/bin/ghostty";
   expectedStandaloneTerminal = "${standaloneGhostty}/bin/ghostty";
+  overridden =
+    (extendStandaloneHome {
+      modules = [
+        {
+          programs = {
+            fastfetch.settings = {
+              logo.source = "/fixture/custom-logo.txt";
+              display.color.keys = "blue";
+              modules = ["os"];
+            };
+            ghostty.settings.background = "202020";
+            fuzzel.settings.main.width = 42;
+            swappy.settings.Default.save_dir = "/fixture/Captures";
+          };
+          xdg.mimeApps.defaultApplications."image/png" = ["fixture-viewer.desktop"];
+          gtk.theme.name = "Fixture GTK theme";
+          gtk.iconTheme.name = "Fixture icons";
+          dconf.settings."org/gnome/desktop/interface".color-scheme = "default";
+        }
+      ];
+    }).config;
+  disabled =
+    (extendStandaloneHome {
+      modules = [
+        {
+          programs.fastfetch.enable = false;
+          programs.imv.enable = false;
+          gtk.enable = false;
+        }
+      ];
+    }).config;
+  customPictures =
+    (extendStandaloneHome {
+      modules = [{xdg.userDirs.pictures = "/fixture/Pictures";}];
+    }).config;
+  withoutPictures =
+    (extendStandaloneHome {
+      modules = [{xdg.userDirs.pictures = null;}];
+    }).config;
+  # Evaluate real Home Manager merges, including option normalization, rather
+  # than checking source spelling or copying the module's merge implementation.
+  moduleChecks = {
+    fastfetchEnabledByDefault = standaloneHomeConfig.programs.fastfetch.enable;
+    fastfetchConfigGenerated = standaloneHomeConfig.xdg.configFile ? "fastfetch/config.jsonc";
+    fastfetchDisableRemovesConfig = !(disabled.xdg.configFile ? "fastfetch/config.jsonc");
+    fastfetchDisableRemovesPackage =
+      !(builtins.elem
+        (toString standaloneHomeConfig.programs.fastfetch.package)
+        (map toString disabled.home.packages));
+    logoSourceOverride = overridden.programs.fastfetch.settings.logo.source == "/fixture/custom-logo.txt";
+    logoTypePreserved = overridden.programs.fastfetch.settings.logo.type == standaloneHomeConfig.programs.fastfetch.settings.logo.type;
+    logoPalettePreserved = overridden.programs.fastfetch.settings.logo.color == standaloneHomeConfig.programs.fastfetch.settings.logo.color;
+    displayColorOverride = overridden.programs.fastfetch.settings.display.color.keys == "blue";
+    displayTitlePreserved = overridden.programs.fastfetch.settings.display.color.title == standaloneHomeConfig.programs.fastfetch.settings.display.color.title;
+    moduleListReplacesDefaults = overridden.programs.fastfetch.settings.modules == ["os"];
+    # The pinned Ghostty module normalizes scalar options into lists.
+    ghosttyBackgroundOverride = overridden.programs.ghostty.settings.background == ["202020"];
+    ghosttyForegroundPreserved = overridden.programs.ghostty.settings.foreground == standaloneHomeConfig.programs.ghostty.settings.foreground;
+    ghosttyCommandPreserved = overridden.programs.ghostty.settings.command == standaloneHomeConfig.programs.ghostty.settings.command;
+    fuzzelWidthOverride = overridden.programs.fuzzel.settings.main.width == 42;
+    fuzzelPalettePreserved = overridden.programs.fuzzel.settings.colors == standaloneHomeConfig.programs.fuzzel.settings.colors;
+    gtkThemeOverride = overridden.gtk.theme.name == "Fixture GTK theme";
+    gtkIconOverride = overridden.gtk.iconTheme.name == "Fixture icons";
+    gtkDarkDefaultPreserved = overridden.gtk.gtk3.extraConfig.gtk-application-prefer-dark-theme;
+    gtkDisableHonored = !disabled.gtk.enable;
+    gtkDisableRemovesConfig = !(disabled.xdg.configFile ? "gtk-3.0/settings.ini");
+    dconfColorSchemeOverride = overridden.dconf.settings."org/gnome/desktop/interface".color-scheme == "default";
+    integratedFastfetchEnabled = integratedHomeConfig.programs.fastfetch.enable;
+    integratedGtkThemeEnabled = integratedHomeConfig.gtk.enable && integratedHomeConfig.gtk.theme.name == "adw-gtk3-dark";
+    integratedGhosttyPalette = integratedHomeConfig.programs.ghostty.settings.foreground == standaloneHomeConfig.programs.ghostty.settings.foreground;
+    swappyEnabledByDefault = standaloneHomeConfig.programs.swappy.enable;
+    swappySaveDirectoryOverride = overridden.programs.swappy.settings.Default.save_dir == "/fixture/Captures";
+    swappyFilenamePreserved = overridden.programs.swappy.settings.Default.save_filename_format == standaloneHomeConfig.programs.swappy.settings.Default.save_filename_format;
+    swappyUsesPicturesDirectory = customPictures.programs.swappy.settings.Default.save_dir == "/fixture/Pictures/Screenshots";
+    swappyNullPicturesFallback = withoutPictures.programs.swappy.settings.Default.save_dir == "${standaloneHomeConfig.home.homeDirectory}/Pictures/Screenshots";
+    imageViewerDefault = standaloneHomeConfig.programs.imv.enable && standaloneHomeConfig.xdg.mimeApps.defaultApplications."image/png" == ["imv.desktop"];
+    imageViewerOverride = overridden.xdg.mimeApps.defaultApplications."image/png" == ["fixture-viewer.desktop"];
+    imageViewerDisableRemovesMimeDefault = !(disabled.xdg.mimeApps.defaultApplications ? "image/png");
+    imageViewerDisableRemovesPackage =
+      !(builtins.elem
+        (toString standaloneHomeConfig.programs.imv.package)
+        (map toString disabled.home.packages));
+  };
 in
+  assert pkgs.lib.all
+  (name: pkgs.lib.assertMsg moduleChecks.${name} "Sleepy app module contract failed: ${name}")
+  (builtins.attrNames moduleChecks);
   assert pkgs.lib.assertMsg
   (integratedGhostty != pkgs.ghostty)
   "Sleepy VM must use its renderer-compatible Ghostty package";

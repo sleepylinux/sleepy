@@ -1,0 +1,18 @@
+--- a/src/Compositor.cpp
++++ b/src/Compositor.cpp
+@@ -512,6 +512,15 @@
+                 }
+ 
+                 Config::monitorRuleMgr()->scheduleReload();
++
++                // Damage received while inactive cannot schedule a frame. The monitor
++                // reload runs from render.preChecks, so it cannot bootstrap rendering.
++                // Request the first frame explicitly after the seat becomes active.
++                for (auto const& m : State::monitorState()->monitors()) {
++                    g_pHyprRenderer->damageMonitor(m);
++                    m->scheduleFrame();
++                }
++
+                 Pointer::Cursor::mgr()->syncGsettings();
+             } else {
+                 Log::logger->log(Log::DEBUG, "Session got deactivated!");

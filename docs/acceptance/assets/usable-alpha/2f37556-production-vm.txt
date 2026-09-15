@@ -1,0 +1,5 @@
+Build exited 0; fresh NixOS VM, existing credential-free test-only PAM.
+vm-test-run-sleepy-hyprland-production> machine: (finished: waiting for Session: to appear on screen, in 9.20 seconds)
+vm-test-run-sleepy-hyprland-production> machine: (finished: waiting for success: sudo -u lazy HOME=/home/lazy XDG_RUNTIME_DIR=/run/user/1000 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus systemctl --user is-active wayland-wm@hyprland.desktop.service, in 1.68 seconds)
+vm-test-run-sleepy-hyprland-production> test script finished in 118.93s
+vm-test-run-sleepy-hyprland-production> (finished: cleanup, in 0.15 seconds)

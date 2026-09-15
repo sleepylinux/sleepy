@@ -1,0 +1,16 @@
+error: Cannot build '/nix/store/b6sh9k709px6lsw487wawhkq85jiqf4i-user-units.drv'.
+       Reason: builder failed with exit code 1.
+       Output paths:
+         /nix/store/h8q3sxslvibk59ynrx7crq39f15r9ihr-user-units
+       Last 1 log lines:
+       > ln: failed to create symbolic link '/nix/store/h8q3sxslvibk59ynrx7crq39f15r9ihr-user-units/xdg-desktop-portal-hyprland.service': File exists
+       For full logs, run:
+         nix log /nix/store/b6sh9k709px6lsw487wawhkq85jiqf4i-user-units.drv
+error: Cannot build '/nix/store/413k1wgbhs5yb5bb486gjc0wlvszj6dn-etc.drv'.
+       Reason: 1 dependency failed.
+       Output paths:
+         /nix/store/xzf0ifkdvkhm1id8rm82gakgc73z0dv4-etc
+error: Cannot build '/nix/store/wxjb6pa3qygvfxqrg11g0klyn40r72f1-nixos-system-sleepy-26.11.20260822.2c423e0.drv'.
+       Reason: 1 dependency failed.
+       Output paths:
+         /nix/store/dk04dz2bd7hg47dgwggl498pjqf2mi32-nixos-system-sleepy-26.11.20260822.2c423e0

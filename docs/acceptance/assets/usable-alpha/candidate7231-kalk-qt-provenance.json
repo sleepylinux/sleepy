@@ -1,0 +1,21 @@
+{
+  "installed_image_source": "7231d4b2bf320440365b0f51a323f3466c724dd1",
+  "session_runtime_revision": "4d48082a0ff22cfefa6ebd007f41b6192709aa27",
+  "dark_locker_revision": "815b403b5016a41027b396b0c5efac6a5160cb6e",
+  "clean_qt_runtime": "/nix/store/s7n4mf856bmrmqz1i3q9v54giy2gfyqc-qtbase-wayland-focus-reset-6.11.1",
+  "earlier_instrumented_qt_runtime": "/nix/store/vc3yhwsbiz8v9b4lh9wn74j6j0mshdlz-qtbase-wayland-focus-reset-diagnostic-6.11.1",
+  "permanent_qt_patch_root_revision": "0de8bab4d02cbb0b8c9c7afa96112273562a8baa",
+  "qt_regression_output": "/nix/store/g5bvsjsanz9j9pxk74gkpqfn8y9g89f9-qt-wayland-keyboard-capability-focus",
+  "source_sha256": {
+    "work/vm-usability-1/software-calculator-details.png": "7049effa7ca6d7bb63d489eaafef2b438cf06f81bfa1c6f24f537c9be7643815",
+    "work/vm-usability-1/software-after-unlock.png": "8b4b83c23152a735b4dd3c19b9d29ddce7241ed2a880230bbd33b508a82283c1",
+    "work/vm-usability-1/kalk-calculation.png": "6a6328186c0ea10a12822dc839db0a83a2c98170475c3c72d4efa48bf75969f3",
+    "work/vm-usability-1/dark-locker-vt-russian-input.png": "bfb156e93df9a342e3dfe5916f8bf270c01a0aacf062550efb1d0d0d25b0647c",
+    "work/debug-usability/software-kalk-actual-vm.txt": "7f740406c024da35d8c316b3e4f22f45a08797099520166b8004f18ba2621942",
+    "work/debug-usability/qt-source-fixed-native-unlock.txt": "370ac6fc1053b9b79fc222983cf3ae1a7541cef6773011888d910822a387b434",
+    "work/debug-usability/dark-locker-vt-pam.txt": "d3c6e800ca378d91f8b68dc0e665dcc18e1d2f7dd988c336b1d82a6de7516940",
+    "work/debug-usability/qt-source-fixed-observer.txt": "0acc5edb74e60b159cf898046d95b88b9d1bbc132f9f580cc21ba5087508933a",
+    "work/evidence/qt-keyboard-focus/public-check-build.log": "b70b375ea4411dadde7e9811f8ce8df8daeb6de38a5e9db3a8675bc0d036fadf"
+  },
+  "scope": "Separate live diagnostics on old installed disk, temporary runtime overrides. Earlier Qt observer is instrumented; later dark locker uses clean library. Not fresh final combined acceptance."
+}

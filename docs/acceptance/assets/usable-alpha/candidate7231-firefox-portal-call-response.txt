@@ -1,0 +1,44 @@
+head -4 /tmp/sleepy-file-portal-filtered.txt; tail -39 /tmp/sleepy-file-portal-filtered.txt; printf '\nSLEEPY_COMMAND_DONE:%s\n' "$?"
+Monitoring bus message stream.
+‣ Type=method_call  Endian=l  Flags=0  Version=1 Cookie=112  Timestamp="Tue 2026-09-15 03:24:28.483565 UTC"
+  Sender=:1.442455  Destination=:1.390358  Path=/org/freedesktop/portal/desktop  Interface=org.freedesktop.portal.FileChooser  Member=OpenFile
+  UniqueName=:1.442455
+
+‣ Type=signal  Endian=l  Flags=1  Version=1 Cookie=249345  Timestamp="Tue 2026-09-15 03:24:45.541792 UTC"
+  Sender=:1.390358  Destination=:1.442455  Path=/org/freedesktop/portal/desktop/request/1_442455/firefox_file_picker_2_2710870148  Interface=org.freedesktop.portal.Request  Member=Response
+  UniqueName=:1.390358
+  MESSAGE "ua{sv}" {
+          UINT32 0;
+          ARRAY "{sv}" {
+                  DICT_ENTRY "sv" {
+                          STRING "choices";
+                          VARIANT "a(ss)" {
+                                  ARRAY "(ss)" {
+                                  };
+                          };
+                  };
+                  DICT_ENTRY "sv" {
+                          STRING "current_filter";
+                          VARIANT "(sa(us))" {
+                                  STRUCT "sa(us)" {
+                                          STRING "All Files";
+                                          ARRAY "(us)" {
+                                                  STRUCT "us" {
+                                                          UINT32 0;
+                                                          STRING "*";
+                                                  };
+                                          };
+                                  };
+                          };
+                  };
+                  DICT_ENTRY "sv" {
+                          STRING "uris";
+                          VARIANT "as" {
+                                  ARRAY "s" {
+                                          STRING "file:///home/sleepy/Pictures/Screenshots/Sleepy-20260915-022519.png";
+                                  };
+                          };
+                  };
+          };
+  };
+

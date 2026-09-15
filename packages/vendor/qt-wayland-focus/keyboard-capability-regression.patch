@@ -1,0 +1,42 @@
+--- a/tests/auto/wayland/client/tst_client.cpp
++++ b/tests/auto/wayland/client/tst_client.cpp
+@@ -159,6 +159,7 @@
+     }
+     void createDestroyWindow();
+     void activeWindowFollowsKeyboardFocus();
++    void keyboardCapabilityRestoresFocus();
+     void events();
+     void backingStore();
+     void touchDrag();
+@@ -212,6 +213,31 @@
+     QCOMPARE(QGuiApplication::focusWindow(), static_cast<QWindow *>(nullptr));
+ }
+ 
++void tst_WaylandClient::keyboardCapabilityRestoresFocus()
++{
++    TestWindow window;
++    window.show();
++    Surface *s = nullptr;
++    QCOMPOSITOR_TRY_VERIFY(s = surface());
++    exec([&] { sendShellSurfaceConfigure(s); });
++    QTRY_VERIFY(window.isExposed());
++    exec([&] { keyboard()->sendEnter(s); });
++    QTRY_COMPARE(QGuiApplication::focusWindow(), &window);
++
++    // Removing the keyboard capability destroys the client keyboard without
++    // requiring a wl_keyboard.leave for the still-live surface.
++    exec([&] { get<Seat>()->setCapabilities(Seat::capability_pointer | Seat::capability_touch); });
++    QTRY_COMPARE(QGuiApplication::focusWindow(), nullptr);
++    exec([&] { get<Seat>()->setCapabilities(Seat::capability_pointer | Seat::capability_keyboard | Seat::capability_touch); });
++    QCOMPOSITOR_TRY_VERIFY(keyboard() && !keyboard()->resourceMap().isEmpty());
++    exec([&] { keyboard()->sendEnter(s); });
++    QTRY_COMPARE(QGuiApplication::focusWindow(), &window);
++    QTRY_COMPARE(window.focusInEventCount, 2);
++
++    exec([&] { keyboard()->sendLeave(s); });
++    QTRY_COMPARE(QGuiApplication::focusWindow(), nullptr);
++}
++
+ void tst_WaylandClient::events()
+ {
+     TestWindow window;

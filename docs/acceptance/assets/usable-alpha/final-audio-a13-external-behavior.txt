@@ -1,0 +1,10 @@
+uenv "$python" /tmp/sleepy-audio-behavior.py; printf '\nSLEEPY_COMMAND_DONE:%s\n' "$?"
+{"kind": "output", "field": "volume", "value": 0.37, "observed_seconds": 1.613}
+{"kind": "output", "field": "muted", "value": true, "observed_seconds": 2.009}
+{"kind": "input", "field": "volume", "value": 0.37, "observed_seconds": 1.91}
+{"kind": "input", "field": "muted", "value": true, "observed_seconds": 2.01}
+{"kind": "output", "field": "volume", "value": 0.4, "observed_seconds": 2.017}
+{"kind": "output", "field": "muted", "value": false, "observed_seconds": 0.0}
+{"kind": "input", "field": "volume", "value": 1.0, "observed_seconds": 1.916}
+{"kind": "input", "field": "muted", "value": false, "observed_seconds": 0.0}
+AUDIO_EXTERNAL_VOLUME_MUTE_AND_RESTORE_OK

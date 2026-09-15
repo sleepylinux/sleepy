@@ -35,6 +35,9 @@
 
   gesture = ["3, horizontal, workspace"];
 
+  # Sleepy's welcome and update workflow own the first-login experience.
+  ecosystem.no_update_news = true;
+
   dwindle = {
     preserve_split = true;
     smart_split = false;
@@ -52,6 +55,9 @@
   };
 
   misc = {
+    # Compositor-owned wake also works after the shell restarts while idle.
+    key_press_enables_dpms = true;
+    mouse_move_enables_dpms = true;
     disable_hyprland_logo = true;
     disable_splash_rendering = true;
     force_default_wallpaper = 0;

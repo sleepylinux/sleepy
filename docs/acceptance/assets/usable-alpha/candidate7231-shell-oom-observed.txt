@@ -1,0 +1,110 @@
+uenv systemctl --user show sleepy-shell.service sleepy-locker.service sleepy-session.service -p Id -p MainPID -p NRestarts -p MemoryCurrent -p MemoryPeak; journalctl -b -k --no-pager -n 45; ps -eo pid,rss,pcpu,comm --sort=-rss | head -12; uenv journalctl --user -b -u sleepy-shell.service --no-pager -n 35; printf '\nSLEEPY_COMMAND_DONE:%s\n' "$?"
+Id=sleepy-shell.service
+MainPID=2433766
+NRestarts=1
+MemoryCurrent=1071939584
+MemoryPeak=1074683904
+
+Id=sleepy-locker.service
+MainPID=352458
+NRestarts=0
+MemoryCurrent=41988096
+MemoryPeak=138993664
+
+Id=sleepy-session.service
+MainPID=352462
+NRestarts=0
+MemoryCurrent=74883072
+MemoryPeak=86822912
+Sep 15 03:14:15 sleepy kernel: [ 352546]  1000 352546    78082      838      192      646         0   118784        0           200 .gvfsd-wrapped
+Sep 15 03:14:15 sleepy kernel: [ 352560]  1000 352560    81001      732      160      572         0   114688        0           200 .gvfsd-fuse-wra
+Sep 15 03:14:15 sleepy kernel: [ 352565]  1000 352565   120214     1585      800      785         0   163840        0           200 .xdg-desktop-po
+Sep 15 03:14:15 sleepy kernel: [ 352584]  1000 352584    77267      717      128      589         0   114688        0           200 .xdg-permission
+Sep 15 03:14:15 sleepy kernel: [ 352589]  1000 352589   171902      722      128      594         0   172032        0           200 .xdg-document-p
+Sep 15 03:14:15 sleepy kernel: [ 352599]  1000 352599      672      456        0      456         0    49152        0           200 fusermount3
+Sep 15 03:14:15 sleepy kernel: [ 352605]  1000 352605   123043     2614     1833      717        64   196608        0           200 .xdg-desktop-po
+Sep 15 03:14:15 sleepy kernel: [ 352635]  1000 352635    99647     2286     1632      654         0   409600        0           200 .xdg-desktop-po
+Sep 15 03:14:15 sleepy kernel: [ 352648]  1000 352648    20951      982      224      758         0    65536        0           200 pw-mon
+Sep 15 03:14:15 sleepy kernel: [ 352650]  1000 352650  2022574  1577086  1572729     1381      2976 14565376        0           200 .quickshell-wra
+Sep 15 03:14:15 sleepy kernel: [ 353025]  1000 353025    79982      965      352      613         0   131072        0           200 nmcli
+Sep 15 03:14:15 sleepy kernel: [2084481]  1000 2084481   846690    73273    69125     1029      3119  2510848        0           200 .firefox-wrappe
+Sep 15 03:14:15 sleepy kernel: [2084761]  1000 2084761    37746      552      132      420         0    65536        0           200 crashhelper
+Sep 15 03:14:15 sleepy kernel: [2085859]  1000 2085859    96095     3388     2496      828        64   360448        0           200 Socket Process
+Sep 15 03:14:15 sleepy kernel: [2086276]  1000 2086276   117486     3059     2272      787         0   274432        0           200 forkserver
+Sep 15 03:14:15 sleepy kernel: [2086896]  1000 2086896   686921     8252     7342      676       234   897024        0           133 WebExtensions
+Sep 15 03:14:15 sleepy kernel: [2086902]  1000 2086902   141582     3623     2918      641        64   458752        0           200 RDD Process
+Sep 15 03:14:15 sleepy kernel: [2087231]  1000 2087231   697612    15173    14049      732       392  1069056        0           133 Privileged Cont
+Sep 15 03:14:15 sleepy kernel: [2087664]  1000 2087664   687202     9736     8668      781       287   827392        0           200 Isolated Web Co
+Sep 15 03:14:15 sleepy kernel: [2089810]  1000 2089810   120262     3227     2567      596        64   335872        0           200 Utility Process
+Sep 15 03:14:15 sleepy kernel: [2089841]  1000 2089841   661954     4801     3975      699       127   561152        0           233 Web Content
+Sep 15 03:14:15 sleepy kernel: [2089941]  1000 2089941   661954     4816     4007      682       127   561152        0           233 Web Content
+Sep 15 03:14:15 sleepy kernel: [2089946]  1000 2089946   661954     4771     3944      706       121   561152        0           233 Web Content
+Sep 15 03:14:15 sleepy kernel: [2432116]  1000 2432116    32950      463      192      271         0   192512        0           200 .hyprland-dialo
+Sep 15 03:14:15 sleepy kernel: [2432380]     0 2432380     2155      753       64      689         0    65536        0             0 runuser
+Sep 15 03:14:15 sleepy kernel: [2432382]  1000 2432382    11821      409      192      217         0    73728        0             0 hyprctl
+Sep 15 03:14:15 sleepy kernel: [2433224]     0 2433224     1997      611       32      579         0    57344        0             0 agetty
+Sep 15 03:14:15 sleepy kernel: [2433509]  1000 2433509     3661      634       64      570         0    69632        0           200 sleepy-sessiond
+Sep 15 03:14:15 sleepy kernel: [2433510]  1000 2433510     3661      731       64      667         0    77824        0           200 sleepy-sessiond
+Sep 15 03:14:15 sleepy kernel: [2433511]  1000 2433511     3661      697       64      633         0    77824        0           200 sleepy-sessiond
+Sep 15 03:14:15 sleepy kernel: [2433512]  1000 2433512     3661      662       32      630         0    77824        0           200 sleepy-sessiond
+Sep 15 03:14:15 sleepy kernel: [2433513]  1000 2433513     3661      677       64      613         0    73728        0           200 sleepy-sessiond
+Sep 15 03:14:15 sleepy kernel: [2433514]  1000 2433514     3661      670       64      606         0    73728        0           200 sleepy-sessiond
+Sep 15 03:14:15 sleepy kernel: [2433515]  1000 2433515     3661      663       64      599         0    65536        0           200 sleepy-sessiond
+Sep 15 03:14:15 sleepy kernel: [2433516]  1000 2433516     3661      776       64      712         0    73728        0           200 sleepy-sessiond
+Sep 15 03:14:15 sleepy kernel: [2433517]  1000 2433517     2746       51        0       51         0    49152        0           200 python3.14
+Sep 15 03:14:15 sleepy kernel: [2433518]  1000 2433518   306999      134      128        6         0    90112        0           200 cliphist
+Sep 15 03:14:15 sleepy kernel: [2433519]  1000 2433519     2080      110        0      110         0    53248        0           200 wpctl
+Sep 15 03:14:15 sleepy kernel: [2433520]  1000 2433520     2011      139        0      139         0    53248        0           200 playerctl
+Sep 15 03:14:15 sleepy kernel: [2433521]  1000 2433521     2159      271       96      175         0    53248        0           200 busctl
+Sep 15 03:14:15 sleepy kernel: [2433522]  1000 2433522     2763       84        0       84         0    61440        0           200 nmcli
+Sep 15 03:14:15 sleepy kernel: [2433523]  1000 2433523     1994      106        0      106         0    53248        0           200 upower
+Sep 15 03:14:15 sleepy kernel: oom-kill:constraint=CONSTRAINT_NONE,nodemask=(null),cpuset=/,mems_allowed=0,global_oom,task_memcg=/user.slice/user-1000.slice/user@1000.service/app.slice/sleepy-shell.service,task=.quickshell-wra,pid=352650,uid=1000
+Sep 15 03:14:15 sleepy kernel: Out of memory: Killed process 352650 (.quickshell-wra) total-vm:8090296kB, anon-rss:6290916kB, file-rss:5524kB, shmem-rss:11904kB, UID:1000 pgtables:14224kB oom_score_adj:200
+Sep 15 03:14:38 sleepy kernel: sysrq: This sysrq operation is disabled.
+    PID   RSS %CPU COMMAND
+2433766 915460 21.3 .quickshell-wra
+2084481 344764 10.1 .firefox-wrappe
+ 352401 216304 7.4 .Hyprland-wrapp
+2087231 129592 1.9 Privileged Cont
+ 352605 71384  0.0 .xdg-desktop-po
+2087664 68116  2.0 Isolated Web Co
+2086896 61988  0.2 WebExtensions
+ 352496 28732  0.8 .quickshell-wra
+2575278 28372 55.5 python3.14
+ 352455 24208  0.0 .nm-applet-wrap
+ 352431 20860  0.0 Xwayland
+Sep 15 02:46:13 sleepy sleepy-shell[3089675]: MESA-EGL: warning: egl: failed to create dri2 screen
+Sep 15 02:46:13 sleepy sleepy-shell[3089675]: MESA-EGL: warning: egl: failed to create dri2 screen
+Sep 15 02:46:14 sleepy sleepy-shell[3089675]:   WARN quickshell.dbus.objectmanager: Failed to create DBusObjectManagerInterface for "org.bluez" "/" : QDBusError("", "")
+Sep 15 02:46:14 sleepy sleepy-shell[3089675]:   INFO: Configuration Loaded
+Sep 15 02:46:14 sleepy sleepy-shell[3089675]:   WARN scene: QML FileView at @services/Colours.qml[116:5]: Read of /home/sleepy/.local/state/sleepy/scheme.json failed: File does not exist.
+Sep 15 02:46:18 sleepy sleepy-shell[3089675]:   WARN qt.qpa.services: Failed to register with host portal QDBusError("org.freedesktop.portal.Error.Failed", "Could not register app ID: App info not found for 'org.quickshell'")
+Sep 15 02:55:50 sleepy systemd[1174]: Stopping Sleepy desktop shell...
+Sep 15 02:55:50 sleepy systemd[1174]: Stopped Sleepy desktop shell.
+Sep 15 02:55:50 sleepy systemd[1174]: sleepy-shell.service: Consumed 22min 36.636s CPU time over 9min 37.972s wall clock time, 4.7G memory peak.
+Sep 15 02:57:40 sleepy systemd[1174]: Started Sleepy desktop shell.
+Sep 15 02:57:40 sleepy sleepy-shell[352650]:   INFO: Launching config: "/nix/store/hss5r9pf8x4xr5inpmimagvizx5v104v-sleepy-shell-0.2.0/share/sleepy-desktop/shell.qml"
+Sep 15 02:57:40 sleepy sleepy-shell[352650]:   INFO: Shell ID: "sleepy" Path ID "4b2f9d3f7c5c4f02e93194c60325821c"
+Sep 15 02:57:40 sleepy sleepy-shell[352650]:   INFO: Saving logs to "/run/user/1000/quickshell/by-id/u3k74kxdlt/log.qslog"
+Sep 15 02:57:41 sleepy sleepy-shell[352650]: MESA-EGL: warning: egl: failed to create dri2 screen
+Sep 15 02:57:41 sleepy sleepy-shell[352650]: MESA-EGL: warning: egl: failed to create dri2 screen
+Sep 15 02:57:42 sleepy sleepy-shell[352650]:   WARN quickshell.dbus.objectmanager: Failed to create DBusObjectManagerInterface for "org.bluez" "/" : QDBusError("", "")
+Sep 15 02:57:42 sleepy sleepy-shell[352650]:   INFO: Configuration Loaded
+Sep 15 02:57:42 sleepy sleepy-shell[352650]:   WARN scene: QML FileView at @services/Colours.qml[116:5]: Read of /home/sleepy/.local/state/sleepy/scheme.json failed: File does not exist.
+Sep 15 02:57:45 sleepy sleepy-shell[352650]:   WARN qt.qpa.services: Failed to register with host portal QDBusError("org.freedesktop.portal.Error.Failed", "Could not register app ID: App info not found for 'org.quickshell'")
+Sep 15 02:57:48 sleepy sleepy-shell[352650]:   WARN quickshell.io.socket: Socket error for Socket(0x78ac5a4fbac0) QLocalSocket::PeerClosedError
+Sep 15 03:14:15 sleepy systemd[1174]: sleepy-shell.service: The kernel OOM killer killed some processes in this unit.
+Sep 15 03:14:15 sleepy systemd[1174]: sleepy-shell.service: Main process exited, code=killed, status=9/KILL
+Sep 15 03:14:15 sleepy systemd[1174]: sleepy-shell.service: Failed with result 'oom-kill'.
+Sep 15 03:14:15 sleepy systemd[1174]: sleepy-shell.service: Consumed 32min 51.133s CPU time over 16min 35.209s wall clock time, 6.6G memory peak.
+Sep 15 03:14:17 sleepy systemd[1174]: sleepy-shell.service: Scheduled restart job, restart counter is at 1.
+Sep 15 03:14:17 sleepy systemd[1174]: Started Sleepy desktop shell.
+Sep 15 03:14:17 sleepy sleepy-shell[2433766]:   INFO: Launching config: "/nix/store/hss5r9pf8x4xr5inpmimagvizx5v104v-sleepy-shell-0.2.0/share/sleepy-desktop/shell.qml"
+Sep 15 03:14:17 sleepy sleepy-shell[2433766]:   INFO: Shell ID: "sleepy" Path ID "4b2f9d3f7c5c4f02e93194c60325821c"
+Sep 15 03:14:17 sleepy sleepy-shell[2433766]:   INFO: Saving logs to "/run/user/1000/quickshell/by-id/mw5g1tbydlt/log.qslog"
+Sep 15 03:14:18 sleepy sleepy-shell[2433766]: MESA-EGL: warning: egl: failed to create dri2 screen
+Sep 15 03:14:18 sleepy sleepy-shell[2433766]: MESA-EGL: warning: egl: failed to create dri2 screen
+Sep 15 03:14:18 sleepy sleepy-shell[2433766]:   WARN quickshell.dbus.objectmanager: Failed to create DBusObjectManagerInterface for "org.bluez" "/" : QDBusError("", "")
+Sep 15 03:14:18 sleepy sleepy-shell[2433766]:   INFO: Configuration Loaded
+Sep 15 03:14:18 sleepy sleepy-shell[2433766]:   WARN scene: QML FileView at @services/Colours.qml[116:5]: Read of /home/sleepy/.local/state/sleepy/scheme.json failed: File does not exist.
+Sep 15 03:14:18 sleepy sleepy-shell[2433766]:   WARN qt.qpa.services: Failed to register with host portal QDBusError("org.freedesktop.portal.Error.Failed", "Could not register app ID: App info not found for 'org.quickshell'")

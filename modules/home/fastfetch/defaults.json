@@ -1,0 +1,40 @@
+{
+  "logo": {
+    "type": "file",
+    "color": {
+      "1": "38;2;185;167;255",
+      "2": "38;2;232;226;240"
+    },
+    "padding": {
+      "top": 1,
+      "left": 1,
+      "right": 4
+    }
+  },
+  "display": {
+    "separator": "  ",
+    "color": {
+      "keys": "38;2;185;167;255",
+      "title": "38;2;232;226;240"
+    },
+    "key": {
+      "width": 10
+    }
+  },
+  "modules": [
+    "title",
+    "separator",
+    { "type": "os", "key": "OS" },
+    { "type": "kernel", "key": "Kernel" },
+    { "type": "uptime", "key": "Uptime" },
+    "break",
+    { "type": "wm", "key": "Desktop" },
+    { "type": "terminal", "key": "Terminal" },
+    { "type": "shell", "key": "Shell" },
+    "break",
+    { "type": "cpu", "key": "CPU", "format": "{name}" },
+    { "type": "gpu", "key": "GPU" },
+    { "type": "memory", "key": "Memory" },
+    { "type": "disk", "key": "Disk", "folders": "/" }
+  ]
+}

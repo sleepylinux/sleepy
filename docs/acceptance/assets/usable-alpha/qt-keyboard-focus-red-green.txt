@@ -1,0 +1,5 @@
+qt-wayland-keyboard-capability-focus> FAIL!  : tst_WaylandClient::keyboardCapabilityRestoresFocus() Compared QObject pointers are not the same
+qt-wayland-keyboard-capability-focus>    Actual   (QGuiApplication::focusWindow()): <null>
+qt-wayland-keyboard-capability-focus> Totals: 2 passed, 1 failed, 0 skipped, 0 blacklisted, 15440ms
+qt-wayland-keyboard-capability-focus> Totals: 5 passed, 0 failed, 0 skipped, 0 blacklisted, 1372ms
+/nix/store/g5bvsjsanz9j9pxk74gkpqfn8y9g89f9-qt-wayland-keyboard-capability-focus

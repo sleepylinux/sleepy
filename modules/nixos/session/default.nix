@@ -21,6 +21,7 @@ in {
   imports = [./pam.nix];
 
   programs.hyprland = {
+    package = lib.mkDefault (import ../../../packages/vendor/hyprland-session-redraw {inherit pkgs;});
     enable = true;
     xwayland.enable = true;
     withUWSM = true;
@@ -45,14 +46,16 @@ in {
     greetd.enable = true;
   };
 
+  services.displayManager.regreet.settings.GTK.application_prefer_dark_theme = lib.mkDefault true;
+
   security.pam.services.greetd.enableGnomeKeyring = true;
 
   xdg.portal = {
     enable = true;
-    extraPortals = [
-      pkgs.xdg-desktop-portal-hyprland
-      pkgs.xdg-desktop-portal-gtk
-    ];
+    # The upstream Hyprland module adds its portalPackage, matched to the
+    # selected compositor. Adding the raw nixpkgs portal duplicates its units
+    # when the compositor is patched or overridden by a host.
+    extraPortals = [pkgs.xdg-desktop-portal-gtk];
     config = {
       common = {
         default = ["hyprland" "gtk"];
@@ -96,10 +99,6 @@ in {
     serviceConfig.ExecStart = "${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1";
   };
 
-  systemd.user.services.gnome-keyring-daemon = {
-    wantedBy = ["graphical-session.target"];
-    partOf = ["graphical-session.target"];
-    after = ["graphical-session.target"];
-    requisite = ["graphical-session.target"];
-  };
+  # Upstream GNOME Keyring uses PAM login unlock and DBus activation. It does
+  # not define a systemd user service to extend; an ordering-only unit is invalid.
 }

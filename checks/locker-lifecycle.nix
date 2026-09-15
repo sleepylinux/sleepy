@@ -24,6 +24,10 @@ in
   (pkgs.lib.toList locker.Service.ExecStart == ["${homeConfig.sleepy.lockerPackage}/bin/sleepy-locker"])
   "the locker unit must execute the pinned package binary";
   assert pkgs.lib.assertMsg
+  (builtins.elem "LD_LIBRARY_PATH=${pkgs.sleepy-qt-wayland-focus}/lib" locker.Service.Environment
+    && builtins.elem "LD_LIBRARY_PATH=${pkgs.sleepy-qt-wayland-focus}/lib" homeConfig.systemd.user.services.sleepy-shell.Service.Environment)
+  "Sleepy Qt surfaces must restore keyboard focus after VT device removal";
+  assert pkgs.lib.assertMsg
   (locker.Service.Restart == "no")
   "a crashed secure locker must fail once instead of trying to reclaim an orphaned lock";
   assert pkgs.lib.assertMsg

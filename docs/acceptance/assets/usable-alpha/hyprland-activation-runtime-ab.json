@@ -1,0 +1,24 @@
+{
+  "image_revision": "bfa319a6fba977ebd61e172aabd7163c10faa9d5",
+  "runtime_override": true,
+  "package": "/nix/store/vab6yfkk554x20wrmv2pafax1c23mvxa-hyprland-0.56.2",
+  "inactive_seconds": 220,
+  "before": {
+    "status": 0,
+    "output": "locker_state; cat /sys/class/tty/tty0/active; hypr -j monitors | jq \"map({name,dpmsStatus})\"; for p in $(pgrep -u sleepy -f Hyprland); do readlink -f /proc/$p/exe; done; printf '\\nSLEEPY_COMMAND_DONE:%s\\n' \"$?\"\nlocked\ntty2\n[\n  {\n    \"name\": \"Virtual-1\",\n    \"dpmsStatus\": true\n  }\n]\n/nix/store/vab6yfkk554x20wrmv2pafax1c23mvxa-hyprland-0.56.2/bin/.Hyprland-wrapped\n"
+  },
+  "visible_password_without_rescue": true,
+  "native_password_unlock": {
+    "status": 0,
+    "output": "locker_state; printf '\\nSLEEPY_COMMAND_DONE:%s\\n' \"$?\"\nunlocked\n"
+  },
+  "locked_shell_crash_input_wake": {
+    "status": 0,
+    "output": "locker_state; hypr -j monitors | jq \"map({name,dpmsStatus})\"; printf '\\nSLEEPY_COMMAND_DONE:%s\\n' \"$?\"\nlocked\n[\n  {\n    \"name\": \"Virtual-1\",\n    \"dpmsStatus\": true\n  }\n]\n"
+  },
+  "active_lock_vt_visible": true,
+  "active_lock_vt_native_unlock": {
+    "status": 0,
+    "output": "locker_state; printf '\\nSLEEPY_COMMAND_DONE:%s\\n' \"$?\"\nunlocked\n"
+  }
+}

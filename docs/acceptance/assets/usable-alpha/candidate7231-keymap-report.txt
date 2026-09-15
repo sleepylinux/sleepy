@@ -1,0 +1,145 @@
+{
+"mice": [
+
+],
+"keyboards": [
+
+],
+"tablets": [
+
+],
+"touch": [
+
+],
+"switches": [
+
+]
+}
+
+[{
+    "id": 0,
+    "name": "Virtual-1",
+    "description": "Red Hat Inc. QEMU Monitor",
+    "make": "Red Hat, Inc.",
+    "model": "QEMU Monitor",
+    "serial": "",
+    "width": 1280,
+    "height": 800,
+    "physicalWidth": 320,
+    "physicalHeight": 200,
+    "refreshRate": 74.99400,
+    "x": 0,
+    "y": 0,
+    "activeWorkspace": {
+        "id": 1,
+        "name": "1"
+    },
+    "specialWorkspace": {
+        "id": 0,
+        "name": ""
+    },
+    "reserved": [60, 10, 10, 10],
+    "scale": 1,
+    "transform": 0,
+    "focused": true,
+    "dpmsStatus": true,
+    "vrr": false,
+    "solitary": "0",
+    "solitaryBlockedBy": ["WINDOWED","CANDIDATE"],
+    "activelyTearing": false,
+    "tearingBlockedBy": ["NOT_TORN","USER","CANDIDATE"],
+    "directScanoutTo": "0",
+    "directScanoutBlockedBy": ["USER","SW","CANDIDATE"],
+    "disabled": false,
+    "currentFormat": "XRGB8888",
+    "mirrorOf": "none",
+    "availableModes": ["1280x800@74.99Hz","5120x2160@50.00Hz","4096x2160@50.00Hz","3840x2160@60.00Hz","3840x2160@59.94Hz","3840x2160@50.00Hz","1920x1440@60.00Hz","2560x1080@50.00Hz","1856x1392@59.99Hz","1792x1344@60.00Hz","2048x1152@60.00Hz","1920x1200@59.88Hz","1920x1080@60.00Hz","1920x1080@50.00Hz","1600x1200@60.00Hz","1680x1050@59.95Hz","1400x1050@59.98Hz","1280x1024@60.02Hz","1440x900@59.89Hz","1280x960@60.00Hz","1360x768@60.02Hz","1280x768@59.87Hz","1024x768@60.00Hz","800x600@60.32Hz","640x480@60.00Hz","640x480@59.94Hz"],
+    "colorManagementPreset": "srgb",
+    "sdrBrightness": 1,
+    "sdrSaturation": 1,
+    "sdrMinLuminance": 0.2,
+    "sdrMaxLuminance": 80,
+    "hardwareCursorsInUse": true
+}]
+KEYMAP_RETURN_READY
+ok
+{
+"mice": [
+
+],
+"keyboards": [
+
+],
+"tablets": [
+
+],
+"touch": [
+
+],
+"switches": [
+
+]
+}
+
+KEYMAP_SHIFT_READY
+ok
+{
+"mice": [
+    {
+        "address": "0x5caaff636f90",
+        "name": "qemu-qemu-usb-tablet",
+        "defaultSpeed": 0.00000,
+        "scrollFactor": -1.00
+    },    {
+        "address": "0x5caaff641940",
+        "name": "virtualps/2-vmware-vmmouse",
+        "defaultSpeed": 0.00000,
+        "scrollFactor": -1.00
+    },    {
+        "address": "0x5caaff641da0",
+        "name": "virtualps/2-vmware-vmmouse-1",
+        "defaultSpeed": 0.00000,
+        "scrollFactor": -1.00
+    }
+],
+"keyboards": [
+    {
+        "address": "0x5caafa7341b0",
+        "name": "power-button",
+        "rules": "",
+        "model": "",
+        "layout": "us,ru",
+        "variant": "",
+        "options": "grp:alt_shift_toggle",
+        "active_layout_index": 1,
+        "active_keymap": "Russian",
+        "capsLock": false,
+        "numLock": false,
+        "main": false
+    },    {
+        "address": "0x5caafe969cc0",
+        "name": "at-translated-set-2-keyboard",
+        "rules": "",
+        "model": "",
+        "layout": "us,ru",
+        "variant": "",
+        "options": "grp:alt_shift_toggle",
+        "active_layout_index": 1,
+        "active_keymap": "Russian",
+        "capsLock": false,
+        "numLock": false,
+        "main": true
+    }
+],
+"tablets": [
+
+],
+"touch": [
+
+],
+"switches": [
+
+]
+}
+
+KEYMAP_COMPLETE

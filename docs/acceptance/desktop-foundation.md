@@ -7,17 +7,27 @@ The root integration pins this exact reviewed public component graph:
 | Component | Reviewed revision |
 |---|---|
 | `sleepy-sdk` | `dff28bb596950d862ae5d219e478460dfa13e8f4` |
-| `sleepy-session` | `3980ea94547ff42b590e6c96b8ae3b987d7a2dcc` |
-| `sleepy-artwork` | `175314b9c236c1b412e8e1ebc54bbe3937b0c90d` |
-| `sleepy-desktop` | `008d8bc662c6b10045a24a4bd05f0852837fa5e9` |
+| `sleepy-session` | `210cbaad7a50280e4406281f90cbe36def50086c` |
+| `sleepy-artwork` | `ac3feed1e81b4e74a84a326c1f53f3ddaf94aa3e` |
+| `sleepy-desktop` | `45f721a037693523ba1886eba20784ac9e8102fc` |
 
 The generated `flake.lock` SHA-256 is
-`f162411efef85c9fb7423e427783eef306fb71c273f17b46187c3ed2b5e87aab`. This candidate includes the SDK UTF-8 fix, deterministic session process tests,
-consistent Hyprland command readback deadlines, and the native locker unlock fix.
+`5287c31b89266a72a954c0abd619e798563e337a996d09338bbbe5e068472be6`. This candidate includes the SDK UTF-8 fix, deterministic session process tests,
+consistent Hyprland command readback deadlines, typed audio monitor events,
+empty Wayland application metadata normalization, and the native locker unlock fix. The current desktop adds a dark native lock
+view and hides optional panels without data; its offscreen QML checks pass,
+while actual installed-VM visual acceptance of this revision is pending.
 Component review and CI are tracked in
 [SDK PR #8](https://github.com/sleepylinux/sleepy-sdk/pull/8),
-[session PR #9](https://github.com/sleepylinux/sleepy-session/pull/9), and
-[desktop PR #7](https://github.com/sleepylinux/sleepy-desktop/pull/7).
+[session PR #9](https://github.com/sleepylinux/sleepy-session/pull/9),
+[session PR #12](https://github.com/sleepylinux/sleepy-session/pull/12),
+[session PR #13](https://github.com/sleepylinux/sleepy-session/pull/13), and
+[desktop PR #7](https://github.com/sleepylinux/sleepy-desktop/pull/7),
+[desktop PR #8](https://github.com/sleepylinux/sleepy-desktop/pull/8), and
+[desktop PR #9](https://github.com/sleepylinux/sleepy-desktop/pull/9).
+The current desktop also retires NetworkManager command processes when their
+executable fails to start. This reviewed public PR head is a candidate pin;
+its local packaged checks passed, while exact-head CI and merge remain pending.
 
 The installer acceptance remains bound to root `9bca73c` and session `8edee2e`:
 installation, real password login, desktop startup, crash recovery, failed-update
@@ -29,7 +39,13 @@ The current graph adds the read-only doctor from
 [session PR #10](https://github.com/sleepylinux/sleepy-session/pull/10).
 Its package and installed-VM diagnostics are recorded separately in
 [doctor acceptance](doctor.md); the previous installer ISO does not contain
-this command. Existing audio/battery/Bluetooth provider errors remain visible.
+this command. This candidate additionally includes conservative absent-hardware
+classification from [session PR #11](https://github.com/sleepylinux/sleepy-session/pull/11)
+including the captured UPower 1.91.3 `power supply: no` regression fix
+and a logind capability preflight before acquiring a suspend locker hold,
+and the terminal crescent from [artwork PR #6](https://github.com/sleepylinux/sleepy-artwork/pull/6).
+Their component tests pass; installed-VM verification of the combined candidate
+is pending. The older doctor evidence records the provider errors before these fixes.
 
 The older 2026-09-04 baseline, CI interpreter correction, and protected-VM
 acceptance remain historical records in

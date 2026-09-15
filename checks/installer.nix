@@ -7,5 +7,8 @@ pkgs.runCommand "sleepy-installer-tests" {
   cp -r ${../packages/sleepy-installer} installer
   chmod -R u+w installer
   python3 -m unittest discover -s installer -v
+  cp -r ${../packages/sleepy-system} system-tools
+  chmod -R u+w system-tools
+  python3 -m unittest discover -s system-tools -v
   touch "$out"
 ''

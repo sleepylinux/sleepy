@@ -1,0 +1,10 @@
+Flatpak change: ad9e3599fcf0b071765115310352663ce7b1503a
+Check output: /nix/store/756i4i1prv05ws46pj5jd93wb7pjrrvn-vm-test-run-sleepy-flatpak-recovery
+Check: nix build .#checks.x86_64-linux.flatpak-recovery --max-jobs 1 -L
+Fresh KVM guest, disposable test disk, pinned NixOS systemd 261.1.
+OLD unit: expected failure after 30.30s waiting for registration after simulated network recovery.
+NEW unit: PASS, 69.46s; failed operation retries, success stops retries, stalled operation has activating service while multi-user target is active, timeout kills child (MainPID=0), recovery after timeout succeeds.
+Test accelerates only timer interval to 2s; production execution start timeout 45s and stop timeout 5s unchanged.
+Remote operation is a controlled process fixture. This does NOT prove public Flathub or GNOME Software UI behavior; installed VM acceptance remains separate.
+Preliminary fixture error: systemPackages mkForce[] removed stty and prevented test-driver backdoor; removed before RED/GREEN runs. Preliminary run interrupted and excluded from acceptance.
+Alejandra two-files and git diff --check PASS.

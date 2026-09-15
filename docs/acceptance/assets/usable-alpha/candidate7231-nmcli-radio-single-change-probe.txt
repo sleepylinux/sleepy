@@ -1,0 +1,7 @@
+shell_pid=$(uenv systemctl --user show sleepy-shell.service -p MainPID --value); date -u; grep VmRSS /proc/$shell_pid/status; cat /proc/stat | grep processes; sleep 5; grep VmRSS /proc/$shell_pid/status; cat /proc/stat | grep processes; uenv systemctl --user is-active sleepy-shell.service; printf '\nSLEEPY_COMMAND_DONE:%s\n' "$?"
+Tue Sep 15 03:22:26 AM UTC 2026
+VmRSS:	  460564 kB
+processes 16177214
+VmRSS:	  451060 kB
+processes 16177498
+active

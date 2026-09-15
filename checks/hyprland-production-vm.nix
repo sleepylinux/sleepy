@@ -137,9 +137,13 @@ in
 
       testScript = ''
         import json
-        import re
         import shlex
+        import tomllib
         from datetime import timedelta
+
+        def assert_selected_session(state, expected):
+          assert state["last_user"] == "lazy"
+          assert state["user_to_last_sess"]["lazy"] == expected
 
         start_all()
         machine.wait_for_unit("multi-user.target")
@@ -192,10 +196,15 @@ in
         # missing" log, so that absence cannot be used as readiness.
         machine.wait_until_succeeds("grep -F 'Loaded TOML file:' /var/log/regreet/log", timeout=timedelta(seconds=30))
         machine.wait_for_text("Welcome back!", timeout=timedelta(seconds=30))
-        machine.wait_for_text(re.escape("${selectedSessionName}"), timeout=timedelta(seconds=30))
+        # Small GTK text is not an identity oracle: CI OCR confused uwsm
+        # with uw&n. Keep visible selector readiness, require exact persisted
+        # selection, then prove its actual UWSM launch and unit below.
+        machine.wait_for_text("Session:", timeout=timedelta(seconds=30))
+        regreet_state = tomllib.loads(machine.succeed("cat /var/lib/regreet/state.toml"))
+        assert_selected_session(regreet_state, session_name)
         regreet_pid = machine.succeed("pgrep -f -x '${pkgs.regreet}/bin/regreet'").strip()
         # ReGreet focuses Login after initialization.  Return activates the
-        # visible, asserted UWSM selection and enters the real greetd exchange.
+        # visible selection (its exact UWSM launch is asserted below) and enters the real greetd exchange.
         machine.send_key("ret")
         try:
           machine.wait_until_succeeds("grep -F 'Creating session for username: lazy' /var/log/regreet/log", timeout=timedelta(seconds=30))

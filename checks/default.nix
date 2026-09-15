@@ -25,6 +25,7 @@
   };
   appsContract = import ./apps-contract.nix {
     inherit pkgs integratedHomeConfig;
+    extendStandaloneHome = homeConfiguration.extendModules;
     standaloneHomeConfig = homeConfiguration.config;
     nixosConfig = nixosConfiguration.config;
   };
@@ -153,6 +154,7 @@
         ${inputs.sleepy-desktop}/tests/direct-integrations.json \
         ${source}/docs/architecture/shell-runtime-integrations.md
       ${pkgs.bash}/bin/bash ${source}/checks/vm-acceptance-assets-test.sh
+      ${pkgs.python3}/bin/python ${source}/scripts/vm/test_installable_protocol.py
       touch "$out"
     '';
   freshCloneSource = pkgs.runCommand "sleepy-fresh-clone-source-check" {} ''
@@ -199,6 +201,8 @@ in
     nixos = nixosConfiguration.config.system.build.toplevel;
     home = homeConfiguration.activationPackage;
     nix-private-git = import ./nix-private-git.nix {inherit pkgs;};
+    qt-wayland-keyboard-focus = import ../packages/vendor/qt-wayland-focus/check.nix {inherit pkgs;};
+    hyprland-session-activation = import ../packages/vendor/hyprland-session-redraw/check.nix {inherit pkgs;};
     greetd-sessions = import ./greetd-sessions.nix {
       inherit pkgs;
       inherit (nixosConfiguration) config;
@@ -210,6 +214,10 @@ in
     hyprland-production-vm = hyprlandProductionVm;
     public-module = publicModule;
     session-contract = sessionContract;
+    keyring-contract = import ./keyring-contract.nix {
+      inherit pkgs;
+      inherit (nixosConfiguration) config;
+    };
     update-safety = updateSafety;
     update-safety-vm = updateSafetyVm;
     pristine-login-vm = updateSafetyVm;

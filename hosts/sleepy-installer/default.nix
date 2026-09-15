@@ -9,6 +9,25 @@
   system.stateVersion = "26.05";
   environment.etc."sleepy-installer-image".text = "Sleepy installer 0.1.0-alpha\n";
   environment.extraOutputsToInstall = lib.mkForce [];
+  # Native VT palette: dialog's normal/bold MAGENTA become soft lavender.
+  console.colors = lib.mkDefault [
+    "181620"
+    "f38ba8"
+    "a6d6a8"
+    "ebc88b"
+    "94b9ef"
+    "b9a7ff"
+    "89dceb"
+    "e8e2f0"
+    "6e647c"
+    "f7a8b8"
+    "b6e3b8"
+    "f4dbab"
+    "b1c9f4"
+    "d0c2ff"
+    "a3e5ed"
+    "ffffff"
+  ];
   networking = {
     hostName = "sleepy-installer";
     networkmanager.enable = true;
