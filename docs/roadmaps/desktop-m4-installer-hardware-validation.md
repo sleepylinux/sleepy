@@ -1,5 +1,9 @@
 # Desktop Milestone 4: installer and hardware validation roadmap
 
+Historical contract-era roadmap. The active implementation and verification
+plan is [Sleepy usable alpha](installable-alpha.md); its completed installer
+and runtime work supersedes the implementation-state statements below.
+
 M4 may begin only after the M3 desktop is published, its rollback path is
 verified, and the installer threat model has an independent security review.
 M3 contains contracts and fake providers only; it performs no disk, account,
