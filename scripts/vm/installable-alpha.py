@@ -542,7 +542,10 @@ doctor_status=$?
 set -e
 cat /tmp/sleepy-alpha-doctor.json
 test "$doctor_status" = 0
-jq -e '.ok == true and any(.checks[]; .capability == "audio" and .status == "available")' /tmp/sleepy-alpha-doctor.json
+jq -e '.ok == true
+  and any(.checks[]; .capability == "audio" and .status == "available")
+  and any(.checks[]; .capability == "battery" and .status == "unavailable")
+  and any(.checks[]; .capability == "bluetooth" and .status == "unavailable")' /tmp/sleepy-alpha-doctor.json
 printf 'DAILY_DOCTOR_HEALTHY_WITH_VIRTUAL_AUDIO_OK\n'
 '''
     if after_reboot:
