@@ -38,7 +38,18 @@ Reproduce with `nix build .#checks.x86_64-linux.flatpak-recovery --max-jobs 1 -L
 
 ## Combined VM
 
-Pending: public-source ISO `731e4aab469f22b220c67b2921fcc91182eda7cc` is being
-built for the extended `--daily-usability --flatpak-recovery` installed-disk
-scenario. Runner-only assertions have been syntax checked; they are not proof
-of successful boot, UI interactions or recovery.
+Candidate ISO `7231d4b2bf320440365b0f51a323f3466c724dd1` completed real TUI
+installation, installed-disk boot, password login, application mapping and crash
+recovery. A first boot with the NIC disconnected before firmware execution
+failed its first Flathub registration, then the unchanged production timer
+registered the real public remote after networking returned.
+
+The combined run **failed** waiting for the visible password field after
+locking. The protocol reported locked, but the captured framebuffer still
+showed the earlier desktop. The cause is under investigation; no full daily,
+screenshot, update or reboot acceptance is claimed for this candidate.
+[Partial evidence and exact revisions](assets/usable-alpha/candidate7231-README.md).
+
+A subsequent candidate also includes the installer VT palette and dark ReGreet
+preference. Those changes have Nix evaluation and override checks, but still
+require a fresh image and visible installed-VM verification.
