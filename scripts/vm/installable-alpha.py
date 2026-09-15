@@ -346,9 +346,14 @@ def install(machine, password, timeout, cache_url=None, cache_public_key=None, i
 
 
 def update_fixture(phase):
+    user_environment = r'''
+development_user() { runuser -u sleepy -- env HOME=/home/sleepy XDG_CONFIG_HOME=/home/sleepy/.config PATH=/etc/profiles/per-user/sleepy/bin:/home/sleepy/.nix-profile/bin:/run/current-system/sw/bin "$@"; }
+'''
     if phase == 'seed':
-        return r'''
+        return user_environment + r'''
 state=/var/lib/sleepy-alpha
+development_user sh -c 'cd "$HOME"; ! command -v direnv'
+printf 'DEVELOPMENT_ABSENT_IN_BASE_GENERATION_OK\n'
 install -d -m 0700 "$state"
 config=/etc/nixos/configuration.nix
 head -n 1 "$config" | grep -Fx '{ ... }: {'
@@ -368,7 +373,7 @@ test "$(readlink -f /nix/var/nix/profiles/system)" = "$(cat "$state/profile.befo
 sha256sum /boot/loader/loader.conf /boot/loader/entries/*.conf | sort > "$state/boot.after"
 cmp "$state/boot.before" "$state/boot.after"
 printf 'FAILED_UPDATE_PRESERVED_SYSTEM_AND_BOOT_OK\n'
-printf '%s\n' '{ ... }: { environment.etc."sleepy-alpha-generation".text = "generation-2"; }' > /etc/nixos/alpha-update.nix
+printf '%s\n' '{ ... }: { sleepy.features.development.enable = true; environment.etc."sleepy-alpha-generation".text = "generation-2"; }' > /etc/nixos/alpha-update.nix
 nixos-rebuild boot --flake /etc/nixos#installed > "$state/generation2-build.log" 2>&1
 readlink -f /nix/var/nix/profiles/system > "$state/generation2"
 test "$(cat "$state/generation2")" != "$(cat "$state/generation1")"
@@ -377,21 +382,51 @@ trap - EXIT
 printf 'SECOND_GENERATION_PREPARED_OK\n'
 '''
     if phase == 'rollback':
-        return r'''
+        return user_environment + r'''
 state=/var/lib/sleepy-alpha
 test "$(readlink -f /run/current-system)" = "$(cat "$state/generation2")"
 test "$(cat /etc/sleepy-alpha-generation)" = generation-2
 printf 'SECOND_GENERATION_REAL_BOOT_OK\n'
+development_user git --version
+development_user direnv version
+development_user sh -c 'cd "$HOME"; ! command -v python3'
+# Reuse the installed system's locked nixpkgs source, without a registry lookup.
+nixpkgs_source=$(timeout 60 nix eval --impure --raw --expr '(builtins.getFlake "path:/etc/nixos").inputs.nixpkgs.outPath')
+case "$nixpkgs_source" in /nix/store/*-source) ;; *) exit 1;; esac
+test -f "$nixpkgs_source/flake.nix"
+project=/home/sleepy/Projects/sleepy-alpha-dev
+test ! -e "$project"
+development_user mkdir -p "$project"
+development_user tee "$project/flake.nix" > /dev/null <<NIX
+{
+  inputs.nixpkgs.url = "path:$nixpkgs_source";
+  outputs = { nixpkgs, ... }: {
+    devShells.x86_64-linux.default = (import nixpkgs { system = "x86_64-linux"; }).mkShell {
+      packages = [ (import nixpkgs { system = "x86_64-linux"; }).python3 ];
+      shellHook = "export SLEEPY_ALPHA_DEV_SHELL=ready";
+    };
+  };
+}
+NIX
+printf 'use flake\n' | development_user tee "$project/.envrc" > /dev/null
+# Explicitly authorize only this fixed, user-owned disposable test project.
+development_user timeout 10 direnv allow "$project"
+development_user timeout 180 direnv exec "$project" bash -c 'set -e; test "$SLEEPY_ALPHA_DEV_SHELL" = ready; test "$(python3 -c "print(6 * 7)")" = 42'
+development_user sh -c 'cd "$HOME"; ! command -v python3'
+printf 'DEVELOPMENT_PINNED_DIRENV_PROJECT_OK\n'
 nix-env --profile /nix/var/nix/profiles/system --rollback
 /nix/var/nix/profiles/system/bin/switch-to-configuration boot
 test "$(readlink -f /nix/var/nix/profiles/system)" = "$(cat "$state/generation1")"
 printf 'PREVIOUS_GENERATION_SELECTED_FOR_BOOT_OK\n'
 '''
     if phase == 'verify':
-        return r'''
+        return user_environment + r'''
 test "$(readlink -f /run/current-system)" = "$(cat /var/lib/sleepy-alpha/generation1)"
 test ! -e /etc/sleepy-alpha-generation
 cmp /etc/nixos/configuration.nix /var/lib/sleepy-alpha/configuration.before
+development_user sh -c 'cd "$HOME"; ! command -v direnv'
+development_user sh -c 'cd "$HOME"; ! command -v python3'
+printf 'DEVELOPMENT_REMOVED_AFTER_ROLLBACK_OK\n'
 printf 'PREVIOUS_GENERATION_REAL_BOOT_OK\n'
 '''
     return ''
@@ -1215,6 +1250,9 @@ def main():
             'CRASH_RECOVERY_OK sleepy-session.service': 'session-daemon-SIGKILL-recovery',
             'REAL_HYPRLAND_SETTING_APPLIED_OK': 'real-Hyprland-setting-applied',
             'FAILED_UPDATE_PRESERVED_SYSTEM_AND_BOOT_OK': 'failed-update-preserved-boot',
+            'DEVELOPMENT_ABSENT_IN_BASE_GENERATION_OK': 'development-disabled-base-generation',
+            'DEVELOPMENT_PINNED_DIRENV_PROJECT_OK': 'development-pinned-direnv-project',
+            'DEVELOPMENT_REMOVED_AFTER_ROLLBACK_OK': 'development-removed-after-rollback',
             'SECOND_GENERATION_PREPARED_OK': 'second-generation-prepared',
             'SECOND_GENERATION_REAL_BOOT_OK': 'second-generation-real-boot',
             'PREVIOUS_GENERATION_SELECTED_FOR_BOOT_OK': 'previous-generation-selected',

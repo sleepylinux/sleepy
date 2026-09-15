@@ -12,7 +12,7 @@ TREE = ast.parse(SOURCE.read_text())
 FUNCTIONS = {node.name: node for node in TREE.body if isinstance(node, ast.FunctionDef)}
 NAMESPACE = {}
 exec(compile(ast.Module(body=[FUNCTIONS[name] for name in
-                             ('lock_fixture', 'advance_locked_vt', 'keyring_fixture', 'advance_daily_idle', 'daily_idle_fixture')], type_ignores=[]),
+                             ('lock_fixture', 'advance_locked_vt', 'keyring_fixture', 'advance_daily_idle', 'daily_idle_fixture', 'update_fixture')], type_ignores=[]),
              str(SOURCE), 'exec'), NAMESPACE)
 
 
@@ -184,6 +184,28 @@ class IdleSamplingProtocol(unittest.TestCase):
         subprocess.run(['bash', '-n'], input=script, text=True, check=True)
         python = script.split("<<'IDLE_PY'\n", 1)[1].split('\nIDLE_PY', 1)[0]
         compile(python, '<guest-idle-sampler>', 'exec')
+
+
+class DevelopmentUpdateFixture(unittest.TestCase):
+    def test_development_is_enabled_only_in_new_generation_and_validated_before_rollback(self):
+        seed = NAMESPACE['update_fixture']('seed')
+        updated = NAMESPACE['update_fixture']('rollback')
+        previous = NAMESPACE['update_fixture']('verify')
+        for fixture in (seed, updated, previous):
+            subprocess.run(['bash', '-n'], input=fixture, text=True, check=True)
+        self.assertIn('sleepy.features.development.enable = true;', seed)
+        self.assertLess(seed.index('DEVELOPMENT_ABSENT_IN_BASE_GENERATION_OK'),
+                        seed.index('sleepy.features.development.enable = true;'))
+        self.assertIn('(builtins.getFlake "path:/etc/nixos").inputs.nixpkgs.outPath', updated)
+        self.assertNotIn('github:NixOS/nixpkgs', updated)
+        self.assertLess(updated.index('direnv allow'), updated.index('direnv exec'))
+        self.assertLess(updated.index('DEVELOPMENT_PINNED_DIRENV_PROJECT_OK'),
+                        updated.index('nix-env --profile'))
+        self.assertIn('set -e; test "$SLEEPY_ALPHA_DEV_SHELL" = ready;', updated)
+        self.assertIn('python3 -c "print(6 * 7)"', updated)
+        self.assertIn('! command -v direnv', previous)
+        self.assertIn('! command -v python3', previous)
+        self.assertNotIn('development.enable = true', previous)
 
 
 if __name__ == '__main__':
