@@ -15,6 +15,11 @@
       ];
     };
   defaultConfig = (mkSystem {}).config;
+  # A host can select a portal build without leaving a second backend behind.
+  portalOverride =
+    ((mkSystem {}).extendModules {
+      modules = [{programs.hyprland.portalPackage = pkgs.xdg-desktop-portal-hyprland.overrideAttrs (_: {pname = "sleepy-test-portal";});}];
+    }).config;
   overriddenConfig =
     (mkSystem {
       primaryUser = "sleepy-test";
@@ -99,6 +104,9 @@ in
   assert profiles.combined.hardware.nvidia.open;
   assert bluetoothOverride {} true;
   assert !(bluetoothOverride {features.bluetooth.enable = true;} false);
+  assert pkgs.lib.all (config:
+    builtins.filter (portal: builtins.elem (pkgs.lib.getName portal) ["xdg-desktop-portal-hyprland" "sleepy-test-portal"]) config.xdg.portal.extraPortals
+    == [config.programs.hyprland.portalPackage]) [defaultConfig profiles.flatpak portalOverride];
   assert defaultConfig.sleepy.primaryUser == "sleepy";
   assert defaultConfig.sleepy.version == "0.1.0";
   assert defaultConfig.users.users.sleepy.isNormalUser;
@@ -116,5 +124,9 @@ in
   assert overriddenConfig.users.users.sleepy-test.isNormalUser;
   assert overriddenConfig.system.nixos.extraOSReleaseArgs.SLEEPY_VERSION == "9.8.7";
     pkgs.runCommand "sleepy-public-module-check" {} ''
+      # Build the assembled production user-unit directories, not only option
+      # values. Different portal derivations can otherwise collide at install.
+      test -f ${defaultConfig.environment.etc."systemd/user".source}/xdg-desktop-portal-hyprland.service
+      test -f ${profiles.flatpak.environment.etc."systemd/user".source}/xdg-desktop-portal-hyprland.service
       touch "$out"
     ''

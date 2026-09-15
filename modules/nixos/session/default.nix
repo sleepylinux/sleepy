@@ -52,10 +52,10 @@ in {
 
   xdg.portal = {
     enable = true;
-    extraPortals = [
-      pkgs.xdg-desktop-portal-hyprland
-      pkgs.xdg-desktop-portal-gtk
-    ];
+    # The upstream Hyprland module adds its portalPackage, matched to the
+    # selected compositor. Adding the raw nixpkgs portal duplicates its units
+    # when the compositor is patched or overridden by a host.
+    extraPortals = [pkgs.xdg-desktop-portal-gtk];
     config = {
       common = {
         default = ["hyprland" "gtk"];

@@ -43,7 +43,7 @@ in
     && portalPreference."org.freedesktop.impl.portal.Screenshot" == "hyprland")
   "Hyprland must own screencast and screenshot portals";
   assert pkgs.lib.assertMsg
-  (builtins.elem pkgs.xdg-desktop-portal-hyprland config.xdg.portal.extraPortals
+  (builtins.elem config.programs.hyprland.portalPackage config.xdg.portal.extraPortals
     && builtins.elem pkgs.xdg-desktop-portal-gtk config.xdg.portal.extraPortals)
   "the Hyprland and GTK portal backends must be in the candidate closure";
   assert pkgs.lib.assertMsg
