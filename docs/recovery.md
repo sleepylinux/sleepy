@@ -31,21 +31,37 @@ Use `sleepy-system rollback` to activate the previous generation, then reboot to
 verify its boot path. This restores system packages and configuration, not user
 documents, passwords, or erased disk contents. Keep independent backups.
 
-If the installed bootloader is unavailable, boot the installation ISO, choose
-Leave installer, and identify the installed partitions using `lsblk -f`. For the
-default layout, mount the Btrfs partition at `/mnt`, then its FAT32 ESP at
-`/mnt/boot`. Use the paths you actually identified; never format either partition
-during recovery. Enter the installation with `sudo nixos-enter --root /mnt`.
-There, inspect `/nix/var/nix/profiles/system` and its generations. To regenerate
-boot entries from the retained system profile, run:
+## Guided boot-entry repair
 
-```sh
-/nix/var/nix/profiles/system/bin/switch-to-configuration boot
-```
+The guided-recovery candidate adds this flow to the installation image. Its VM
+acceptance is pending; the previously accepted `97830de` image still provides
+the manual recovery terminal. Use the revision-bound acceptance record to
+identify which image you have.
 
-Exit the installed shell, unmount `/mnt/boot` and `/mnt`, shut down, detach the
-ISO, and boot the disk. Installed source remains under `/etc/nixos`; the installer
-log exists only on the installation image unless copied before shutdown.
+Boot the recovery-capable image in UEFI mode and choose **Recovery and
+diagnostics**. Select the installed disk in **Recover Sleepy boot**. Sleepy
+checks its identity and supported layout, mounts the Btrfs root read-only with
+log replay disabled, and shows the current system and retained generations.
+**Back** is selected by default; inspection does not start a repair.
+
+Choose **Restore boot entries** and type the complete disk path shown in the
+confirmation. This runs the selected installation's boot repair code as root;
+use it only for your own trusted Sleepy installation. It writes boot files and
+may update UEFI boot entries. It does not format partitions, download a new
+system, select a different generation or restore erased personal files.
+
+After **Boot repair complete**, shut down, remove the image, and boot the disk.
+Hold Space to choose a retained generation. Repair uses the current retained
+system profile; it cannot fix a missing Nix store or an invalid system
+configuration. Diagnostics remain in `/var/log/sleepy-installer.log` on the
+recovery image, so copy them before shutting down if needed.
+
+Guided repair supports only the installer's original two-partition GPT layout:
+first a FAT32 ESP, then Btrfs root. Mounted/busy, changed, encrypted, removable,
+and unrecognized targets are rejected. A complete retained installation can be
+repaired offline. Other layouts require manual diagnosis from **Leave installer**;
+identify partitions with `lsblk -f` and never format them during recovery.
+Do not run repair against the computer hosting a test VM.
 
 ## Historical Niri deployment record
 
