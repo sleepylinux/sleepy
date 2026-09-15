@@ -280,5 +280,50 @@ wait_daily() {
             self.assertNotEqual(result.returncode, 0)
             self.assertNotIn('DAILY_SYSTEM_MENU_READY', result.stdout)
 
+
+class SafetyDiagnostics(unittest.TestCase):
+    def test_real_failure_preserves_bounded_redacted_diagnostics_and_marker(self):
+        script = next(node.value.value for node in FUNCTIONS['safety_checks'].body
+                      if isinstance(node, ast.Assign) and isinstance(node.value, ast.Constant)
+                      and isinstance(node.value.value, str))
+        prelude = script.split('backend = shutil.which', 1)[0]
+        with tempfile.TemporaryDirectory() as directory:
+            log = Path(directory) / 'backend.log'
+            secret = 'private-password-must-not-appear'
+            log.write_text('old data\n' * 10000 + 'preflight actual failure ' + secret)
+            prelude = prelude.replace('"/var/log/sleepy-installer.log"', repr(str(log)))
+            program = prelude + '\nprivate_values.append(' + repr(secret) + ')\n' + '''
+for i in range(20):
+    remember({'stage':'preflight', 'message':'event-' + str(i) + ' ' + private_values[0]})
+remember({'stage':'error', 'message':'nix eval failed (exit 1)'})
+raise RuntimeError(private_values[0])
+'''
+            result = subprocess.run(['python3', '-c', program], capture_output=True, text=True, timeout=5)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(result.stderr, '')
+        self.assertNotIn(secret, result.stdout)
+        self.assertNotIn('Traceback', result.stdout)
+        self.assertIn('nix eval failed (exit 1)', result.stdout)
+        self.assertIn('preflight actual failure [REDACTED]', result.stdout)
+        self.assertNotIn('event-0 ', result.stdout)
+        self.assertLess(len(result.stdout), 20000)
+        self.assertTrue(result.stdout.endswith('SLEEPY_SAFETY_FAILED\n'))
+
+    def test_failure_marker_aborts_host_wait_without_waiting_for_shell_prompt(self):
+        namespace = {'SHELL_PROMPT': 'shell-prompt'}
+        exec(compile(ast.Module(body=[FUNCTIONS['serial_line']], type_ignores=[]), str(SOURCE), 'exec'), namespace)
+        calls = []
+        class Terminal:
+            def sendline(self, line): calls.append(('send', line))
+            def expect(self, patterns, timeout):
+                calls.append(('expect', patterns, timeout))
+                return 1
+        with self.assertRaisesRegex(RuntimeError, 'installer-safety.log'):
+            namespace['serial_line'](Terminal(), 'fixed-guest-command', 'SUCCESS',
+                                     timeout=300, failure_marker='SLEEPY_SAFETY_FAILED')
+        self.assertEqual(calls, [('send', 'fixed-guest-command'),
+            ('expect', ['SUCCESS', 'SLEEPY_SAFETY_FAILED'], 300)])
+
+
 if __name__ == '__main__':
     unittest.main()
