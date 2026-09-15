@@ -318,17 +318,17 @@
         ]
       },
       "locked": {
-        "lastModified": 1789451480,
-        "narHash": "sha256-F3YE2/6rKDtmgYR0qaUEbs1kbYjCogfiYnvWHm+/lWw=",
+        "lastModified": 1789470624,
+        "narHash": "sha256-ir39Kz4zZv2trJPNJuQQRNFBJnCfum0dehGH1z4fqjA=",
         "owner": "sleepylinux",
         "repo": "sleepy-desktop",
-        "rev": "45f721a037693523ba1886eba20784ac9e8102fc",
+        "rev": "0a72d23ad6ed4a4c384020e7e5c0999df7c23970",
         "type": "github"
       },
       "original": {
         "owner": "sleepylinux",
         "repo": "sleepy-desktop",
-        "rev": "45f721a037693523ba1886eba20784ac9e8102fc",
+        "rev": "0a72d23ad6ed4a4c384020e7e5c0999df7c23970",
         "type": "github"
       }
     },
