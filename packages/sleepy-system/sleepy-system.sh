@@ -8,8 +8,29 @@ usage() {
     'rebuild applies the configuration already saved in /etc/nixos; it does not download a new Sleepy version.'
 }
 
+source_status() {
+  local metadata=/run/current-system/etc/sleepy/source.json summary
+  if ! test -e "$metadata" && ! test -L "$metadata"; then
+    printf '%s\n' 'Sleepy version: unavailable (legacy installation)' 'Source NAR: unavailable'
+  elif summary=$(jq -ers '
+    if length != 1 then error("Expected one source metadata object") else .[0] end
+    | if .schema == 1 and (.version | type) == "string"
+         and (.version | length) > 0 and (.version | length) <= 120
+         and (.version | explode | all(. >= 32 and . != 127))
+         and (.nar_hash | type) == "string"
+         and (.nar_hash | test("^sha256-[A-Za-z0-9+/]{43}=$"))
+      then "Sleepy version: \(.version)\nSource NAR: \(.nar_hash[0:19])..."
+      else error("Invalid source metadata") end' "$metadata" 2>/dev/null); then
+    printf '%s\n' "$summary"
+  else
+    printf '%s\n' 'Sleepy version: unavailable' 'Source NAR: unavailable' \
+      'Cannot read source metadata; inspect /run/current-system/etc/sleepy/source.json.'
+  fi
+}
+
 system_status() {
   local label path resolved identity
+  source_status
   for label in 'Current system' 'Booted system' 'Selected system profile'; do
     case "$label" in
       'Current system') path=/run/current-system ;;

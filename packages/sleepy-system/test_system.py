@@ -41,8 +41,9 @@ case "$*" in
  *--menu*) printf '%s' "${CHOICE:-cancel}"; exit "${MENU_STATUS:-0}";;
  *--yesno*) exit "${CONFIRM_STATUS:-0}";;
 esac''')
+        self.metadata = self.root / 'source.json'
         self.script = self.root / 'sleepy-system'
-        self.script.write_text(SOURCE.read_text().replace('@rebuild@', str(self.bin / 'nixos-rebuild')).replace('@update@', str(self.bin / 'sleepy-update')).replace('@dialogrc@', '/test/dialogrc').replace('/nix/var/nix/profiles/system', str(self.profile)))
+        self.script.write_text(SOURCE.read_text().replace('@rebuild@', str(self.bin / 'nixos-rebuild')).replace('@update@', str(self.bin / 'sleepy-update')).replace('@dialogrc@', '/test/dialogrc').replace('/nix/var/nix/profiles/system', str(self.profile)).replace('/run/current-system/etc/sleepy/source.json', str(self.metadata)))
 
     def command(self, name, body):
         p = self.bin / name
@@ -65,6 +66,35 @@ esac''')
         self.assertIn('Current system:', p.stdout)
         self.assertIn('Booted system:', p.stdout)
         self.assertNotIn('sudo', self.calls_text())
+
+    def test_status_reports_current_source_version_and_short_nar_readonly(self):
+        self.metadata.write_text(json.dumps(dict(schema=1, version='Alpha 2', nar_hash='sha256-'+'A'*43+'=', source_path='/nix/store/source', revision=None)))
+        result = self.run_tool('status')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('Sleepy version: Alpha 2', result.stdout)
+        self.assertIn('Source NAR: sha256-'+'A'*12+'...', result.stdout)
+        self.assertNotIn('A'*43, result.stdout)
+        self.assertIn('Current system:', result.stdout)
+        self.assertIn('Booted system:', result.stdout)
+        self.assertNotIn('sudo ', self.calls_text())
+        self.assertNotIn('update status', self.calls_text())
+        self.assertEqual(self.run_tool('menu', CHOICE='status').returncode, 0)
+        self.assertIn('Sleepy version: Alpha 2', self.calls_text())
+
+    def test_missing_or_malformed_source_metadata_does_not_hide_system_status(self):
+        for contents in (None, '{broken', '{"schema":1,"version":"bad"}',
+                         json.dumps(dict(schema=1, version='Bad\u001b[2J', nar_hash='sha256-'+'A'*43+'='))):
+            with self.subTest(contents=contents):
+                self.metadata.unlink(missing_ok=True)
+                if contents is not None: self.metadata.write_text(contents)
+                result = self.run_tool('status')
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertIn('Sleepy version: unavailable', result.stdout)
+                self.assertIn('Source NAR: unavailable', result.stdout)
+                self.assertIn('Selected system profile:', result.stdout)
+                self.assertNotIn('\x1b', result.stdout)
+                self.assertNotIn('sudo ', self.calls_text())
+                if contents is not None: self.assertIn('source metadata', result.stdout)
 
     def test_existing_rebuild_and_rollback_fixed_arguments(self):
         for name, args in [('rebuild', 'switch --flake /etc/nixos#installed'), ('rollback', 'switch --rollback')]:
