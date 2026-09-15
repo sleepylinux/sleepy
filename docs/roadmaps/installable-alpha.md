@@ -60,7 +60,9 @@ A/B (session PR #12 merged). The compositor activation correction passed cold id
 shell-crash/DPMS/VT comparisons and is now wired into the production default.
 Empty Wayland app metadata no longer rejects the entire provider (session PR #13
 merged). Next: freeze the corrected source graph and repeat fresh installation
-and the full daily/update/rollback gate. Keyring persistence, crash/DPMS wake
+and the full daily/update/rollback gate. The first corrected-image install
+exposed duplicate Hyprland portal units; d047afd removes the redundant
+registration and the new default/Flatpak assembled-unit regression passes. Keyring persistence, crash/DPMS wake
 and update/rollback still require the corrected final image gate.
 [Revision-bound evidence](../acceptance/usable-alpha.md).
 

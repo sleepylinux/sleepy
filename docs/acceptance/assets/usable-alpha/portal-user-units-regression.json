@@ -1,0 +1,9 @@
+{
+  "failed_image_revision": "52d44f767009630b9e5616e4e85267c3f0df1c62",
+  "fix_revision": "d047afd9e6f88d7535c5fd80554399218afaee32",
+  "red": "actual installed-target user-units and new public-module check both fail on duplicate xdg-desktop-portal-hyprland.service",
+  "green": "public-module check builds actual default and Flatpak user-unit directories; host portalPackage override checked",
+  "green_check": "/nix/store/95sgf093jbsvx77yjg45cvdwdqk8hgiw-sleepy-public-module-check",
+  "session_contract_evaluation": "passed",
+  "fresh_corrected_image_acceptance": "pending"
+}

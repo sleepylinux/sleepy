@@ -318,3 +318,12 @@ the target; no successful install or boot is claimed.
 The dependency-only cache warmup did not build system user units and therefore
 did not catch this integration fault. The correction must build the assembled
 user units before repeating fresh installation.
+
+
+The correction `d047afd` removes only the redundant raw portal registration.
+NixOS supplies the portal matched to `programs.hyprland.package`; GTK and the
+existing portal preferences remain. The permanent public-module check reproduced
+the collision before the fix and now builds the actual default and Flatpak
+user-unit directories successfully, including a host portal-package override
+assertion. [Red/green provenance](assets/usable-alpha/portal-user-units-regression.json)
+is retained. Future cache warmups also build this assembled user-unit root.
