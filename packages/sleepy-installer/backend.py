@@ -14,6 +14,7 @@ import tempfile
 import urllib.request
 import subprocess
 import sys
+import uuid
 
 ROOT = Path('/mnt/sleepy')
 OPTIONS = {'nvidia', 'gaming', 'development', 'flatpak', 'bluetooth'}
@@ -57,9 +58,19 @@ def log_output(value):
 def run(argv, secret=None):
     # Credential subprocess output is discarded, including on errors.
     if secret is not None:
-        result = subprocess.run(argv, input=secret, text=True, stdout=subprocess.DEVNULL,
-                                stderr=subprocess.DEVNULL, check=False)
-        code, output = result.returncode, ''
+        with subprocess.Popen(argv, stdin=subprocess.PIPE, text=True,
+                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                              start_new_session=True) as process:
+            try:
+                process.communicate(input=secret)
+            except BaseException:
+                # Stop the whole secret-handling group before reaping its leader:
+                # an unreaped child pins the group ID, avoiding PID reuse races.
+                try: os.killpg(process.pid, signal.SIGKILL)
+                except ProcessLookupError: pass
+                process.wait()
+                raise
+            code, output = process.returncode, ''
     else:
         log_output('> ' + ' '.join(argv) + '\n')
         captured = []
@@ -167,11 +178,22 @@ def hostname_valid(value):
     return re.fullmatch(r'[a-z0-9][a-z0-9-]{0,61}[a-z0-9]|[a-z0-9]', value) is not None
 
 
+def encryption_passphrase_valid(value):
+    return isinstance(value, str) and 12 <= len(value) <= 128 and all(32 <= ord(c) <= 126 for c in value)
+
+
 def validate_request(data):
     required = {'disk', 'identity', 'confirm_erase', 'username', 'password', 'hostname',
                 'locale', 'keyboard', 'timezone', 'options'}
-    if not isinstance(data, dict) or set(data) != required:
+    if not isinstance(data, dict) or not required <= set(data) or set(data) - required - {'encryption', 'encryption_passphrase'}:
         raise InstallError('Invalid installation request fields')
+    if type(data.get('encryption', False)) is not bool:
+        raise InstallError('Encryption selection must be a boolean')
+    if data.get('encryption', False):
+        if not encryption_passphrase_valid(data.get('encryption_passphrase')):
+            raise InstallError('Disk passphrase must contain 12–128 printable ASCII characters for the US boot keyboard')
+    elif 'encryption_passphrase' in data:
+        raise InstallError('Disk passphrase requires encryption to be enabled')
     if any(not isinstance(data[k], str) for k in required - {'options'}):
         raise InstallError('Installation settings must be strings')
     if not re.fullmatch(r'/dev/[A-Za-z0-9_-]+', data['disk']): raise InstallError('Invalid disk path')
@@ -207,12 +229,19 @@ def nix_string(value):
     return json.dumps(value).replace('${', r'\${')
 
 
-def render_configuration(data):
+def render_configuration(data, luks_uuid=None):
     # Keep the installer US password layout available after login and on lock.
     keyboard = data['keyboard']
     layout = 'us' if keyboard == 'us' else 'us,' + keyboard
     keyboard_options = '' if keyboard == 'us' else 'grp:alt_shift_toggle'
     features = []
+    if data.get('encryption', False):
+        if not isinstance(luks_uuid, str) or not re.fullmatch(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}', luks_uuid):
+            raise InstallError('Invalid internally generated LUKS UUID')
+        features.extend([
+            '  console.earlySetup = true;',
+            f'  boot.initrd.luks.devices."luks-{luks_uuid}".device = "/dev/disk/by-uuid/{luks_uuid}";',
+        ])
     for name in sorted(OPTIONS):
         if data['options'].get(name, False):
             path = 'sleepy.hardware.nvidia' if name == 'nvidia' else f'sleepy.features.{name}'
@@ -232,11 +261,11 @@ def render_configuration(data):
 ''' + '\n'.join(features) + '\n}\n'
 
 
-def write_configuration(data, source, target=None):
+def write_configuration(data, source, target=None, luks_uuid=None):
     target = ROOT / 'etc/nixos' if target is None else target
     target.mkdir(parents=True, exist_ok=True)
     shutil.copytree(source, target / 'sleepy-source', symlinks=True)
-    (target / 'configuration.nix').write_text(render_configuration(data))
+    (target / 'configuration.nix').write_text(render_configuration(data, luks_uuid=luks_uuid))
     (target / 'flake.nix').write_text('''{
   inputs.sleepy.url = "path:./sleepy-source";
   inputs.nixpkgs.follows = "sleepy/nixpkgs";
@@ -259,7 +288,7 @@ def preflight_configuration(data, source):
     # NixOS assertions (including system-account collisions) and missing pinned inputs.
     with tempfile.TemporaryDirectory(prefix='sleepy-preflight-', dir='/run') as directory:
         target = Path(directory)
-        write_configuration(data, source, target=target)
+        write_configuration(data, source, target=target, luks_uuid='00000000-0000-4000-8000-000000000000' if data.get('encryption', False) else None)
         (target / 'hardware-configuration.nix').write_text('''{ ... }: {
   fileSystems."/" = { device = "/dev/disk/by-label/sleepy-root"; fsType = "btrfs"; };
   fileSystems."/boot" = { device = "/dev/disk/by-label/SLEEPY_EFI"; fsType = "vfat"; };
@@ -267,6 +296,55 @@ def preflight_configuration(data, source):
 }
 ''')
         run(['nix', 'eval', '--raw', str(target) + '#nixosConfigurations.installed.config.system.build.toplevel.drvPath'])
+
+
+class LuksRoot:
+    """One internally named mapping. Never close an existing or changed target."""
+    def __init__(self, partition):
+        self.partition = partition
+        self.uuid = str(uuid.uuid4())
+        self.name = 'luks-' + self.uuid
+        self.path = '/dev/mapper/' + self.name
+        self.open_attempted = False
+        if os.path.lexists(self.path):
+            raise InstallError('Generated encrypted mapping already exists')
+
+    def create(self, passphrase):
+        run(['cryptsetup', 'luksFormat', '--batch-mode', '--type', 'luks2',
+             '--uuid', self.uuid, '--key-file', '-', self.partition], secret=passphrase)
+        actual_uuid = run(['blkid', '-s', 'UUID', '-o', 'value', self.partition]).strip()
+        if actual_uuid != self.uuid:
+            raise InstallError('Encrypted partition UUID changed before opening it')
+        if os.path.lexists(self.path):
+            raise InstallError('Encrypted mapping appeared before opening it')
+        # Even if interrupted after the open syscall, finally checks the UUID
+        # of the resulting mapping before attempting a non-forced close.
+        self.open_attempted = True
+        run(['cryptsetup', 'open', '--type', 'luks2', '--key-file', '-',
+             self.partition, self.name], secret=passphrase)
+        if not self.owned():
+            raise InstallError('Encrypted mapping identity could not be verified')
+
+    def owned(self):
+        try:
+            info = os.stat(self.path)
+            if not stat.S_ISBLK(info.st_mode):
+                return False
+            dm_uuid = Path(f'/sys/dev/block/{os.major(info.st_rdev)}:{os.minor(info.st_rdev)}/dm/uuid').read_text().strip()
+            return dm_uuid == 'CRYPT-LUKS2-' + self.uuid.replace('-', '') + '-' + self.name
+        except FileNotFoundError:
+            return False
+
+    def close(self):
+        if not self.open_attempted:
+            return
+        if not os.path.lexists(self.path):
+            self.open_attempted = False
+            return
+        if not self.owned():
+            raise InstallError('Encrypted mapping changed; refusing to close it')
+        run(['cryptsetup', 'close', self.name])
+        self.open_attempted = False
 
 
 def install(data):
@@ -284,6 +362,8 @@ def install(data):
     lock = os.open('/run/sleepy-installer.lock', os.O_CREAT | os.O_RDWR | os.O_CLOEXEC, 0o600)
     mounted = False
     device = None
+    encrypted_root = None
+    cleanup_unmounted = True
     try:
         try: fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError: raise InstallError('Another installation is running') from None
@@ -321,13 +401,21 @@ def install(data):
             raise InstallError('Disk changed or became busy after partitioning; stopping before format')
         emit('format', 'Creating FAT32 EFI and Btrfs root filesystems', 12)
         run(['mkfs.fat', '-F', '32', '-n', 'SLEEPY_EFI', esp])
+        if data.get('encryption', False):
+            emit('encrypt', 'Creating LUKS2 encrypted root; boot unlock uses the US keyboard', 14)
+            encrypted_root = LuksRoot(root)
+            encrypted_root.create(data['encryption_passphrase'])
+            root = encrypted_root.path
         run(['mkfs.btrfs', '-f', '-L', 'sleepy-root', root])
-        run(['mount', '-o', 'compress=zstd', root, str(ROOT)]); mounted = True
+        # Mark the attempt before mount so interruption after a successful syscall
+        # cannot leave an untracked filesystem on an owned encrypted mapping.
+        mounted = True
+        run(['mount', '-o', 'compress=zstd', root, str(ROOT)])
         (ROOT / 'boot').mkdir()
         run(['mount', '-o', 'umask=0077', esp, str(ROOT / 'boot')])
         emit('configure', 'Generating hardware configuration and selected features', 20)
         run(['nixos-generate-config', '--root', str(ROOT)])
-        write_configuration(data, source)
+        write_configuration(data, source, luks_uuid=encrypted_root.uuid if encrypted_root else None)
         # nixos-install resolves a hash-pinned URL via flake metadata before its
         # build. Creating the lock during that resolution changes the source NAR.
         # Write it first so metadata and the subsequent build see identical files.
@@ -339,11 +427,20 @@ def install(data):
         emit('sync', 'Saving files and unmounting the installed disk', 95)
         run(['sync'])
         run(['umount', '--recursive', str(ROOT)]); mounted = False
+        if encrypted_root is not None:
+            encrypted_root.close()
         emit('complete', 'Installation complete. Shut down, remove installer media, then boot the disk.', 100)
     finally:
         if mounted:
             try: run(['umount', '--recursive', str(ROOT)])
-            except InstallError: print('Cleanup could not unmount /mnt/sleepy; unmount it before retrying.', file=sys.stderr)
+            except InstallError:
+                cleanup_unmounted = False
+                print('Cleanup could not unmount /mnt/sleepy; unmount it before retrying.' +
+                      (' Encrypted mapping left open.' if encrypted_root is not None else ''), file=sys.stderr)
+        if encrypted_root is not None and cleanup_unmounted:
+            try: encrypted_root.close()
+            except (InstallError, OSError):
+                print('Cleanup could not close the owned encrypted mapping; inspect it before retrying.', file=sys.stderr)
         if device is not None: os.close(device)
         os.close(lock)
 

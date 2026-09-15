@@ -132,15 +132,115 @@ class ValidationTests(unittest.TestCase):
             self.assertIn(token, config)
 
     def test_command_password_only_stdin(self):
-        with patch.object(backend.subprocess, 'run') as run:
-            run.return_value.returncode = 1; run.return_value.stdout = request()['password']
+        with patch.object(backend.subprocess, 'Popen') as popen:
+            process = popen.return_value.__enter__.return_value
+            process.returncode = 1
+            process.communicate.return_value = (None, None)
             with self.assertRaises(backend.InstallError) as error:
                 backend.run(['chpasswd', '-R', '/mnt/sleepy'], secret='alice:'+request()['password']+'\n')
             self.assertNotIn(request()['password'], str(error.exception))
-            self.assertNotIn(request()['password'], str(run.call_args.args))
+            self.assertNotIn(request()['password'], str(popen.call_args))
+            self.assertEqual(popen.call_args.kwargs['stdout'], backend.subprocess.DEVNULL)
+            self.assertEqual(popen.call_args.kwargs['stderr'], backend.subprocess.DEVNULL)
+            self.assertEqual(process.communicate.call_args.kwargs['input'], 'alice:'+request()['password']+'\n')
+
+    def test_real_secret_child_output_is_discarded_even_on_failure(self):
+        import contextlib
+        import io
+        import sys
+        output = io.StringIO()
+        log = io.StringIO()
+        secret = 'Disposable Test Passphrase 123'
+        with patch.object(backend,'LOG',log), contextlib.redirect_stdout(output), contextlib.redirect_stderr(output):
+            with self.assertRaises(backend.InstallError) as error:
+                backend.run([sys.executable,'-c','import sys; value=sys.stdin.read(); print(value); print(value,file=sys.stderr); sys.exit(7)'],secret=secret)
+        self.assertNotIn(secret,str(error.exception))
+        self.assertEqual(output.getvalue(),'')
+        self.assertEqual(log.getvalue(),'')
+
+    def test_secret_process_interrupt_stops_group_and_reaps(self):
+        with patch.object(backend.subprocess,'Popen') as popen, patch.object(backend.os,'killpg') as kill:
+            process = popen.return_value.__enter__.return_value
+            process.pid = 12345
+            process.communicate.side_effect = backend.InstallError('Installation interrupted')
+            with self.assertRaisesRegex(backend.InstallError,'interrupted'):
+                backend.run(['cryptsetup','open'],secret='Correct Horse 123')
+            self.assertTrue(popen.call_args.kwargs['start_new_session'])
+            self.assertEqual(kill.call_args_list[-1].args, (12345,backend.signal.SIGKILL))
+            process.wait.assert_called()
+
+    def test_optional_luks_passphrase_is_explicit_and_console_reproducible(self):
+        data = request()
+        data['encryption'] = False
+        backend.validate_request(data)
+        data.update(encryption=True, encryption_passphrase='Correct Horse 123')
+        backend.validate_request(data)
+        for value in ['', 'short', 'x'*129, 'passphrase-ééé', 'passphrase\nmore']:
+            with self.subTest(value=value):
+                invalid = dict(data, encryption_passphrase=value)
+                with self.assertRaises(backend.InstallError): backend.validate_request(invalid)
+        for invalid in [dict(data, encryption=False), dict(data, encryption='yes'), dict(data, mapper='/dev/mapper/user')]:
+            with self.assertRaises(backend.InstallError): backend.validate_request(invalid)
+
+    def test_luks_configuration_uses_internal_uuid_and_us_initrd(self):
+        data = dict(request(), encryption=True, encryption_passphrase='Correct Horse 123')
+        uuid = '12345678-1234-4234-8234-123456789abc'
+        config = backend.render_configuration(data, luks_uuid=uuid)
+        self.assertIn('/dev/disk/by-uuid/' + uuid, config)
+        self.assertIn('console.keyMap = "us";', config)
+        self.assertNotIn(data['encryption_passphrase'], config)
+        self.assertNotIn('luks.devices', backend.render_configuration(request()))
+        with self.assertRaises(backend.InstallError): backend.render_configuration(data, luks_uuid='../evil')
+
+
+class EncryptedMappingTests(unittest.TestCase):
+    def test_close_rejects_changed_or_preexisting_mapping(self):
+        with patch.object(backend.os.path,'lexists',return_value=True):
+            with self.assertRaisesRegex(backend.InstallError,'already exists'):
+                backend.LuksRoot('/dev/vda2')
+        with patch.object(backend.os.path,'lexists',return_value=False):
+            mapping=backend.LuksRoot('/dev/vda2')
+        mapping.open_attempted=True
+        with patch.object(backend.os.path,'lexists',return_value=True), patch.object(mapping,'owned',return_value=False), patch.object(backend,'run') as run:
+            with self.assertRaisesRegex(backend.InstallError,'changed'):
+                mapping.close()
+            run.assert_not_called()
+
+    def test_interruption_after_open_can_close_only_verified_own_mapper(self):
+        with patch.object(backend.os.path,'lexists',return_value=False):
+            mapping=backend.LuksRoot('/dev/vda2')
+            def command(argv, secret=None):
+                if argv[0]=='blkid': return mapping.uuid+'\n'
+                if argv[:2]==['cryptsetup','open']: raise backend.InstallError('interrupted after open')
+                return ''
+            with patch.object(backend,'run',side_effect=command):
+                with self.assertRaisesRegex(backend.InstallError,'interrupted'):
+                    mapping.create('Correct Horse 123')
+        self.assertTrue(mapping.open_attempted)
+        with patch.object(backend.os.path,'lexists',return_value=True), patch.object(mapping,'owned',return_value=True), patch.object(backend,'run') as run:
+            mapping.close()
+            run.assert_called_once_with(['cryptsetup','close',mapping.name])
+        self.assertFalse(mapping.open_attempted)
+
+    def test_wrong_luks_uuid_never_opens_mapping(self):
+        with patch.object(backend.os.path,'lexists',return_value=False), patch.object(backend,'run',return_value='wrong') as run:
+            mapping=backend.LuksRoot('/dev/vda2')
+            with self.assertRaisesRegex(backend.InstallError,'UUID changed'):
+                mapping.create('Correct Horse 123')
+            self.assertFalse(mapping.open_attempted)
+            self.assertFalse(any(call.args[0][:2]==['cryptsetup','open'] for call in run.call_args_list))
+
+    def test_owned_mapping_requires_exact_kernel_dm_uuid(self):
+        from types import SimpleNamespace
+        with patch.object(backend.os.path,'lexists',return_value=False): mapping=backend.LuksRoot('/dev/vda2')
+        expected='CRYPT-LUKS2-'+mapping.uuid.replace('-','')+'-'+mapping.name
+        with patch.object(backend.os,'stat',return_value=SimpleNamespace(st_mode=backend.stat.S_IFBLK,st_rdev=backend.os.makedev(253,3))):
+            for value,valid in [(expected,True),(expected+'changed',False),('CRYPT-LUKS2-foreign',False)]:
+                with patch.object(pathlib.Path,'read_text',return_value=value):
+                    self.assertEqual(mapping.owned(),valid)
 
 class InstallationSequenceTests(unittest.TestCase):
-    def exercise_install(self, fail_command=None, offline=False, invalid_config=False, invalid_target=False):
+    def exercise_install(self, fail_command=None, offline=False, invalid_config=False, invalid_target=False, encrypted=False):
         from contextlib import ExitStack
         calls = []
         with tempfile.TemporaryDirectory() as temp, ExitStack() as stack:
@@ -156,6 +256,11 @@ class InstallationSequenceTests(unittest.TestCase):
             stack.enter_context(patch.dict(backend.os.environ, {'SLEEPY_SOURCE': str(source)}))
             stack.enter_context(patch.object(backend.os, 'geteuid', return_value=0))
             stack.enter_context(patch.object(pathlib.Path, 'is_dir', lambda p: True if str(p) == '/sys/firmware/efi' else original_is_dir(p)))
+            mapping = {'open': False}
+            stack.enter_context(patch.object(backend.uuid, 'uuid4', return_value='12345678-1234-4234-8234-123456789abc'))
+            stack.enter_context(patch.object(backend.LuksRoot, 'owned', return_value=True))
+            real_lexists = backend.os.path.lexists
+            stack.enter_context(patch.object(backend.os.path, 'lexists', side_effect=lambda p: mapping['open'] if str(p).startswith('/dev/mapper/') else real_lexists(p)))
             claim = {'opens': 0, 'held': False}
             def open_device(path, flags, *args):
                 claim['opens'] += 1
@@ -185,13 +290,18 @@ class InstallationSequenceTests(unittest.TestCase):
                     self.assertIn('--force', argv)
                 if argv[0] == 'parted': self.assertTrue(claim['held'])
                 if argv[0].startswith('mkfs.'): self.assertFalse(claim['held'])
+                if argv[:2] == ['cryptsetup', 'open']: mapping['open'] = True
+                if argv[:2] == ['cryptsetup', 'close']: mapping['open'] = False
                 if argv[0] == fail_command: raise backend.InstallError('simulated command failure')
+                if argv[0] == 'blkid': return '12345678-1234-4234-8234-123456789abc\n'
                 return ''
             stack.enter_context(patch.object(backend, 'run', side_effect=command))
+            data = request()
+            if encrypted: data.update(encryption=True, encryption_passphrase='Correct Horse 123')
             if fail_command or offline or invalid_config or invalid_target:
-                with self.assertRaises(backend.InstallError): backend.install(request())
+                with self.assertRaises(backend.InstallError): backend.install(data)
             else:
-                backend.install(request())
+                backend.install(data)
             self.assertEqual(verify.call_count, 1 if offline or invalid_config or invalid_target else 3)
             if invalid_target:
                 network.assert_not_called()
@@ -225,5 +335,35 @@ class InstallationSequenceTests(unittest.TestCase):
         calls = self.exercise_install('nixos-install')
         self.assertEqual(calls[-1][0][0], 'umount')
         self.assertNotIn('chpasswd', [argv[0] for argv, _ in calls])
+
+
+    def test_encrypted_install_formats_mapper_and_closes_after_unmount(self):
+        calls = self.exercise_install(encrypted=True)
+        argv = [call[0] for call in calls]
+        format_index = next(i for i,a in enumerate(argv) if a[:2] == ['cryptsetup','luksFormat'])
+        open_index = next(i for i,a in enumerate(argv) if a[:2] == ['cryptsetup','open'])
+        btrfs_index = next(i for i,a in enumerate(argv) if a[0]=='mkfs.btrfs')
+        self.assertLess(format_index,open_index)
+        self.assertLess(open_index,btrfs_index)
+        self.assertEqual(argv[btrfs_index][-1], '/dev/mapper/luks-12345678-1234-4234-8234-123456789abc')
+        self.assertEqual(argv[-2][0], 'umount')
+        self.assertEqual(argv[-1][:2], ['cryptsetup','close'])
+        for args,secret in calls:
+            self.assertNotIn('Correct Horse 123', str(args))
+            if args[:2] in [['cryptsetup','luksFormat'],['cryptsetup','open']]:
+                self.assertEqual(secret,'Correct Horse 123')
+                self.assertIn('--key-file',args)
+
+    def test_encrypted_install_failure_unmounts_before_closing(self):
+        calls = self.exercise_install('nixos-install', encrypted=True)
+        self.assertEqual(calls[-2][0][0], 'umount')
+        self.assertEqual(calls[-1][0][:2], ['cryptsetup','close'])
+
+    def test_encrypted_unmount_failure_never_attempts_mapper_close(self):
+        calls = self.exercise_install('umount', encrypted=True)
+        self.assertFalse(any(args[:2] == ['cryptsetup','close'] for args,_ in calls))
+
+    def test_encrypted_invalid_target_keeps_all_disk_commands_unexecuted(self):
+        self.assertEqual(self.exercise_install(invalid_target=True,encrypted=True),[])
 
 if __name__ == '__main__': unittest.main()
