@@ -45,6 +45,8 @@ in {
     greetd.enable = true;
   };
 
+  services.displayManager.regreet.settings.GTK.application_prefer_dark_theme = lib.mkDefault true;
+
   security.pam.services.greetd.enableGnomeKeyring = true;
 
   xdg.portal = {
