@@ -6,52 +6,27 @@ The root integration pins this exact reviewed public component graph:
 
 | Component | Reviewed revision |
 |---|---|
-| `sleepy-sdk` | `dff28bb596950d862ae5d219e478460dfa13e8f4` |
-| `sleepy-session` | `210cbaad7a50280e4406281f90cbe36def50086c` |
+| `sleepy-sdk` | `c7d7452163d4fdfa000634e2196212a53d8b159f` |
+| `sleepy-session` | `341d69fcb245f41b56e72e8ac89630a5e1b7d4e2` |
 | `sleepy-artwork` | `ac3feed1e81b4e74a84a326c1f53f3ddaf94aa3e` |
-| `sleepy-desktop` | `45f721a037693523ba1886eba20784ac9e8102fc` |
+| `sleepy-desktop` | `5710631354df0f54d97a46d8ceae7f0bcae69b80` |
 
 The generated `flake.lock` SHA-256 is
-`5287c31b89266a72a954c0abd619e798563e337a996d09338bbbe5e068472be6`. This candidate includes the SDK UTF-8 fix, deterministic session process tests,
-consistent Hyprland command readback deadlines, typed audio monitor events,
-empty Wayland application metadata normalization, and the native locker unlock fix. The current desktop adds a dark native lock
-view and hides optional panels without data; its offscreen QML checks pass,
-and the combined installed-VM acceptance now passes for image `97830de`.
-Component review and CI are tracked in
-[SDK PR #8](https://github.com/sleepylinux/sleepy-sdk/pull/8),
-[session PR #9](https://github.com/sleepylinux/sleepy-session/pull/9),
-[session PR #12](https://github.com/sleepylinux/sleepy-session/pull/12),
-[session PR #13](https://github.com/sleepylinux/sleepy-session/pull/13), and
-[desktop PR #7](https://github.com/sleepylinux/sleepy-desktop/pull/7),
-[desktop PR #8](https://github.com/sleepylinux/sleepy-desktop/pull/8), and
-[desktop PR #9](https://github.com/sleepylinux/sleepy-desktop/pull/9).
-The current desktop also retires NetworkManager command processes when their
-executable fails to start. Its packaged checks and exact-head CI passed;
-desktop PR #9 is merged.
+`d768216eb99793d0472113a80b0c3106aa5c31382bc1bbafdeb80e14d88d8c3c`.
 
-The historical installer acceptance remains bound to root `9bca73c` and session `8edee2e`:
-installation, real password login, desktop startup, crash recovery, failed-update
-preservation and three installed-disk boots passed. See the immutable
-[Installable Sleepy acceptance](installable-alpha.md) and
-[installer runbook](../runbooks/installable-alpha.md).
+This candidate adds asynchronous capture v1: interactive region consent,
+nonblocking job status/cancellation, and private temporary PNG publication.
+Component tests and source reviews pass; full component CI and installed-VM
+capture acceptance remain pending. Track [SDK PR #9](https://github.com/sleepylinux/sleepy-sdk/pull/9),
+[session PR #15](https://github.com/sleepylinux/sleepy-session/pull/15), and
+[desktop PR #11](https://github.com/sleepylinux/sleepy-desktop/pull/11).
 
-The current graph adds the read-only doctor from
-[session PR #10](https://github.com/sleepylinux/sleepy-session/pull/10).
-Its package and installed-VM diagnostics are recorded separately in
-[doctor acceptance](doctor.md); the previous installer ISO does not contain
-this command. This candidate additionally includes conservative absent-hardware
-classification from [session PR #11](https://github.com/sleepylinux/sleepy-session/pull/11)
-including the captured UPower 1.91.3 `power supply: no` regression fix
-and a logind capability preflight before acquiring a suspend locker hold,
-and the terminal crescent from [artwork PR #6](https://github.com/sleepylinux/sleepy-artwork/pull/6).
-Their component tests and the combined `97830de` installed-VM run pass. See
-[the final usable-alpha result](usable-alpha.md) for 47 gates across three
-installed-disk boots and the remaining hardware/public-cache limits. The older
-doctor evidence records the provider errors before these fixes.
-
-The older 2026-09-04 baseline, CI interpreter correction, and protected-VM
-acceptance remain historical records in
-`docs/acceptance/hyprland-sleepy-desktop.md`; they do not certify this installer.
+The verified installation, everyday desktop, updates and recovery evidence is
+bound to earlier revisions, including image `8624092`. See
+[usable-alpha acceptance](usable-alpha.md) and the
+[installer runbook](../runbooks/installable-alpha.md). Those results do not
+certify capture v1. Historical baseline evidence remains in
+[Hyprland desktop acceptance](hyprland-sleepy-desktop.md).
 
 ## Desktop Milestone 3 integration candidate
 

@@ -14,5 +14,10 @@
       description = "Optional fail-secure Sleepy locker package.";
     };
     shellPackage = lib.mkOption {type = lib.types.package;};
+    capture.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Enable the asynchronous screenshot API with interactive region consent.";
+    };
   };
 }

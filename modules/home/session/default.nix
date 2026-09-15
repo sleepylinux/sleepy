@@ -4,27 +4,29 @@
   pkgs,
   ...
 }: let
-  sessionRuntimePackages = with pkgs; [
-    config.sleepy.sessionPackage
-    networkmanager
-    bluez
-    wireplumber
-    pipewire
-    brightnessctl
-    ddcutil
-    lm_sensors
-    libqalculate
-    power-profiles-daemon
-    upower
-    playerctl
-    gammastep
-    cliphist
-    wl-clipboard
-    gpu-screen-recorder
-    swappy
-    systemd
-    curl
-  ];
+  sessionRuntimePackages =
+    (with pkgs; [
+      config.sleepy.sessionPackage
+      networkmanager
+      bluez
+      wireplumber
+      pipewire
+      brightnessctl
+      ddcutil
+      lm_sensors
+      libqalculate
+      power-profiles-daemon
+      upower
+      playerctl
+      gammastep
+      cliphist
+      wl-clipboard
+      gpu-screen-recorder
+      swappy
+      systemd
+      curl
+    ])
+    ++ lib.optionals config.sleepy.capture.enable [config.sleepy.shellPackage];
   sessionRuntimePath = lib.makeBinPath sessionRuntimePackages;
 in {
   config = lib.mkIf (config.sleepy.enable && config.sleepy.sessionPackage != null) {
@@ -53,6 +55,11 @@ in {
             "PATH=${sessionRuntimePath}"
             "SLEEPY_LOCKER_SOCKET=%t/sleepy/locker.sock"
             "SLEEPY_NOTIFICATION_BUS_OWNER=shell"
+            "SLEEPY_CAPTURE_ENABLE=${
+              if config.sleepy.capture.enable
+              then "1"
+              else "0"
+            }"
           ];
           Restart = "on-failure";
           RestartSec = 2;

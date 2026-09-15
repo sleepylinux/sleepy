@@ -62,8 +62,13 @@ remove disposable disks, credentials and the task-owned builder after validation
    are useful evidence, not physical GPU or suspend acceptance.
 2. **Complete the session capture provider.** Print already uses native
    Quickshell screencopy and Swappy. The separate SDK capture action expects an
-   unimplemented helper; keep doctor honest until consent/output contracts and
-   actual capture are tested. Do not alias its status to the Print picker.
+   unimplemented legacy helper. A separate opt-in capture v1 endpoint now has
+   typed asynchronous jobs, cancellation and bounded temporary PNG publication;
+   session and SDK changes are in draft review. The existing picker supplies
+   visible region consent through an anonymous image descriptor. Native writer,
+   QML lifecycle and real daemon shutdown checks pass; actual installed-VM
+   capture and final packaging remain pending. Keep legacy doctor honest and
+   do not alias its status to the Print picker.
 3. **Encryption and public distribution.** Add a separate encrypted
    install/unlock/recovery branch. Prepare reproducible public binary artifacts,
    source revisions/checksums, short docs and honest known issues. Validate a

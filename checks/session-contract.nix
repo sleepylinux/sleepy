@@ -57,6 +57,20 @@ in
   "Home Manager must author Hyprland config without owning UWSM's target";
   assert pkgs.lib.assertMsg (homeConfig.xdg.configFile ? "uwsm/env")
   "Home Manager variables must be imported through UWSM";
+  assert pkgs.lib.assertMsg
+  (builtins.elem "SLEEPY_CAPTURE_ENABLE=${
+      if homeConfig.sleepy.capture.enable
+      then "1"
+      else "0"
+    }"
+    session.Service.Environment)
+  "capture availability must follow the overridable Home Manager option";
+  assert pkgs.lib.assertMsg
+  (!homeConfig.sleepy.capture.enable
+    || builtins.any
+    (value: pkgs.lib.hasPrefix "PATH=" value && builtins.elem "${homeConfig.sleepy.shellPackage}/bin" (pkgs.lib.splitString ":" (pkgs.lib.removePrefix "PATH=" value)))
+    session.Service.Environment)
+  "enabled capture must resolve the version-matched shell helper";
   assert pkgs.lib.assertMsg (session.Service.Type == "notify")
   "sleepy-sessiond readiness must use sd_notify";
   assert pkgs.lib.assertMsg
@@ -102,6 +116,7 @@ in
       set -eu
       test -e ${keyringContract}
 
+      ${pkgs.lib.optionalString homeConfig.sleepy.capture.enable "test -x ${homeConfig.sleepy.shellPackage}/bin/sleepy-capture-job-helper"}
       test -x ${hyprlandPackage}/bin/Hyprland
       test -x ${uwsmPackage}/bin/uwsm
       session_file=${config.system.build.toplevel}/sw/share/wayland-sessions/hyprland-uwsm.desktop
