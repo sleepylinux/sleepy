@@ -32,7 +32,7 @@
     { "type": "terminal", "key": "Terminal" },
     { "type": "shell", "key": "Shell" },
     "break",
-    { "type": "cpu", "key": "CPU" },
+    { "type": "cpu", "key": "CPU", "format": "{name}" },
     { "type": "gpu", "key": "GPU" },
     { "type": "memory", "key": "Memory" },
     { "type": "disk", "key": "Disk", "folders": "/" }
