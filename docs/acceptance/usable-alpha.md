@@ -343,3 +343,37 @@ shell/locker checks. [Package graph and results](assets/usable-alpha/nmcli-faile
 record a nonfatal unused IPC-path warning in the new direct-Process fixture;
 that fixture does not establish IPC-server behavior. Independent review passed.
 Remote CI and a fresh installed-image run remain separate gates.
+
+
+### Fresh 97830de installation and menu input readiness
+
+Image `97830de29099483356a7cff1a28751edfcc538d9` completed fresh TUI installation,
+disk-only boot, actual login, Flathub timer recovery, cold idle-lock password
+unlock, locked shell SIGKILL/input-DPMS wake, locked VT/keyboard-layout roundtrip,
+Fastfetch, healthy doctor with virtual audio and keyring store/lookup. The
+[combined run then failed](assets/usable-alpha/978-first-run-failed.json) waiting
+for Escape to close the system menu; update/rollback was not reached.
+
+On that retained disk, the menu was the correct active window after VT return,
+but Hyprland reported no main keyboard. Escape left the menu alive. After an
+ordinary Shift wake and keyboard/focus readback, Escape closed the same menu.
+[Actual observations](assets/usable-alpha/978-system-menu-vt-ab.json) support the
+runner correction `0c30bd6`: mapped menu → active VT acknowledgement → ordinary
+wake → main keyboard and focused-address confirmation → Escape. Existing timeout,
+window-closure and unchanged-generations assertions remain. Fourteen runner
+regressions pass; a fresh combined rerun remains required.
+
+Further diagnostics on the same production packages saved and opened a real PNG
+in Swappy/imv and replaced a known text clipboard value with a complete PNG.
+[Results](assets/usable-alpha/978-daily-manual-results.json) and
+[viewer](assets/usable-alpha/978-diagnostic-screenshot-viewer.png) are separate from
+fresh acceptance. The first manual selection was sent before the picker was
+ready; repeating normal pointer movement after visible readiness worked. The
+normal runner already captures the visible picker before selecting.
+
+The custom Fastfetch crescent rendered in an ordinary interactive fish/Ghostty
+terminal at [1280×800](assets/usable-alpha/978-fastfetch-1280-fish.png) and
+[1600×1000](assets/usable-alpha/978-fastfetch-1600-fish.png). These are real installed
+desktop screenshots; the second resolution is a temporary diagnostic monitor
+setting. Desktop PR #9 passed exact CI and merged as
+`d092cfd2a7cf48bb7026b0cbc0dfc2d05a528131`.
