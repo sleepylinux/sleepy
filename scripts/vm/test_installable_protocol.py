@@ -12,7 +12,7 @@ TREE = ast.parse(SOURCE.read_text())
 FUNCTIONS = {node.name: node for node in TREE.body if isinstance(node, ast.FunctionDef)}
 NAMESPACE = {}
 exec(compile(ast.Module(body=[FUNCTIONS[name] for name in
-                             ('lock_fixture', 'advance_locked_vt', 'keyring_fixture')], type_ignores=[]),
+                             ('lock_fixture', 'advance_locked_vt', 'keyring_fixture', 'advance_daily_idle', 'daily_idle_fixture')], type_ignores=[]),
              str(SOURCE), 'exec'), NAMESPACE)
 
 
@@ -127,6 +127,36 @@ uenv() {
             self.assertNotIn('echo "$keyring_value"', fixture)
         self.assertIn('DAILY_KEYRING_STORE_LOOKUP_OK', first)
         self.assertIn('DAILY_KEYRING_PERSISTED_UNLOCKED_OK', reboot)
+
+
+class IdleSamplingProtocol(unittest.TestCase):
+    def test_complete_acknowledgements_switch_to_desktop_then_back_only_once(self):
+        calls = []
+        class QMP:
+            def keys(self, *keys):
+                calls.append(keys)
+        qmp, sent = QMP(), set()
+        advance = NAMESPACE['advance_daily_idle']
+        advance(qmp, b'DAILY_IDLE_SHELL_STABLE_OK\n', sent)
+        self.assertEqual(calls, [])
+        advance(qmp, b'DAILY_IDLE_SAMPLE_READY', sent)
+        self.assertEqual(calls, [])
+        ready = b'DAILY_IDLE_SAMPLE_READY\n'
+        advance(qmp, ready, sent)
+        advance(qmp, ready, sent)
+        self.assertEqual(calls, [('ctrl', 'alt', 'f1'), ('shift',)])
+        advance(qmp, ready + b'DAILY_IDLE_SHELL_STABLE_OK', sent)
+        self.assertEqual(len(calls), 2)
+        advance(qmp, ready + b'DAILY_IDLE_SHELL_STABLE_OK\n', sent)
+        advance(qmp, ready + b'DAILY_IDLE_SHELL_STABLE_OK\n', sent)
+        self.assertEqual(calls[-1], ('ctrl', 'alt', 'f2'))
+        self.assertEqual(len(calls), 3)
+
+    def test_idle_fixture_shell_and_embedded_python_parse(self):
+        script = NAMESPACE['daily_idle_fixture']()
+        subprocess.run(['bash', '-n'], input=script, text=True, check=True)
+        python = script.split("<<'IDLE_PY'\n", 1)[1].split('\nIDLE_PY', 1)[0]
+        compile(python, '<guest-idle-sampler>', 'exec')
 
 
 if __name__ == '__main__':

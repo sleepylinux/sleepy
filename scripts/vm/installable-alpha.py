@@ -742,6 +742,64 @@ printf 'DAILY_SCREENSHOT_CLIPBOARD_PNG_OK\n'
 '''
 
 
+def advance_daily_idle(qmp, report, sent):
+    if b'DAILY_IDLE_SAMPLE_READY\n' in report and 'idle-sampling' not in sent:
+        sent.add('idle-sampling')
+        qmp.keys('ctrl', 'alt', 'f1')
+        qmp.keys('shift')
+    if ('idle-sampling' in sent and b'DAILY_IDLE_SHELL_STABLE_OK\n' in report
+            and 'idle-complete' not in sent):
+        sent.add('idle-complete')
+        qmp.keys('ctrl', 'alt', 'f2')
+
+
+def daily_idle_fixture():
+    # A fixed 8 GiB, 1280px software-rendered VM normally uses well below 1 GiB
+    # for the shell. 128 MiB/min leaves cache warm-up headroom while rejecting
+    # the observed feedback loop (approximately 600 MiB/min). Not an OS limit.
+    return r'''
+printf 'DAILY_IDLE_SAMPLE_READY\n'
+for attempt in $(seq 1 30); do
+  test "$(cat /sys/class/tty/tty0/active)" = tty1 && break
+  sleep 1
+done
+test "$(cat /sys/class/tty/tty0/active)" = tty1
+shell_pid=$(usystem show sleepy-shell.service -P MainPID)
+shell_restarts=$(usystem show sleepy-shell.service -P NRestarts)
+"$python" - "$shell_pid" <<'IDLE_PY'
+import json, os, pathlib, sys, time
+pid = int(sys.argv[1])
+assert pid > 1, "shell has no running MainPID"
+base = pathlib.Path('/proc') / str(pid)
+def sample():
+    # comm may contain spaces or parentheses; fields start after its final ')'.
+    fields = (base / 'stat').read_text().rsplit(')', 1)[1].split()
+    rss = int(next(line.split()[1] for line in (base / 'status').read_text().splitlines() if line.startswith('VmRSS:')))
+    return {'pid': pid, 'start_ticks': int(fields[19]), 'rss_kib': rss,
+            'cpu_ticks': int(fields[11]) + int(fields[12]), 'threads': int(fields[17])}
+start = time.monotonic()
+first = sample()
+peak = first['rss_kib']
+for index in range(7):
+    if index:
+        time.sleep(max(0, start + index * 10 - time.monotonic()))
+    current = sample()
+    current['elapsed_seconds'] = round(time.monotonic() - start, 3)
+    current['cpu_seconds'] = (current['cpu_ticks'] - first['cpu_ticks']) / os.sysconf('SC_CLK_TCK')
+    peak = max(peak, current['rss_kib'])
+    print('DAILY_IDLE_SAMPLE ' + json.dumps(current, sort_keys=True), flush=True)
+    assert current['start_ticks'] == first['start_ticks'], "shell PID was reused"
+    assert current['rss_kib'] <= 1024 * 1024, "shell exceeded 1 GiB resident memory"
+    assert peak - first['rss_kib'] <= 128 * 1024, "shell grew over 128 MiB within one minute"
+assert time.monotonic() - start >= 60
+IDLE_PY
+usystem is-active sleepy-shell.service
+test "$(usystem show sleepy-shell.service -P MainPID)" = "$shell_pid"
+test "$(usystem show sleepy-shell.service -P NRestarts)" = "$shell_restarts"
+printf 'DAILY_IDLE_SHELL_STABLE_OK\n'
+'''
+
+
 def guest_report(machine, password, stage, after_reboot=False, update_phase=None, final=False):
     """Authenticate on a real VT, then explicitly sudo fixed disposable-VM checks."""
     machine.qmp.keys('ctrl', 'alt', 'f2')
@@ -757,6 +815,8 @@ def guest_report(machine, password, stage, after_reboot=False, update_phase=None
     if getattr(machine, 'flatpak_recovery', False) and not after_reboot:
         # One production attempt (60s), natural retry (420s), Software (30s).
         audit_timeout += 510
+    if getattr(machine, 'daily_usability', False):
+        audit_timeout += 90  # 30s graphical VT acknowledgement + 60s idle samples.
     channel.settimeout(audit_timeout)
     channel.connect(str(machine.output / 'report.sock'))
     script = r'''#!/usr/bin/env bash
@@ -838,7 +898,7 @@ runuser -u sleepy -- mkdir -p /home/sleepy/.config/sleepy
 runuser -u sleepy -- sh -c 'printf sleepy-alpha-state > /home/sleepy/.config/sleepy/alpha-persistence'
 sync
 printf 'PERSISTENCE_MARKER_WRITTEN\n'
-''') + (flatpak_fixture(after_reboot) if getattr(machine, 'flatpak_recovery', False) else '') + lock_fixture(getattr(machine, 'keyboard', 'us')) + (daily_fixture(after_reboot) if getattr(machine, 'daily_usability', False) else '') + update_fixture(update_phase) + (r'''
+''') + (flatpak_fixture(after_reboot) if getattr(machine, 'flatpak_recovery', False) else '') + lock_fixture(getattr(machine, 'keyboard', 'us')) + (daily_fixture(after_reboot) + daily_idle_fixture() if getattr(machine, 'daily_usability', False) else '') + update_fixture(update_phase) + (r'''
 cp -p /var/lib/sleepy-alpha/hypr-user.before /home/sleepy/.config/hypr/sleepy-user.conf
 hypr reload
 printf 'USER_SETTING_FIXTURE_RESTORED_OK\n'
@@ -884,6 +944,7 @@ printf 'SLEEPY_REPORT_COMPLETE\n'
                 machine.qmp.text(password + '\n')
                 idle_lock_input_sent = True
             advance_locked_vt(machine.qmp, report, daily_sent)
+            advance_daily_idle(machine.qmp, report, daily_sent)
             if b'LOCK_READY_FOR_REAL_PASSWORD' in report and not lock_input_sent:
                 machine.wait_screen('Password', f'{stage}-locked')
                 if getattr(machine, 'keyboard', 'us') != 'us':
@@ -940,7 +1001,6 @@ printf 'SLEEPY_REPORT_COMPLETE\n'
                 if b'DAILY_SCREENSHOT_CLIPBOARD_PNG_OK' in report and 'finished' not in daily_sent:
                     daily_sent.add('finished')
                     machine.screen(f'{stage}-daily-screenshot-viewer')
-                    machine.qmp.keys('ctrl', 'alt', 'f2')
             if len(report) > 1024 * 1024: raise RuntimeError('Guest audit exceeded 1 MiB output bound')
     finally:
         channel.close()
@@ -1112,6 +1172,7 @@ def main():
                 'SCREENSHOT_VIEWER_OPEN': 'daily-screenshot-viewer-open',
                 'SCREENSHOT_CLIPBOARD_PNG': 'daily-ShiftPrint-clipboard-PNG',
                 'SCREENSHOT_PERSISTED': 'daily-screenshot-persistence',
+                'IDLE_SHELL_STABLE': 'daily-idle-shell-memory-and-process-stability',
             }.items()},
             'LOCK_VT_ROUNDTRIP_READY': 'locked-VT-roundtrip-keyboard-restored',
             'REAL_PASSWORD_LOCK_UNLOCK_OK': 'real-password-lock-unlock',
