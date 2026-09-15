@@ -473,6 +473,30 @@ for attempt in $(seq 1 40); do
   sleep 1
 done
 test "$locked" = true
+# A fresh shell has no remembered idle-resume transition. Compositor input
+# must still wake its locked display; never repair this with `dpms on`.
+locked_shell_pid=$(usystem show sleepy-shell.service -P MainPID)
+test "$locked_shell_pid" -gt 0
+usystem kill --kill-whom=main --signal=KILL sleepy-shell.service
+locked_shell_recovered=false
+for attempt in $(seq 1 40); do
+  next_shell_pid=$(usystem show sleepy-shell.service -P MainPID)
+  if test "$next_shell_pid" -gt 0 && test "$next_shell_pid" != "$locked_shell_pid" && usystem is-active --quiet sleepy-shell.service; then locked_shell_recovered=true; break; fi
+  sleep 1
+done
+test "$locked_shell_recovered" = true
+test "$(locker_state)" = locked
+hypr dispatch dpms off
+hypr monitors -j | jq -e 'length > 0 and all(.[]; .dpmsStatus == false)'
+printf 'LOCK_SHELL_CRASH_WAKE_READY\n'
+locked_display_awake=false
+for attempt in $(seq 1 30); do
+  if hypr monitors -j | jq -e 'length > 0 and all(.[]; .dpmsStatus == true)'; then locked_display_awake=true; break; fi
+  sleep 1
+done
+test "$locked_display_awake" = true
+test "$(locker_state)" = locked
+printf 'LOCK_SHELL_CRASH_INPUT_WAKE_OK\n'
 # Reproduce keyboard removal/re-addition while the native lock owns focus.
 # Guest acknowledgements require the actual kernel VT, not a sent-key assumption.
 printf 'LOCK_SWITCH_TO_CONSOLE\n'
@@ -520,6 +544,7 @@ printf 'REAL_PASSWORD_LOCK_UNLOCK_OK\n'
 def advance_locked_vt(qmp, report, sent):
     """Advance only guest-acknowledged locked VT transitions, once per audit."""
     transitions = (
+        (b'LOCK_SHELL_CRASH_WAKE_READY', ('shift',)),
         (b'LOCK_SWITCH_TO_CONSOLE', ('ctrl', 'alt', 'f2')),
         (b'LOCK_CONSOLE_VT_READY', ('ctrl', 'alt', 'f1')),
         (b'LOCK_RETURNED_GRAPHICAL_VT_READY', ('shift',)),
@@ -1176,6 +1201,7 @@ def main():
                 'SCREENSHOT_PERSISTED': 'daily-screenshot-persistence',
                 'IDLE_SHELL_STABLE': 'daily-idle-shell-memory-and-process-stability',
             }.items()},
+            'LOCK_SHELL_CRASH_INPUT_WAKE_OK': 'locked-shell-SIGKILL-input-DPMS-wake',
             'LOCK_VT_ROUNDTRIP_READY': 'locked-VT-roundtrip-keyboard-restored',
             'REAL_PASSWORD_LOCK_UNLOCK_OK': 'real-password-lock-unlock',
             'LOCK_SCREEN_LAYOUT_SWITCH_OK': 'lock-screen-layout-switch',

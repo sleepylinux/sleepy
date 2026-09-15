@@ -24,7 +24,7 @@ class LockedVTProtocol(unittest.TestCase):
                 calls.append(keys)
         qmp, sent, report = QMP(), set(), b''
         advance = NAMESPACE['advance_locked_vt']
-        markers = (b'LOCK_SWITCH_TO_CONSOLE', b'LOCK_CONSOLE_VT_READY',
+        markers = (b'LOCK_SHELL_CRASH_WAKE_READY', b'LOCK_SWITCH_TO_CONSOLE', b'LOCK_CONSOLE_VT_READY',
                    b'LOCK_RETURNED_GRAPHICAL_VT_READY')
         for index, marker in enumerate(markers):
             advance(qmp, report + marker[:-1], sent)
@@ -33,7 +33,7 @@ class LockedVTProtocol(unittest.TestCase):
             advance(qmp, report, sent)
             advance(qmp, report, sent)
             self.assertEqual(len(calls), index + 1)
-        self.assertEqual(calls, [('ctrl', 'alt', 'f2'), ('ctrl', 'alt', 'f1'), ('shift',)])
+        self.assertEqual(calls, [('shift',), ('ctrl', 'alt', 'f2'), ('ctrl', 'alt', 'f1'), ('shift',)])
 
     def test_later_acknowledgement_cannot_skip_prior_transition(self):
         class QMP:
@@ -48,12 +48,17 @@ class LockedVTProtocol(unittest.TestCase):
                 subprocess.run(['bash', '-n'], input=script, text=True, check=True)
                 self.assertNotIn('__GROUP__', script)
                 markers = ['IDLE_LOCK_NATIVE_UNLOCK_OK', 'KEYBOARD_LAYOUT_SELECTED_OK',
+                           'LOCK_SHELL_CRASH_WAKE_READY', 'LOCK_SHELL_CRASH_INPUT_WAKE_OK',
                            'LOCK_SWITCH_TO_CONSOLE', 'LOCK_CONSOLE_VT_READY',
                            'LOCK_RETURNED_GRAPHICAL_VT_READY', 'LOCK_VT_ROUNDTRIP_READY',
                            'LOCK_READY_FOR_REAL_PASSWORD', 'REAL_PASSWORD_LOCK_UNLOCK_OK']
                 positions = [script.index(marker) for marker in markers]
                 self.assertEqual(positions, sorted(positions))
                 locked = script[script.index('test "$locked" = true'):]
+                self.assertLess(locked.index('--signal=KILL'), locked.index('hypr dispatch dpms off'))
+                self.assertNotIn('hypr dispatch dpms on', locked)
+                self.assertIn('length > 0 and all(.[]; .dpmsStatus == false)', locked)
+                self.assertIn('length > 0 and all(.[]; .dpmsStatus == true)', locked)
                 self.assertIn('= tty2;', locked)
                 self.assertIn('= tty1;', locked)
                 self.assertIn('test "$(locker_state)" = locked', locked)
