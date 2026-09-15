@@ -179,10 +179,12 @@ class Machine:
 SHELL_PROMPT = r'[$#](?:\x1b\[[0-9;]*m)* '
 
 
-def serial_line(terminal, command, marker=None, timeout=300):
+def serial_line(terminal, command, marker=None, timeout=300, failure_marker=None):
     terminal.sendline(command)
     if marker is not None:
-        terminal.expect(marker, timeout=timeout)
+        matched = terminal.expect([marker, failure_marker] if failure_marker else marker, timeout=timeout)
+        if failure_marker and matched == 1:
+            raise RuntimeError("Installer safety fixture failed; inspect installer-safety.log for bounded backend diagnostics")
     # sudo/login restore terminal modes on exit. Wait until bash owns the TTY
     # again; sending after a progress marker alone can be lost by TCSAFLUSH.
     terminal.expect(SHELL_PROMPT, timeout=timeout)
@@ -190,6 +192,29 @@ def serial_line(terminal, command, marker=None, timeout=300):
 
 def safety_checks(machine, terminal, interrupt_install=False):
     script = r'''import fcntl, json, os, secrets, shutil, signal, subprocess, sys
+# Retain only bounded diagnostics, never the request or a traceback containing it.
+recent_events = []
+private_values = []
+def scrub(value):
+    text = str(value)
+    for secret in private_values:
+        if secret: text = text.replace(secret, "[REDACTED]")
+    return text
+def remember(event):
+    recent_events.append({key: scrub(event.get(key, ""))[:2048] for key in ("stage", "message")})
+    del recent_events[:-8]
+def failed(kind, value, trace):
+    print("SLEEPY_SAFETY_ERROR_EVENTS " + json.dumps(recent_events), flush=True)
+    try:
+        fd = os.open("/var/log/sleepy-installer.log", os.O_RDONLY | os.O_NOFOLLOW)
+        with os.fdopen(fd, "rb") as log:
+            log.seek(max(0, os.fstat(log.fileno()).st_size - 8192))
+            tail = log.read(8192).decode("utf-8", errors="replace")
+        print("SLEEPY_SAFETY_BACKEND_LOG " + json.dumps(scrub(tail)), flush=True)
+    except OSError:
+        print("SLEEPY_SAFETY_BACKEND_LOG_UNAVAILABLE", flush=True)
+    print("SLEEPY_SAFETY_FAILED", flush=True)
+sys.excepthook = failed
 backend = shutil.which("sleepy-install-backend")
 disks = json.loads(subprocess.check_output([backend, "--list"], text=True))
 disk = next(d for d in disks if d["path"] == "/dev/vda")
@@ -201,6 +226,7 @@ def no_partitions():
 no_partitions()
 mode = sys.argv[1]
 data = dict(disk="/dev/vda", identity=disk["identity"], confirm_erase="/dev/vda", username="sleepy", password=secrets.token_hex(16), hostname="sleepy", locale="en_US.UTF-8", keyboard="us", timezone="UTC", options={})
+private_values.append(data["password"])
 if mode == "invalid":
     data.update(disk="/dev/sr0", confirm_erase="/dev/sr0", identity="0"*64)
 if mode == "interrupt":
@@ -211,6 +237,7 @@ if mode == "interrupt":
     try:
         for line in process.stdout:
             event = json.loads(line)
+            remember(event)
             if event["stage"] == "configure":
                 os.kill(process.pid, signal.SIGTERM)
                 interrupted = True
@@ -230,6 +257,8 @@ else:
     result = subprocess.run([backend, "--install"], input=json.dumps(data), capture_output=True, text=True, timeout=180)
     data.clear()
     assert result.returncode != 0, "Unsafe request unexpectedly succeeded"
+    for line in result.stdout.splitlines()[-8:]:
+        remember(json.loads(line))
     event = json.loads(result.stdout.splitlines()[-1])
     assert event["stage"] == "error", event
     assert ("identity changed" if mode == "invalid" else "Connect the network") in event["message"], event
@@ -245,11 +274,11 @@ print("SLEEPY_SAFETY_" + mode.upper() + "_OK", flush=True)
     for offset in range(0, len(encoded), 512):
         serial_line(terminal, 'printf %s ' + shlex.quote(encoded[offset:offset + 512]) + ' >> /tmp/sleepy-safety.b64')
     serial_line(terminal, 'base64 -d /tmp/sleepy-safety.b64 > /tmp/sleepy-safety.py')
-    serial_line(terminal, 'sudo -n "$sleepy_python" /tmp/sleepy-safety.py invalid', 'SLEEPY_SAFETY_INVALID_OK', timeout=240)
+    serial_line(terminal, 'sudo -n "$sleepy_python" /tmp/sleepy-safety.py invalid', 'SLEEPY_SAFETY_INVALID_OK', timeout=240, failure_marker='SLEEPY_SAFETY_FAILED')
     machine.safety_completed = ['invalid-target-rejected-without-disk-writes']
     machine.qmp.call('set_link', name='nic0', up=False)
     try:
-        serial_line(terminal, 'sudo -n "$sleepy_python" /tmp/sleepy-safety.py offline', 'SLEEPY_SAFETY_OFFLINE_OK', timeout=240)
+        serial_line(terminal, 'sudo -n "$sleepy_python" /tmp/sleepy-safety.py offline', 'SLEEPY_SAFETY_OFFLINE_OK', timeout=240, failure_marker='SLEEPY_SAFETY_FAILED')
         machine.safety_completed.append('offline-install-rejected-without-disk-writes')
     except Exception:
         # Do not restore connectivity while an unexpected backend may still run.
@@ -258,7 +287,7 @@ print("SLEEPY_SAFETY_" + mode.upper() + "_OK", flush=True)
     else:
         machine.qmp.call('set_link', name='nic0', up=True)
     if interrupt_install:
-        serial_line(terminal, 'sudo -n "$sleepy_python" /tmp/sleepy-safety.py interrupt', 'SLEEPY_SAFETY_INTERRUPT_OK', timeout=300)
+        serial_line(terminal, 'sudo -n "$sleepy_python" /tmp/sleepy-safety.py interrupt', 'SLEEPY_SAFETY_INTERRUPT_OK', timeout=300, failure_marker='SLEEPY_SAFETY_FAILED')
         machine.safety_completed.append('real-install-SIGTERM-cleanup-and-lock-release')
 
 

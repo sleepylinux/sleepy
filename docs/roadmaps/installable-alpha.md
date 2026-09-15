@@ -38,8 +38,9 @@ Generic defaults stay overridable. No custom compositor or package manager.
   cleanup, offline rollback and future-update validation. These revisions share
   runtime code; a separate `88a87c5` → `d40861d` changed-runtime test passed
   43 gates and three password boots. Pinned-tool regressions also prove rollback
-  works with absent/broken saved configuration. Integration and exact CI are
-  tracked in [PR #12](https://github.com/sleepylinux/sleepy/pull/12).
+  works with absent/broken saved configuration.
+  [PR #12](https://github.com/sleepylinux/sleepy/pull/12) merged after exact-head
+  CI run 34979176753 passed; main is `bc199ed`.
 - [x] Final visual inspection: custom ASCII crescent and compact Fastfetch Disk
   output fit the actual 1280×800 desktop. Desktop PR #10/session PR #14 merged
   after full component CI and automated review. The source-copy cleanup check
@@ -70,17 +71,20 @@ remove disposable disks, credentials and the task-owned builder after validation
    Image `f279883` installed and booted without ISO, but capture acceptance
    failed: one run returned an unexplained doctor error; a second reproduced
    Escape failure after a VT roundtrip. The capture service now inherits the
-   existing Qt focus fix, pending rebuilt-image verification. Keep both failed
-   reports in `docs/acceptance/assets/capture-f279883`. Keep legacy doctor honest and
+   existing Qt focus fix; its packaged session check passes and image `a075bbd`
+   builds successfully. The first fresh run rejected invalid/offline targets but
+   failed before the interruption fixture reached mounted filesystems. Retain
+   backend diagnostics and repeat the strict VM gates before accepting capture.
+   Keep both failed reports in `docs/acceptance/assets/capture-f279883`. Keep legacy doctor honest and
    do not alias its status to the Print picker.
 3. **Encryption and public distribution.** The separate encrypted-install
    branch implements optional LUKS2/Btrfs, hidden TUI passphrase entry and
-   generated initrd configuration with a US keyboard. The full packaged installer suite, including real lsblk and ncurses,
-   passes (92 passed, one root-only skip); generated NixOS configuration
-   evaluates. Guided encrypted recovery implements read-only inspection and
-   separately confirmed repair. Actual install/unlock/reboot/recovery
-   acceptance remains pending. These checks do not
-   yet prove a bootable encrypted installation. Prepare reproducible public binary artifacts,
+   generated initrd configuration with a US keyboard. Packaged installer tests
+   pass (92 passed, one root-only check passed separately); configuration
+   evaluates, and the 822 MiB image `0d24e59` builds. Guided encrypted recovery
+   supports read-only inspection and separately confirmed repair. Actual
+   encrypted installation, wrong-key rejection, disk-only unlock and boot repair
+   remain unverified. Prepare reproducible public binary artifacts,
    source revisions/checksums, short docs and honest known issues. Validate a
    current public-only installation. Release publication and public channel
    promotion still require separate authorization.
