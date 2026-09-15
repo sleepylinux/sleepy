@@ -1,0 +1,10 @@
+{
+  "root_revision": "d3252c67f09618414ca2d33aeb776e75246c3f26",
+  "kind": "fresh-disposable-NixOS-migration-VM",
+  "check": "checks.x86_64-linux.update-safety-vm",
+  "result_store_path": "/nix/store/v9kdnhy1mszhhn4s6n9k350b02d4b5k9-vm-test-run-sleepy-niri-to-hyprland-update-safety",
+  "source_log_sha256": "13311fb9f608faa97665488829192b7a51fea8642afee4bec79320f88560279a",
+  "summary_sha256": "103e131f86a47958ab5fbe8059ace94c0235f2e35f276c8e6fdc43bbedf21d5b",
+  "test_script_seconds": 44.01,
+  "scope": "Home Manager migration/dconf state; not installer or full installed desktop acceptance"
+}
