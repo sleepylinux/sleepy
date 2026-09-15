@@ -1,0 +1,61 @@
+{
+  "image_source_revision": "afd713c5098900061209a746742b5525acdbfbe8",
+  "runner_source_revision": "1087e519ab7494568bc2bb61dccd948c4a2b0d11",
+  "iso": "sleepy-recovery-afd713c.iso",
+  "iso_sha256": "c89c7534e40e63405dcdfe81c88f92afe6a7f684037570f62dd941dbf8a00a7e",
+  "iso_bytes": 859832320,
+  "component_lock_sha256": "5287c31b89266a72a954c0abd619e798563e337a996d09338bbbe5e068472be6",
+  "vm_status": "passed",
+  "vm_plan": "fresh TUI install; optional profiles disabled; ru keyboard; daily desktop; deleted ESP entries; offline TUI repair; disk-only password login and preserved state",
+  "source_build_jobs": 1,
+  "source_build_cores": 2,
+  "local_binary_cache": true,
+  "checks": {
+    "installer_recovery_tui": {
+      "tests": 52,
+      "passed": 51,
+      "skipped": 1,
+      "environment": "Nix build"
+    },
+    "system_tools": {
+      "tests": 13,
+      "passed": 13
+    },
+    "runner": {
+      "tests": 21,
+      "passed": 21
+    },
+    "root_owned_private_log": {
+      "tests": 1,
+      "passed": 1,
+      "environment": "dedicated root build container; temporary directory only"
+    },
+    "format": "passed",
+    "independent_source_review": "reviewed with no source blockers; real VM passed"
+  },
+  "components": {
+    "sleepy-sdk": "dff28bb596950d862ae5d219e478460dfa13e8f4",
+    "sleepy-session": "210cbaad7a50280e4406281f90cbe36def50086c",
+    "sleepy-desktop": "45f721a037693523ba1886eba20784ac9e8102fc",
+    "sleepy-artwork": "ac3feed1e81b4e74a84a326c1f53f3ddaf94aa3e"
+  },
+  "hyprland_store_path": "/nix/store/vab6yfkk554x20wrmv2pafax1c23mvxa-hyprland-0.56.2",
+  "qtbase_store_path": "/nix/store/s7n4mf856bmrmqz1i3q9v54giy2gfyqc-qtbase-wayland-focus-reset-6.11.1",
+  "observed": {
+    "fresh_tui_install_completed": true,
+    "real_busy_descendant_install_and_recovery_rejected": true,
+    "both_partitions_unchanged_after_inspect_cancel": true,
+    "offline_tui_repair": true,
+    "repaired_disk_password_login": true,
+    "profile_config_userdata_preserved": true,
+    "clean_shutdown": true
+  },
+  "completed_gates": 40,
+  "installed_disk_boots": 2,
+  "cache_transport": "http://10.0.2.2:8080",
+  "cache_public_key": "sleepy-local-75e6fa3:SwFBCGRii3DGc3jQoZXDxgNDzyAoW/aKOELIUSBGL2Y=",
+  "verified_at_utc": "2026-09-15T08:59:13.774406+00:00",
+  "iso_derivation": "/nix/store/db40n3y4l8qgvr5amf3k43kk61yn3paq-sleepy-0.1.0-alpha-x86_64-linux.iso.drv",
+  "immutable_source_derivation_matches_built_image": true,
+  "visible_install_seconds": 231.9
+}

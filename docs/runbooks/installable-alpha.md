@@ -7,57 +7,51 @@ configuration uses a 40 GiB disk and 8 GiB RAM. Use that configuration for alpha
 testing; smaller systems are not validated.
 Encryption is not implemented.
 
-Build the pinned source with Nix and flakes enabled:
-
-```sh
-nix flake check --no-build
-nix build .#installer-iso --out-link result-installer
-ls -lh result-installer/iso/
-sha256sum result-installer/iso/*.iso
-```
-
-The older `97830de` image is historical evidence, not the recommended installer:
-its mounted-descendant safety check was incomplete. Recovery candidate `afd713c`
-contains the correction and guided boot repair; fresh acceptance is pending.
-To build that exact candidate:
+Build the verified source with Nix and flakes enabled:
 
 ```sh
 nix build github:sleepylinux/sleepy/afd713c5098900061209a746742b5525acdbfbe8#installer-iso \
-  --out-link result-installer
+  --max-jobs 1 --cores 2 --out-link result-installer
+sha256sum result-installer/iso/*.iso
 ```
 
-The [revision-bound acceptance record](../acceptance/usable-alpha.md) records its SHA256,
-component graph and clean runner revision. A later checkout may produce a
-different artifact checksum. This is a tested alpha snapshot, not a published
-release. Its full VM run used a separately supplied signed local binary cache;
-the later `229a794` diagnostic completed a public-only installation and first
-password desktop login, but failed its subsequent recovery gate.
+The [current acceptance record](../acceptance/usable-alpha.md) records the
+820 MiB artifact, checksum, pins and clean runner. It passed 40 gates including
+fresh installation and offline boot repair. Earlier installer images are
+superseded because they missed mounted descendants during target validation.
+This is a tested local alpha artifact, not a published release.
 
-For the retained local artifacts, start the signed dependency cache on loopback:
+The final run used a separately supplied signed dependency cache. The earlier
+`229a794` diagnostic also completed a public-only install and password desktop
+login, then failed its recovery gate. Public-only installation can build
+uncached components; allow substantially more time than the cached measurement.
+
+To reuse the retained signed cache, serve it on loopback:
 
 ```sh
 python3 -m http.server 8080 --bind 127.0.0.1 \
   --directory work/artifacts/sleepy-cache-97830de
 ```
 
-In another terminal, use runner revision `0d534265c83b0767e79bb93dd132d7fe6f956292`
-or a reviewed successor:
+Use runner `1087e519ab7494568bc2bb61dccd948c4a2b0d11` or a reviewed successor:
 
 ```sh
 python3 scripts/vm/installable-alpha.py \
-  --iso work/artifacts/sleepy-usability-97830de.iso \
-  --image-source-revision 97830de29099483356a7cff1a28751edfcc538d9 \
+  --iso work/artifacts/sleepy-recovery-afd713c.iso \
+  --image-source-revision afd713c5098900061209a746742b5525acdbfbe8 \
   --output work/fresh-acceptance --memory 8192 \
-  --keyboard ru --interrupt-install --flatpak-recovery --daily-usability --update-safety \
+  --keyboard ru --interrupt-install --daily-usability --boot-recovery \
   --cache-url http://10.0.2.2:8080 \
   --cache-public-key "$(cat work/artifacts/sleepy-cache-97830de/public-key)"
 ```
 
-The cache contains signed dependency closures, not a complete offline system;
-public network access remains necessary. Its `verification.json` records 1177
-verified signatures. The signing private key is not distributed. The runner
-needs QEMU/OVMF, KVM access, Python pexpect/Pillow and Tesseract; use `--help` for
-firmware paths. Choose a new output directory: it creates disposable disks.
+Omit both cache arguments to use public sources only. The cache contains signed
+component/dependency closures, not the old installer or a complete offline
+system. Public network access remains necessary for installation. Its
+`verification.json` records 1177 verified signatures; no private signing key is
+distributed. The runner requires QEMU/OVMF, Python pexpect/Pillow and Tesseract;
+use `--help` for firmware paths. Choose a new output directory for its disposable
+disk. `--boot-recovery` and `--update-safety` are separate, incompatible scenarios.
 
 Boot the ISO in a UEFI VM with a new disposable disk. Secure Boot is not supported
 by this alpha. Connect Ethernet, or choose Network in the TUI to configure Wi-Fi.
@@ -142,47 +136,29 @@ Neither status alone proves a successful capture; check the saved image or
 clipboard result. The accepted snapshot includes real saved-image and clipboard
 PNG checks; the absent SDK helper remains a separate limitation.
 
-## Reproduce the real VM gate
+## VM gate details
 
-Requires QEMU, OVMF, Python with pexpect and Pillow, and Tesseract. Firmware paths
-vary by distribution; override `--firmware` and `--vars` as needed.
+The command above creates a new disk and firmware variables, uses KVM when
+accessible and otherwise TCG, drives the visible TUI, and detaches the ISO for
+each installed-disk boot. It authenticates normally with the created password.
+Recovery removes boot-entry configuration only on that disposable disk, proves
+the no-entry boot, reconnects the ISO, tests mounted-target rejection and
+read-only inspection/cancel, then repairs through the visible TUI. The repaired
+disk boots offline and must retain its profile, configuration and user state.
 
-```sh
-python3 scripts/vm/installable-alpha.py \
-  --iso "$PWD/result-installer/iso/sleepy-0.1.0-alpha-x86_64-linux.iso" \
-  --output "$PWD/work/vm-alpha-run-1" \
-  --image-source-revision 97830de29099483356a7cff1a28751edfcc538d9 \
-  --memory 8192 --interrupt-install --update-safety --keyboard ru \
-  --flatpak-recovery --daily-usability --pause-at-greeter
-```
+Daily checks exercise applications, actual PNG capture, keyring, settings,
+first-boot completion, lock/VT/layout/input wake and shell/session restart. Omit
+`--keyboard ru` to exercise the default US-only installation. Optional
+`--pause-at-greeter` releases QMP for manual inspection before entering the
+password; ordinary automated runs do not require that pause.
 
-The output directory must not exist. The runner creates its own disk and firmware
-variables, uses KVM when accessible and otherwise TCG, drives the actual visible
-TUI, and detaches the ISO before disk boot. `--pause-at-greeter` is an inspection
-gate for the first run; inspect the default UWSM session, press Enter to select
-the account, and verify the password field before allowing credentials to be
-entered. The update gate deliberately rejects an invalid configuration, builds
-a second generation, boots it, selects the original generation, and boots that
-generation with the virtual network disconnected. It also checks real password
-authentication, applications, first-boot completion, persistent settings and
-recovery after killing the shell and session daemon. The selected keyboard is
-checked in Hyprland, followed by a real Sleepy locker password roundtrip; with
-an additional layout selected, the test switches back to US on the lock screen.
-Omit `--keyboard ru` to exercise the default US-only installation.
+The historical update scenario instead used `--update-safety --flatpak-recovery`:
+it rejected an invalid configuration, built and booted a development generation,
+then selected and booted the previous generation offline. Its exact 978 image,
+47 gates and three disk boots remain separately recorded; do not claim that
+this covers every failed activation or repeat it with a superseded installer.
 
-Results, screenshots and logs remain in the private output directory. A random
-test password is stored only in its mode-0600 `test-credential` file; do not publish
-that file or the virtual disk. `result.json` distinguishes completed stages from
-failures. A build or a successful runner syntax check is not evidence of a VM boot.
-
-For repeated local validation, the runner accepts `--cache-url` and
-`--cache-public-key` for a separately signed local binary cache. This changes only
-the disposable image's running Nix daemon configuration, retains signature checks,
-and avoids downloading already built components again. It is not a release cache.
-
-Status: the complete installed-disk gate passed at image source
-`97830de29099483356a7cff1a28751edfcc538d9` with runner
-`0d534265c83b0767e79bb93dd132d7fe6f956292`: 47 gates and three installed-disk
-boots, including native password lock/unlock, daily desktop, a development
-generation and offline rollback. See the [acceptance record](../acceptance/usable-alpha.md)
-for the ISO checksum, exact revisions, screenshots and remaining limitations.
+Results, screenshots and logs remain in the private output directory. The
+random test password is stored only in mode-0600 `test-credential`; never publish
+that file or the virtual disk. `result.json` preserves failures and completed
+substeps. A build or syntax check is not evidence of a fresh VM boot.

@@ -1,65 +1,73 @@
 # Sleepy usable-alpha working plan
 
-One active plan. Keep the existing NixOS / Hyprland / UWSM / Quickshell and
-SDK/session/locker/shell boundaries. Install media remains a minimal network
-TUI; NVIDIA, Bluetooth, gaming, development and Flatpak are explicit choices.
-Generic defaults remain overridable. No custom compositor or package manager.
+One plan. Preserve NixOS / Hyprland / UWSM / Quickshell and the
+SDK/session/locker/shell boundaries. Keep the network installer a minimal TUI;
+NVIDIA, Bluetooth, gaming, development and Flatpak remain explicit choices.
+Generic defaults stay overridable. No custom compositor or package manager.
 
 ## Completed and verified
 
-- [x] UEFI/GPT/ESP/Btrfs whole-disk TUI installation, real credentials, target
-  identity checks, error reporting and actual interruption cleanup. Real mounted
-  descendant safety requires the new `7876db3` correction and acceptance below.
-- [x] Final image `97830de`: fresh install, three disk-only boots, real login,
-  native idle/VT/DPMS lock recovery, shell/session crashes and offline desktop.
-- [x] Everyday basics: terminal/file manager, PNG save/view/clipboard, dark GTK,
-  original Fastfetch crescent, system status/menu and keyring persistence.
-- [x] Real Flathub timer recovery and Software window. Earlier separately
-  recorded diagnostics cover Kalk installation, Firefox portal and polkit.
-- [x] Conservative absent-hardware doctor; real virtual-audio changes/hotplug
-  and removal of network/audio observation loops.
-- [x] Optional-profile evaluation matrix; actual Git/direnv project devShell in
-  a new generation, no global language runtimes, offline rollback to the base.
-- [x] Failed evaluation preserves boot entries/profile; settings, PNG and keyring
-  survive both update and rollback boots. Final run passes 47 gates.
+- [x] UEFI/GPT/512 MiB ESP/Btrfs TUI installation with real credentials,
+  regional settings, optional profiles, diagnostics and interruption cleanup.
+- [x] Actual mounted-descendant rejection before preflight, descendant identity
+  fingerprinting and changed-target checks. The lsblk topology regression is
+  fixed; older installer images are superseded.
+- [x] Image `afd713c`: fresh installation, two disk-only password boots and
+  40 gates. Delete boot entries on the disposable disk, prove failed boot,
+  inspect/cancel with unchanged GPT and full partition hashes, then restore
+  through the offline TUI and retain configuration, profile and personal files.
+- [x] New recovery image also repairs the earlier public-only installed229
+  disk. Historical failed/interrupted investigations keep their original status.
+- [x] Everyday desktop: terminal/file manager, PNG save/view/clipboard, dark GTK,
+  original crescent Fastfetch, system status/menu, first-boot welcome and keyring.
+  Real password lock, VT/layout/input-DPMS, shell/session crashes and offline
+  persistence pass. Idle process/memory samples remain stable.
+- [x] Historical978 run: 47 gates, three boots, real Flathub timer/Software,
+  failed evaluation preserving boot state, Git/direnv/pinned project devShell in
+  a second generation, no global language runtimes, offline rollback. Earlier
+  separate diagnostics cover Kalk, Firefox portal, polkit and virtual audio.
+- [x] Component fixes and source review, behavioral regressions, packaged tests,
+  exact image/checksum/pins and revision-bound VM evidence. Production PR #10
+  merged; [PR #11](https://github.com/sleepylinux/sleepy/pull/11) tracks the guided
+  recovery/safety follow-up and its required CI/integration status.
 
-[Revision-bound final proof and limitations](../acceptance/usable-alpha.md).
-Production source remains `97830de`; the keyboard-readiness runner is recorded
-separately. Production PR #10 passed exact CI (run 34934941532) and merged as `7bb26fd`.
-Runner/evidence PR #11 is a separately reviewed follow-up. Disposable acceptance
-disks, old ISOs and Rust build targets were removed; the verified image and
-explicitly labelled signed cache remain. Reuse the dedicated builder only for
-the next active stage, then remove that task-owned container and volume.
+[Acceptance and exact limits](../acceptance/usable-alpha.md),
+[installation](../runbooks/installable-alpha.md), [recovery](../recovery.md).
+The final ISO is 820 MiB. Keep the verified artifact and labelled signed cache;
+remove disposable disks, credentials and the task-owned builder after validation.
 
-## Next work, in dependency order
+## Next cycle, in dependency order
 
-1. **Finish guided recovery and its evidence — active.** PR #11 now includes the
-   recovery implementation and disk-topology safety correction. Merge after
-   fresh installed-disk recovery and exact CI; preserve
-   the earlier failed runs and the distinction between image and runner revisions.
-2. **Complete the guided recovery gate.** Extend the existing TUI beyond instructions and a
-   terminal: identify an installed system read-only, show diagnostics and boot
-   generations, and require explicit confirmation for a bounded repair.
-   Gate: wrong/busy targets rejected; disposable broken-boot recovery; no
-   arbitrary UI command execution or promise to restore erased personal data.
-3. **Make updates select a reviewed candidate.** Preserve saved-config rebuild
-   semantics; add version/channel metadata, verification and clear progress.
-   Gate: rejected candidate, failed activation/boot and previous-generation
-   recovery. Publishing releases or promoting public channels remains separate.
-4. **Validate physical hardware and gaming.** AMD/Intel/NVIDIA/hybrid with
-   explicit device IDs, Vulkan/32-bit graphics, video acceleration, controllers,
-   microphone/Bluetooth, brightness/battery/suspend and monitor scale/VRR.
-   Gate: actual hardware evidence and optional Steam/Gamescope smoke; no claim
-   based only on the existing profile evaluation matrix.
-5. **Encryption and public distribution.** Add a separately tested encrypted
-   install path and establish reproducible public binary artifacts/cache,
-   source revisions, checksums and short installation/recovery instructions.
-   Gate: fresh encrypted install/unlock/recovery, public-only download/install
-   and honest known issues. No release publication without authorization.
+1. **Physical hardware acceptance — needs a dedicated target.** Exercise
+   AMD/Intel/NVIDIA/hybrid, Vulkan/32-bit graphics, video acceleration,
+   controllers, microphone/Bluetooth, brightness/battery/suspend and monitors
+   with scale/refresh/VRR. Run optional Steam/Gamescope smoke on real hardware.
+   The current host's RTX 5070 is bound to its installed NVIDIA driver, with no
+   assignable IOMMU group exposed; no repository self-hosted runner is registered.
+   Do not unbind or alter that host OS. Configuration evaluation and virtual audio
+   are useful evidence, not physical GPU or suspend acceptance.
+2. **Reviewed-candidate updates.** Keep saved-config rebuild semantics. The
+   next implementable slice is an explicitly approved immutable candidate,
+   staged while preserving installation settings and system.stateVersion,
+   built before selection for the next boot. Track previous configuration and
+   generation together so rollback and the next rebuild agree. Gates: rejected
+   or changed candidate, concurrent config edits, offline/build failure,
+   interruption, failed boot and previous-generation password desktop recovery.
+   A content hash proves identity, not maintainer approval. Automatic channels
+   require an approved signing/catalog/promotion policy; none exists yet.
+3. **Complete the session capture provider.** Print already uses native
+   Quickshell screencopy and Swappy. The separate SDK capture action expects an
+   unimplemented helper; keep doctor honest until consent/output contracts and
+   actual capture are tested. Do not alias its status to the Print picker.
+4. **Encryption and public distribution.** Add a separate encrypted
+   install/unlock/recovery branch. Prepare reproducible public binary artifacts,
+   source revisions/checksums, short docs and honest known issues. Validate a
+   current public-only installation. Release publication and public channel
+   promotion still require separate authorization.
 
 ## Verification discipline
 
-Start with behavioral regressions and then real integration. Keep timeouts and
-security assertions meaningful. A cached derivation or source grep is not a
-fresh boot. Use only task-created disposable disks; never modify the user's
+Behavioral regressions precede integration; cached derivations and source grep
+are not fresh boots. Keep failures visible and success claims tied to exact
+image/runner revisions. Use only task-created VM disks. Do not modify the user's
 installed OS. Re-review downstream Qt/Hyprland patches on upstream upgrades.

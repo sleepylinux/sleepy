@@ -1,0 +1,18 @@
+{
+  "status": "passed",
+  "kind": "retained-disk-recovery-resume",
+  "original_result": "../vm-r1/result.json",
+  "runner_source_revision": "fc56758cf7043306f477940db1ac2eeee8e4cc9c",
+  "installed_image_source_revision": "229a794618a694ce3b66bc0d95c32976f10f1531",
+  "recovery_image_source_revision": "afd713c",
+  "completed": [
+    "damaged-disk-no-entry-boot",
+    "recovery-inspect-cancel-partitions-unchanged",
+    "recovery-busy-target-rejected",
+    "real-TUI-boot-repair-and-shutdown",
+    "offline-password-desktop-login",
+    "profile-userdata-config-preserved",
+    "daily-usability-after-repair",
+    "clean-final-shutdown"
+  ]
+}

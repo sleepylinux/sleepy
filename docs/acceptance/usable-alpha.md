@@ -1,11 +1,71 @@
-# Verified installed usable-alpha snapshot
+# Verified installed usable-alpha snapshots
 
-**Installer images before `7876db3` are superseded:** their disk listing omitted
-partition topology, so mounted-descendant safety was not covered by the earlier
-47 gates. Guided recovery also needed the supported Btrfs replay option. The
-new recovery candidate is `afd713c`; its combined fresh VM acceptance is pending.
-The historical results below remain valid only for their recorded scenarios.
+## Current installer and offline recovery
 
+Image **afd713c5098900061209a746742b5525acdbfbe8** passed a fresh visible TUI
+installation, **40 gates and two installed-disk boots** with clean runner
+**1087e519ab7494568bc2bb61dccd948c4a2b0d11**. The second disk boot followed real
+TUI repair of deliberately deleted boot entries. Recovery and the repaired
+boot ran without networking; the ISO was detached before both installed boots.
+This is a local tested alpha artifact, not a published release.
+
+- ISO `sleepy-recovery-afd713c.iso`: **859832320 bytes / 820 MiB**.
+- SHA256 `c89c7534e40e63405dcdfe81c88f92afe6a7f684037570f62dd941dbf8a00a7e`.
+- [Result](assets/usable-alpha/final-afd713c/result.json),
+  [image/pins/check manifest](assets/usable-alpha/final-afd713c/image-manifest.json),
+  [first disk report](assets/usable-alpha/final-afd713c/installed-guest-report.txt),
+  [repaired disk report](assets/usable-alpha/final-afd713c/offline-reboot-guest-report.txt),
+  [recovery commands and markers](assets/usable-alpha/final-afd713c/recovery-commands.log).
+
+The original ESP/Btrfs layout was identified using actual partition topology.
+With the ESP mounted, both installation and recovery refused the disk;
+installation refused before network/preflight. The TUI displayed current and
+retained generations. Its default Back left GPT and both full partition hashes
+unchanged. Explicit typed-disk confirmation then restored boot entries through
+the installed system's bounded boot operation. After shutdown and ISO removal,
+real password login succeeded and the selected system profile, saved Nix
+configuration and user proof file matched their pre-repair values.
+
+Daily checks passed on both boots: terminal/file manager, native password lock,
+VT/layout/input-DPMS recovery, shell/session SIGKILL recovery, Fastfetch, dark GTK,
+read-only doctor with virtual audio, status/menu, keyring and saved/clipboard PNG.
+Welcome state, settings, keyring and the saved screenshot persisted. The two
+60-second idle samples used 0.46 and 1.07 CPU seconds with stable shell PID/start
+time and no RSS growth. Shutdown was clean.
+
+[Optional choices](assets/usable-alpha/final-afd713c/installer-options.png),
+[actual no-entry boot](assets/usable-alpha/final-afd713c/broken-boot.png),
+[read-only inspection](assets/usable-alpha/final-afd713c/recovery-inspection.png),
+[confirmation](assets/usable-alpha/final-afd713c/recovery-confirmation.png),
+[completed repair](assets/usable-alpha/final-afd713c/recovery-complete.png), and
+[repaired desktop](assets/usable-alpha/final-afd713c/offline-reboot-desktop.png)
+are retained. See the [runbook](../runbooks/installable-alpha.md) to reproduce.
+
+This final run selected no optional profiles and used the explicitly signed
+local dependency cache. Visible installation took 231.9 seconds; this is not a
+public-only download speed measurement. Source229 separately completed a
+public-only installation in 2838 seconds and first password desktop login, but
+its original combined run remained interrupted. The final recovery image also
+successfully repaired that earlier installed disk in a separate continuation:
+[public-install record](assets/usable-alpha/recovery-229-public/image-manifest.json),
+[retained-disk recovery and failed investigation history](assets/usable-alpha/recovery-afd-retained/README.md).
+No failed run was relabelled passed and no guest runtime patch supplied final proof.
+
+Packaged checks ran 52 installer/recovery/TUI tests (51 passed, one root-only
+check skipped) and 13 system-tool tests; 21 runner regressions passed. The
+unchanged private-log check also passed separately in the dedicated root build
+container. Review found no source blockers. The ISO derivation was independently
+evaluated from its immutable Git revision and matched the actual built image.
+Integration and exact CI status are tracked by [PR #11](https://github.com/sleepylinux/sleepy/pull/11).
+
+**Earlier installer images are superseded.** Before `7876db3`, disk listing
+omitted descendants from eligibility/fingerprint checks; the historical 47
+scenario gates below did not cover a real mounted descendant. Standalone Btrfs
+`nologreplay` was also unsupported by the image kernel; current recovery uses
+`ro,rescue=nologreplay`, preserving replay protection. Use the current image for
+new installations and guided recovery.
+
+## Historical desktop/update snapshot (97830de)
 
 Image source **97830de29099483356a7cff1a28751edfcc538d9** passed a fresh TUI
 installation and **three installed-disk boots / 47 acceptance gates** with clean
@@ -75,7 +135,8 @@ works through Quickshell CUtils and Swappy. The unavailable capability is a
 separate session SDK capture provider. Gaming and NVIDIA profiles have configuration checks, not physical GPU
 or game-performance acceptance. Hybrid graphics, real microphone/Bluetooth,
 battery/brightness/suspend/VRR, Secure Boot and encryption remain unverified or
-deferred. Reviewed public channels and guided recovery remain follow-up work.
+deferred. Reviewed public channels remain follow-up work. Guided recovery is verified in
+the current snapshot above.
 
 ## Earlier investigation history
 

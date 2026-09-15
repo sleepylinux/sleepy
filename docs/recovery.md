@@ -33,10 +33,11 @@ documents, passwords, or erased disk contents. Keep independent backups.
 
 ## Guided boot-entry repair
 
-The guided-recovery candidate adds this flow to the installation image. Its VM
-acceptance is pending; the previously accepted `97830de` image still provides
-the manual recovery terminal. Use the revision-bound acceptance record to
-identify which image you have.
+Image `afd713c` passed fresh installation, deliberate boot-entry damage, offline
+TUI repair and a real-password boot of the repaired disk. Use the
+[revision-bound acceptance record](acceptance/usable-alpha.md) to identify the
+verified image and its limits. Earlier images are superseded; `97830de` only
+provided the manual recovery terminal.
 
 Boot the recovery-capable image in UEFI mode and choose **Recovery and
 diagnostics**. Select the installed disk in **Recover Sleepy boot**. Sleepy
