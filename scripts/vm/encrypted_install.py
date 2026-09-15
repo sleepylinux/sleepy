@@ -87,7 +87,7 @@ def fixture():
     return r'''
 root_source=$(findmnt -n -o SOURCE /)
 root_device=${root_source%%\[*}
-python3 - "$root_device" <<'ENCRYPTED_ROOT'
+"$python" - "$root_device" <<'ENCRYPTED_ROOT'
 import os, pathlib, re, stat, sys
 info = os.stat(sys.argv[1])
 assert stat.S_ISBLK(info.st_mode), 'root is not a block device'

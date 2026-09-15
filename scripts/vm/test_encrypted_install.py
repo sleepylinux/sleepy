@@ -4,6 +4,10 @@ from types import SimpleNamespace
 from unittest.mock import Mock, patch
 import os
 import stat
+import shlex
+import shutil
+import sys
+import boot_recovery
 import subprocess
 import tempfile
 import unittest
@@ -19,6 +23,22 @@ class EncryptionGateTests(unittest.TestCase):
         return SimpleNamespace(encrypt_install=True, disk_passphrase='private-fixture-value',
                                encryption_completed=[], qmp=Mock(), process=Mock(poll=lambda: None),
                                screen=Mock(side_effect=frames), wait_screen=Mock())
+
+    def test_guest_audits_use_resolved_interpreter_without_global_python(self):
+        # Execute each actual heredoc command with the installed-style absolute
+        # interpreter variable and an empty PATH. Hardware assertions themselves
+        # remain VM-only; this regression proves interpreter/argument dispatch.
+        for script, delimiter in [(gate.fixture(), 'ENCRYPTED_ROOT'),
+                                  (boot_recovery.fixture('damage', encrypted=True), 'RECOVERY_ROOT_DEVICE')]:
+            line = next(line for line in script.splitlines() if "<<'" + delimiter + "'" in line)
+            program = ('set -eu\npython=' + shlex.quote(sys.executable) +
+                       '\nroot_device=/dev/disposable-fixture\n' + line +
+                       '\nimport sys\nassert sys.argv[1] == "/dev/disposable-fixture"\nprint("INTERPRETER_DISPATCH_OK")\n' + delimiter + '\n')
+            with tempfile.TemporaryDirectory() as empty_path:
+                result = subprocess.run([shutil.which('bash'), '-c', program],
+                                        env={'PATH': empty_path}, text=True, capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.strip(), 'INTERPRETER_DISPATCH_OK')
 
     def test_default_off_does_not_enter_or_create_a_disk_secret(self):
         machine = self.machine(); machine.encrypt_install = False

@@ -17,7 +17,7 @@ test "$(findmnt -no FSTYPE /boot)" = vfat
     if encrypted:
         common += r'''
 root_device=$(findmnt -no SOURCE / | cut -d '[' -f 1)
-python3 - "$root_device" <<'RECOVERY_ROOT_DEVICE'
+"$python" - "$root_device" <<'RECOVERY_ROOT_DEVICE'
 import os, pathlib, stat, sys
 info = os.stat(sys.argv[1])
 assert stat.S_ISBLK(info.st_mode), 'Root is not a block device'
