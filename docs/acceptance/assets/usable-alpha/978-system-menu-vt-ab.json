@@ -1,0 +1,19 @@
+{
+  "image_revision": "97830de29099483356a7cff1a28751edfcc538d9",
+  "before_escape_without_wake": {
+    "status": 0,
+    "output": "cat /sys/class/tty/tty0/active; hypr -j activewindow | jq \"{address,class,title}\"; hypr -j devices | jq \"[.keyboards[]|select(.main)]\"; printf '\\nSLEEPY_COMMAND_DONE:%s\\n' \"$?\"\ntty1\n{\n  \"address\": \"0x63f3e5573310\",\n  \"class\": \"com.mitchellh.ghostty\",\n  \"title\": \"sleepy-system\"\n}\n[]\n"
+  },
+  "menu_remained_after_escape": {
+    "status": 0,
+    "output": "hypr -j clients | jq \"map({address,class,title})\"; pgrep -af \"[s]leepy-system|[d]ialog --stdout\"; printf '\\nSLEEPY_COMMAND_DONE:%s\\n' \"$?\"\n[\n  {\n    \"address\": \"0x63f3e5573310\",\n    \"class\": \"com.mitchellh.ghostty\",\n    \"title\": \"sleepy-system\"\n  },\n  {\n    \"address\": \"0x63f3e5531600\",\n    \"class\": \"org.gnome.Software\",\n    \"title\": \"Software\"\n  }\n]\n3988 ghostty -e sleepy-system\n4033 /nix/store/byi2zpy2bgcf3dr6y0l8m50rmjj8z7q1-bash-5.3p15/bin/bash /run/current-system/sw/bin/sleepy-system\n4035 dialog --stdout --title  Sleepy system  --menu Manage this installation. Apply saved settings does not download a new Sleepy version. 18 76 5 status Current and booted system generations List recovery generations rebuild Apply the configuration saved in /etc/nixos rollback Return to the previous system generation\n"
+  },
+  "ordinary_shift_and_focus_readiness": {
+    "status": 0,
+    "output": "hypr -j devices | jq \"[.keyboards[]|select(.main)]\"; hypr dispatch focuswindow address:$menu; hypr -j activewindow | jq \"{address,class,title}\"; printf '\\nSLEEPY_COMMAND_DONE:%s\\n' \"$?\"\n[\n  {\n    \"address\": \"0x63f3e56632d0\",\n    \"name\": \"at-translated-set-2-keyboard\",\n    \"rules\": \"\",\n    \"model\": \"\",\n    \"layout\": \"us,ru\",\n    \"variant\": \"\",\n    \"options\": \"grp:alt_shift_toggle\",\n    \"active_layout_index\": 0,\n    \"active_keymap\": \"English (US)\",\n    \"capsLock\": false,\n    \"numLock\": false,\n    \"main\": true\n  }\n]\nok\n{\n  \"address\": \"0x63f3e5573310\",\n  \"class\": \"com.mitchellh.ghostty\",\n  \"title\": \"sleepy-system\"\n}\n"
+  },
+  "after_escape_when_ready": {
+    "status": 0,
+    "output": "hypr -j clients | jq \"map({address,class,title})\"; if pgrep -f \"^[^ ]*dialog --stdout --title  Sleepy system\"; then exit_code=1; else exit_code=0; fi; test \"$exit_code\" = 0; printf '\\nSLEEPY_COMMAND_DONE:%s\\n' \"$?\"\n[\n  {\n    \"address\": \"0x63f3e5531600\",\n    \"class\": \"org.gnome.Software\",\n    \"title\": \"Software\"\n  }\n]\n"
+  }
+}

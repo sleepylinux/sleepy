@@ -1,0 +1,21 @@
+{
+  "status": "interrupted",
+  "iso": "/home/lazy/orca/workspaces/sleepy/guided-recovery-integration/work/artifacts/sleepy-recovery-7876db3.iso",
+  "iso_sha256": "1d6814eb7357c678ffb0096e89196d331f6b5a85d4df0849b623e22cd49d4ebc",
+  "acceleration": "kvm",
+  "cache_transport": "http://10.0.2.2:8080",
+  "cache_public_key": "sleepy-local-75e6fa3:SwFBCGRii3DGc3jQoZXDxgNDzyAoW/aKOELIUSBGL2Y=",
+  "image_source_revision": "7876db3",
+  "completed": [
+    "invalid-target-rejected-without-disk-writes",
+    "offline-install-rejected-without-disk-writes",
+    "real-install-SIGTERM-cleanup-and-lock-release"
+  ],
+  "runner_source_revision": "7876db3279279bac00a1f8cf80b4cf9dc217c385",
+  "runner_source_dirty": false,
+  "flatpak_recovery": false,
+  "daily_usability": true,
+  "keyboard": "ru",
+  "boot_recovery": true,
+  "error": "Runner interrupted by operator"
+}

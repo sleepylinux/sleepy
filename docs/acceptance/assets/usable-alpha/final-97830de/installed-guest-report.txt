@@ -1,0 +1,110 @@
+SLEEPY_REPORT_START
+REAL_USER_LOGIN_OK
+/dev/vda2 btrfs
+/dev/vda1 vfat
+INSTALLED_DISK_BOOT_OK
+active
+active
+active
+active
+active
+DESKTOP_UNITS_AND_SOCKET_OK
+FIRST_BOOT_WELCOME_DISMISSED_AND_INACTIVE_OK
+ok
+ok
+TERMINAL_AND_FILE_MANAGER_WINDOWS_OK
+CRASH_RECOVERY_OK sleepy-shell.service
+CRASH_RECOVERY_OK sleepy-session.service
+active
+ok
+true
+REAL_HYPRLAND_SETTING_APPLIED_OK
+PERSISTENCE_MARKER_WRITTEN
+active
+active
+active
+active
+FLATPAK_OFFLINE_DESKTOP_AND_FAILED_REGISTRATION_OK
+FLATPAK_ENABLE_NETWORK
+Sep 15 06:33:12 sleepy systemd[1]: Starting Configure the selected Flathub application source...
+Sep 15 06:33:12 sleepy flatpak[8263]: error: Can't load uri https://flathub.org/repo/flathub.flatpakrepo: While fetching https://flathub.org/repo/flathub.flatpakrepo: [6] Could not resolve hostname
+Sep 15 06:33:12 sleepy systemd[1]: sleepy-flathub.service: Main process exited, code=exited, status=1/FAILURE
+Sep 15 06:33:12 sleepy systemd[1]: sleepy-flathub.service: Failed with result 'exit-code'.
+Sep 15 06:33:12 sleepy systemd[1]: Failed to start Configure the selected Flathub application source.
+Sep 15 06:33:12 sleepy systemd[1]: sleepy-flathub.service: Consumed 12ms CPU time over 22ms wall clock time, 7M memory peak, 1.6M read from disk, 40K written to disk.
+Sep 15 06:38:14 sleepy systemd[1]: Starting Configure the selected Flathub application source...
+Sep 15 06:38:14 sleepy flatpak[28416]: system: Added remote flathub to https://dl.flathub.org/repo/
+Sep 15 06:38:17 sleepy systemd[1]: Finished Configure the selected Flathub application source.
+FLATPAK_REAL_FLATHUB_TIMER_RECOVERY_OK
+ok
+FLATPAK_SOFTWARE_WINDOW_OK
+true
+LOCK_RETURN_TO_DESKTOP
+LOCK_GRAPHICAL_VT_READY
+ok
+true
+IDLE_LOCK_PASSWORD_READY
+IDLE_LOCK_NATIVE_UNLOCK_OK
+ok
+true
+KEYBOARD_LAYOUT_SELECTED_OK
+ok
+ok
+true
+LOCK_SHELL_CRASH_WAKE_READY
+true
+LOCK_SHELL_CRASH_INPUT_WAKE_OK
+LOCK_SWITCH_TO_CONSOLE
+LOCK_CONSOLE_VT_READY
+LOCK_RETURNED_GRAPHICAL_VT_READY
+ok
+true
+LOCK_VT_ROUNDTRIP_READY
+LOCK_READY_FOR_REAL_PASSWORD
+true
+LOCK_SCREEN_LAYOUT_SWITCH_OK
+REAL_PASSWORD_LOCK_UNLOCK_OK
+$2    S L E E P Y
+     S L E E P Y
+DAILY_FASTFETCH_ASSET_AND_EXECUTION_OK
+gtk-theme-name=adw-gtk3-dark
+gtk-icon-theme-name=Papirus-Dark
+DAILY_GTK_DARK_CONFIG_OK
+Current system: /nix/store/vwqkrrljq1hy8m02rax7jawjghgqnnmq-nixos-system-sleepy-26.11.20260822.2c423e0
+Booted system: /nix/store/vwqkrrljq1hy8m02rax7jawjghgqnnmq-nixos-system-sleepy-26.11.20260822.2c423e0
+Selected system profile: /nix/store/vwqkrrljq1hy8m02rax7jawjghgqnnmq-nixos-system-sleepy-26.11.20260822.2c423e0
+DAILY_SYSTEM_STATUS_OK
+{"ok":true,"generation":303,"checks":[{"capability":"hyprland","status":"available","required":true},{"capability":"lock","status":"available","required":true},{"capability":"network","status":"available","required":false},{"capability":"audio","status":"available","required":false},{"capability":"bluetooth","status":"unavailable","required":false},{"capability":"battery","status":"unsupported","required":false},{"capability":"brightness","status":"available","required":false},{"capability":"power","status":"available","required":false},{"capability":"media","status":"available","required":false},{"capability":"night-light","status":"available","required":false},{"capability":"resources","status":"available","required":false},{"capability":"screenshot","status":"unavailable","required":false},{"capability":"recording","status":"available","required":false}]}
+true
+DAILY_DOCTOR_HEALTHY_WITH_VIRTUAL_AUDIO_OK
+DAILY_KEYRING_STORE_LOOKUP_OK
+ok
+DAILY_SYSTEM_MENU_MAPPED
+DAILY_SYSTEM_MENU_VT_READY
+DAILY_SYSTEM_MENU_READY
+DAILY_SYSTEM_MENU_CANCEL_UNCHANGED_OK
+DAILY_PRESS_PRINT
+DAILY_SELECT_AREA
+DAILY_SAVE_SWAPPY
+DAILY_SCREENSHOT_SAVED_PNG_OK
+ok
+DAILY_SCREENSHOT_VIEWER_OPEN_OK
+DAILY_PRESS_CLIPBOARD
+DAILY_SELECT_CLIPBOARD_AREA
+DAILY_SCREENSHOT_CLIPBOARD_PNG_OK
+DAILY_IDLE_SAMPLE_READY
+DAILY_IDLE_SAMPLE {"cpu_seconds": 0.0, "cpu_ticks": 931, "elapsed_seconds": 0.0, "pid": 29216, "rss_kib": 602460, "start_ticks": 33110, "threads": 33}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 0.39, "cpu_ticks": 970, "elapsed_seconds": 10.0, "pid": 29216, "rss_kib": 546340, "start_ticks": 33110, "threads": 32}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 0.41, "cpu_ticks": 972, "elapsed_seconds": 20.0, "pid": 29216, "rss_kib": 546120, "start_ticks": 33110, "threads": 31}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 0.42, "cpu_ticks": 973, "elapsed_seconds": 30.0, "pid": 29216, "rss_kib": 546044, "start_ticks": 33110, "threads": 31}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 0.43, "cpu_ticks": 974, "elapsed_seconds": 40.0, "pid": 29216, "rss_kib": 546044, "start_ticks": 33110, "threads": 31}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 0.46, "cpu_ticks": 977, "elapsed_seconds": 50.0, "pid": 29216, "rss_kib": 546484, "start_ticks": 33110, "threads": 31}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 0.47, "cpu_ticks": 978, "elapsed_seconds": 60.0, "pid": 29216, "rss_kib": 546488, "start_ticks": 33110, "threads": 31}
+active
+DAILY_IDLE_SHELL_STABLE_OK
+DEVELOPMENT_ABSENT_IN_BASE_GENERATION_OK
+{ ... }: {
+       - sleepy-alpha-intentional-update-failure
+FAILED_UPDATE_PRESERVED_SYSTEM_AND_BOOT_OK
+SECOND_GENERATION_PREPARED_OK
+SLEEPY_REPORT_COMPLETE

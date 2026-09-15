@@ -1,0 +1,28 @@
+sudo -n mount -t btrfs -o ro,nologreplay,nosuid,nodev,noexec /dev/vda2 /mnt/probe; sudo -n umount /mnt/probe; sudo -n dmesg | tail -15
+[?2004l
+mount: /mnt/probe: fsconfig() failed: btrfs: Unknown parameter 'nologreplay'.
+       dmesg(1) may have more information after failed mount system call.
+umount: /mnt/probe: not mounted.
+[    6.207622] [drm] Initialized virtio_gpu 0.1.0 for 0000:00:02.0 on minor 1
+[    6.209400] fbcon: virtio_gpudrmfb (fb0) is primary device
+[    6.209402] fbcon: Deferring console take-over
+[    6.209404] virtio-pci 0000:00:02.0: [drm] fb0: virtio_gpudrmfb frame buffer device
+[    6.212413] RAPL PMU: API unit is 2^-32 Joules, 0 fixed counters, 10737418240 ms ovfl timer
+[    6.213502] i801_smbus 0000:00:1f.3: Enabling SMBus device
+[    6.213547] i801_smbus 0000:00:1f.3: SMBus using PCI interrupt
+[    6.213599] i2c i2c-0: Memory type 0x07 not supported yet, not instantiating SPD
+[    6.218482] iTCO_wdt iTCO_wdt.0.auto: Found a ICH9 TCO device (Version=2, TCOBASE=0x0660)
+[    6.218612] iTCO_wdt iTCO_wdt.0.auto: initialized. heartbeat=30 sec (nowayout=0)
+[    6.317055] Btrfs loaded, zoned=yes, fsverity=yes
+[    6.391695] intel_rapl_msr: PL4 support detected.
+[    7.472988] NET: Registered PF_PACKET protocol family
+[    8.192732] fbcon: Taking over console
+[    8.192888] Console: switching to colour frame buffer device 160x50
+[?2004h
+
+[1;32m[]0;nixos@sleepy-installer: ~nixos@sleepy-installer:~]$[0m sudo -n lsblk --version
+[?2004l
+lsblk from util-linux 2.42.2
+[?2004h
+
+[1;32m[]0;nixos@sleepy-installer: ~nixos@sleepy-installer:~]$[0m 

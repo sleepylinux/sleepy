@@ -54,7 +54,13 @@
     fi
   '';
   nix.package = lib.mkDefault (import ../../packages/vendor/nix-with-git {inherit pkgs;});
-  nix.settings.experimental-features = ["nix-command" "flakes"];
+  nix.settings = {
+    experimental-features = ["nix-command" "flakes"];
+    # Bound source-build concurrency for the 8 GiB VM when a substitute is absent.
+    # Limit independent compiler jobs; these defaults only affect the image.
+    max-jobs = lib.mkDefault 1;
+    cores = lib.mkDefault 2;
+  };
   isoImage = {
     volumeID = "SLEEPY_INSTALL";
     squashfsCompression = "zstd -Xcompression-level 15";

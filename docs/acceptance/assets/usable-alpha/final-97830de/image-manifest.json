@@ -1,0 +1,29 @@
+{
+  "source_revision": "97830de29099483356a7cff1a28751edfcc538d9",
+  "source_url": "https://github.com/sleepylinux/sleepy/tree/97830de29099483356a7cff1a28751edfcc538d9",
+  "artifact": "sleepy-usability-97830de.iso",
+  "size_bytes": 858783744,
+  "sha256": "00aa6a3bf89e2c5cc7628afdbfcdc97e8669dc36da37a229272e0ce8932b4ebc",
+  "lock_sha256": "5287c31b89266a72a954c0abd619e798563e337a996d09338bbbe5e068472be6",
+  "store_path": "/nix/store/mcswbxaj40l0m0lnsw4nrgdjgkbvza5h-sleepy-0.1.0-alpha-x86_64-linux.iso",
+  "built_at_utc": "2026-09-15T06:00:36.999062+00:00",
+  "verification": {
+    "nix_build": "passed",
+    "copied_image_checksum_matches_store": true,
+    "fresh_iso_boot": "passed",
+    "fresh_tui_install": "passed",
+    "installed_disk_boot_and_login": "passed",
+    "combined_daily_update_rollback": "passed: fresh rerun with keyboard-seat-aware runner",
+    "installed_disk_boots": 3,
+    "completed_gates": 47,
+    "runner_source_revision": "0d534265c83b0767e79bb93dd132d7fe6f956292",
+    "runner_source_dirty": false
+  },
+  "note": "Full clean install and three installed-disk boots passed with the recorded runner. The earlier failed menu-input run remains preserved separately. This is a tested local alpha artifact, not a published release.",
+  "component_revisions": {
+    "sleepy-sdk": "dff28bb596950d862ae5d219e478460dfa13e8f4",
+    "sleepy-session": "210cbaad7a50280e4406281f90cbe36def50086c",
+    "sleepy-desktop": "45f721a037693523ba1886eba20784ac9e8102fc",
+    "sleepy-artwork": "ac3feed1e81b4e74a84a326c1f53f3ddaf94aa3e"
+  }
+}

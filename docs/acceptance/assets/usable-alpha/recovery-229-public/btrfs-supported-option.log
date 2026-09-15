@@ -1,0 +1,26 @@
+sudo -n mount -t btrfs -o ro,rescue=nologreplay,nosuid,nodev,noexec /dev/vda2 /mnt/probe; sudo -n umount /mnt/probe; sudo -n dmesg | tail -15; uname -r
+[?2004l
+[    5.369595] fbcon: virtio_gpudrmfb (fb0) is primary device
+[    5.369596] fbcon: Deferring console take-over
+[    5.369598] virtio-pci 0000:00:02.0: [drm] fb0: virtio_gpudrmfb frame buffer device
+[    5.410219] Btrfs loaded, zoned=yes, fsverity=yes
+[    5.491384] intel_rapl_msr: PL4 support detected.
+[    6.487243] NET: Registered PF_PACKET protocol family
+[    6.839417] fbcon: Taking over console
+[    6.839517] Console: switching to colour frame buffer device 160x50
+[    7.588134] BTRFS: device label sleepy-root devid 1 transid 120 /dev/vda2 (253:2) scanned by mount (883)
+[    7.588293] BTRFS info (device vda2): first mount of filesystem f974c712-571f-44d1-afe2-872fdd482ce2
+[    7.590168] BTRFS info (device vda2): using crc32c (crc32c-lib) checksum algorithm
+[    7.593999] BTRFS info (device vda2 state E): disabling log replay at mount time
+[    7.594001] BTRFS info (device vda2 state E): turning on async discard
+[    7.594001] BTRFS info (device vda2 state E): enabling free space tree
+[    7.600913] BTRFS info (device vda2 state E): last unmount of filesystem f974c712-571f-44d1-afe2-872fdd482ce2
+6.18.45
+[?2004h
+
+[1;32m[]0;nixos@sleepy-installer: ~nixos@sleepy-installer:~]$[0m sudo -n lsblk --version
+[?2004l
+lsblk from util-linux 2.42.2
+[?2004h
+
+[1;32m[]0;nixos@sleepy-installer: ~nixos@sleepy-installer:~]$[0m 

@@ -12,7 +12,7 @@ TREE = ast.parse(SOURCE.read_text())
 FUNCTIONS = {node.name: node for node in TREE.body if isinstance(node, ast.FunctionDef)}
 NAMESPACE = {}
 exec(compile(ast.Module(body=[FUNCTIONS[name] for name in
-                             ('lock_fixture', 'advance_locked_vt', 'keyring_fixture', 'advance_daily_idle', 'daily_idle_fixture', 'update_fixture')], type_ignores=[]),
+                             ('lock_fixture', 'advance_locked_vt', 'keyring_fixture', 'advance_daily_idle', 'daily_idle_fixture', 'update_fixture', 'daily_menu_focus_fixture', 'advance_daily_menu')], type_ignores=[]),
              str(SOURCE), 'exec'), NAMESPACE)
 
 
@@ -207,6 +207,78 @@ class DevelopmentUpdateFixture(unittest.TestCase):
         self.assertIn('! command -v python3', previous)
         self.assertNotIn('development.enable = true', previous)
 
+
+
+class DailyMenuProtocol(unittest.TestCase):
+    def test_host_waits_for_seat_readback_and_never_repeats_escape(self):
+        calls = []
+        class QMP:
+            def keys(self, *keys):
+                calls.append(keys)
+        class Machine:
+            qmp = QMP()
+            def wait_screen(self, fragments, name, timeout):
+                self.assertions = (fragments, name, timeout)
+                calls.append(('ocr',))
+        machine, sent = Machine(), set()
+        advance = NAMESPACE['advance_daily_menu']
+        mapped, ready = b'DAILY_SYSTEM_MENU_MAPPED\n', b'DAILY_SYSTEM_MENU_READY\n'
+        vt = b'DAILY_SYSTEM_MENU_VT_READY\n'
+        advance(machine, ready, sent, 'test')
+        advance(machine, mapped[:-1], sent, 'test')
+        self.assertEqual(calls, [])
+        advance(machine, mapped, sent, 'test')
+        advance(machine, mapped + ready[:-1], sent, 'test')
+        self.assertEqual(calls, [('ctrl', 'alt', 'f1')])
+        advance(machine, mapped + vt, sent, 'test')
+        advance(machine, mapped + vt, sent, 'test')
+        self.assertEqual(calls, [('ctrl', 'alt', 'f1'), ('shift',)])
+        advance(machine, mapped + vt + ready, sent, 'test')
+        advance(machine, mapped + vt + ready, sent, 'test')
+        self.assertEqual(calls, [('ctrl', 'alt', 'f1'), ('shift',), ('ocr',), ('esc',)])
+        self.assertEqual(machine.assertions[2], 25)
+
+    def test_guest_requires_active_vt_keyboard_and_exact_focused_address(self):
+        # Execute the production shell predicate against successive observable
+        # states; a successful focus dispatcher alone is not readiness.
+        prefix = r'''
+set -eu
+system_menu_address=0xabc
+cat() { if test "$1" = /sys/class/tty/tty0/active; then
+  if test "$stage" = 1; then echo tty2; else echo tty1; fi
+else command cat "$@"; fi; }
+hypr() {
+  case "$1" in
+    devices)
+      if test "$stage" = 2; then echo '{"keyboards":[]}';
+      else echo '{"keyboards":[{"main":true}]}'; fi ;;
+    dispatch) printf '%s\n' "$stage" >> "$TRACE" ;;
+    activewindow)
+      if test "$stage" = 3 || test "$NEVER_READY" = yes; then echo '{"address":"0xdef"}';
+      else echo '{"address":"0xabc"}'; fi ;;
+    *) return 2 ;;
+  esac
+}
+wait_daily() {
+  for stage in 1 2 3 4; do
+    if "$@"; then test "$stage" = 4; return; fi
+  done
+  return 1
+}
+'''
+        with tempfile.TemporaryDirectory() as directory:
+            trace = Path(directory) / 'focus'
+            env = dict(os.environ, TRACE=str(trace), NEVER_READY='no')
+            script = prefix + NAMESPACE['daily_menu_focus_fixture']()
+            result = subprocess.run(['bash'], input=script, text=True, capture_output=True,
+                                    env=env, timeout=5)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout.splitlines(), ['DAILY_SYSTEM_MENU_VT_READY', 'DAILY_SYSTEM_MENU_READY'])
+            self.assertEqual(trace.read_text().splitlines(), ['3', '4'])
+            result = subprocess.run(['bash'], input=script, text=True, capture_output=True,
+                                    env=env | {'NEVER_READY': 'yes'}, timeout=5)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertNotIn('DAILY_SYSTEM_MENU_READY', result.stdout)
 
 if __name__ == '__main__':
     unittest.main()

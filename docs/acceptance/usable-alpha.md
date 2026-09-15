@@ -1,24 +1,149 @@
-# Usable alpha validation in progress
+# Verified installed usable-alpha snapshots
 
-This record covers the daily-usability candidate. It does not replace the
-[accepted installer ISO](installable-alpha.md) until a complete installed-disk
-run passes for the new production graph.
+## Current installer and offline recovery
 
-## Implemented and targeted checks
+Image **afd713c5098900061209a746742b5525acdbfbe8** passed a fresh visible TUI
+installation, **40 gates and two installed-disk boots** with clean runner
+**1087e519ab7494568bc2bb61dccd948c4a2b0d11**. The second disk boot followed real
+TUI repair of deliberately deleted boot entries. Recovery and the repaired
+boot ran without networking; the ISO was detached before both installed boots.
+This is a local tested alpha artifact, not a published release.
 
-- Conservative absent-hardware providers: session `004e81d`, component CI
-  [34911942420](https://github.com/sleepylinux/sleepy-session/actions/runs/34911942420)
-  passed. Follow-up `2e85655` fixes the captured UPower absence response;
-  its signed runtime was checked on the existing disposable disk below.
-  Fresh combined-image acceptance remains pending.
-- Original terminal crescent: artwork `ac3feed`, merged PR #6; exact-head CI and
-  real Fastfetch 80/120-column plus monochrome renders passed.
-- Shared GTK/terminal appearance, image viewer, Fastfetch and screenshot keys:
-  real Home Manager override assertions evaluate successfully. Actual combined
-  installed-desktop rendering and screenshot roundtrips are pending.
-- Optional hardware/software profiles: base, Bluetooth, Flatpak, development,
-  gaming, NVIDIA and combined configurations evaluate successfully. Physical
-  hardware and real game performance are not covered by this matrix.
+- ISO `sleepy-recovery-afd713c.iso`: **859832320 bytes / 820 MiB**.
+- SHA256 `c89c7534e40e63405dcdfe81c88f92afe6a7f684037570f62dd941dbf8a00a7e`.
+- [Result](assets/usable-alpha/final-afd713c/result.json),
+  [image/pins/check manifest](assets/usable-alpha/final-afd713c/image-manifest.json),
+  [first disk report](assets/usable-alpha/final-afd713c/installed-guest-report.txt),
+  [repaired disk report](assets/usable-alpha/final-afd713c/offline-reboot-guest-report.txt),
+  [recovery commands and markers](assets/usable-alpha/final-afd713c/recovery-commands.log).
+
+The original ESP/Btrfs layout was identified using actual partition topology.
+With the ESP mounted, both installation and recovery refused the disk;
+installation refused before network/preflight. The TUI displayed current and
+retained generations. Its default Back left GPT and both full partition hashes
+unchanged. Explicit typed-disk confirmation then restored boot entries through
+the installed system's bounded boot operation. After shutdown and ISO removal,
+real password login succeeded and the selected system profile, saved Nix
+configuration and user proof file matched their pre-repair values.
+
+Daily checks passed on both boots: terminal/file manager, native password lock,
+VT/layout/input-DPMS recovery, shell/session SIGKILL recovery, Fastfetch, dark GTK,
+read-only doctor with virtual audio, status/menu, keyring and saved/clipboard PNG.
+Welcome state, settings, keyring and the saved screenshot persisted. The two
+60-second idle samples used 0.46 and 1.07 CPU seconds with stable shell PID/start
+time and no RSS growth. Shutdown was clean.
+
+[Optional choices](assets/usable-alpha/final-afd713c/installer-options.png),
+[actual no-entry boot](assets/usable-alpha/final-afd713c/broken-boot.png),
+[read-only inspection](assets/usable-alpha/final-afd713c/recovery-inspection.png),
+[confirmation](assets/usable-alpha/final-afd713c/recovery-confirmation.png),
+[completed repair](assets/usable-alpha/final-afd713c/recovery-complete.png), and
+[repaired desktop](assets/usable-alpha/final-afd713c/offline-reboot-desktop.png)
+are retained. See the [runbook](../runbooks/installable-alpha.md) to reproduce.
+
+This final run selected no optional profiles and used the explicitly signed
+local dependency cache. Visible installation took 231.9 seconds; this is not a
+public-only download speed measurement. Source229 separately completed a
+public-only installation in 2838 seconds and first password desktop login, but
+its original combined run remained interrupted. The final recovery image also
+successfully repaired that earlier installed disk in a separate continuation:
+[public-install record](assets/usable-alpha/recovery-229-public/image-manifest.json),
+[retained-disk recovery and failed investigation history](assets/usable-alpha/recovery-afd-retained/README.md).
+No failed run was relabelled passed and no guest runtime patch supplied final proof.
+
+Packaged checks ran 52 installer/recovery/TUI tests (51 passed, one root-only
+check skipped) and 13 system-tool tests; 21 runner regressions passed. The
+unchanged private-log check also passed separately in the dedicated root build
+container. Review found no source blockers. The ISO derivation was independently
+evaluated from its immutable Git revision and matched the actual built image.
+Integration and exact CI status are tracked by [PR #11](https://github.com/sleepylinux/sleepy/pull/11).
+
+**Earlier installer images are superseded.** Before `7876db3`, disk listing
+omitted descendants from eligibility/fingerprint checks; the historical 47
+scenario gates below did not cover a real mounted descendant. Standalone Btrfs
+`nologreplay` was also unsupported by the image kernel; current recovery uses
+`ro,rescue=nologreplay`, preserving replay protection. Use the current image for
+new installations and guided recovery.
+
+## Historical desktop/update snapshot (97830de)
+
+Image source **97830de29099483356a7cff1a28751edfcc538d9** passed a fresh TUI
+installation and **three installed-disk boots / 47 acceptance gates** with clean
+runner **0d534265c83b0767e79bb93dd132d7fe6f956292**. The ISO was detached before
+the installed-disk boots. This supersedes the earlier installer-only baseline
+for the covered daily workflows; it is not a published release.
+
+- ISO: `sleepy-usability-97830de.iso`, **858783744 bytes** (819 MiB).
+- SHA256: `00aa6a3bf89e2c5cc7628afdbfcdc97e8669dc36da37a229272e0ce8932b4ebc`.
+- [Final result](assets/usable-alpha/final-97830de/result.json),
+  [image/source manifest](assets/usable-alpha/final-97830de/image-manifest.json).
+- [First installed boot](assets/usable-alpha/final-97830de/installed-guest-report.txt),
+  [development generation](assets/usable-alpha/final-97830de/generation2-guest-report.txt),
+  [offline rollback boot](assets/usable-alpha/final-97830de/offline-reboot-guest-report.txt).
+
+## What passed
+
+Visible TUI options, whole-disk UEFI/GPT/ESP/Btrfs installation, invalid/offline
+target rejection, actual interrupted-install cleanup, real-password ReGreet
+login and native lock authentication. Cold idle lock, locked VT/layout roundtrip,
+shell SIGKILL/input-DPMS wake and session-daemon recovery all passed.
+
+The real Flathub timer recovered after an offline first desktop and Software
+opened. Fastfetch, dark GTK settings, terminal/file manager, system-menu cancel
+without changing generations, healthy read-only doctor with virtual audio,
+Print/save/imv and Shift+Print clipboard PNG passed. PNG, user settings, welcome
+state and the PAM-unlocked keyring persisted through both subsequent boots.
+Three 60-second idle samples preserved shell PID/start time and bounded RSS;
+CPU time was 0.47, 0.57 and 0.90 seconds respectively.
+
+An intentional invalid Nix assertion left the system profile and boot-entry
+hashes unchanged. A real second generation enabled development: Git/direnv and
+a pinned project devShell worked, with Python absent globally. The previous
+generation then booted without networking, restored the original configuration
+and removed the development tools from the base profile. Shutdown was clean.
+
+[Installer choices](assets/usable-alpha/final-97830de/installer-flatpak-selected.png),
+[first welcome](assets/usable-alpha/final-97830de/installed-welcome.png),
+[system menu](assets/usable-alpha/final-97830de/installed-system-menu.png), and
+[real screenshot/viewer](assets/usable-alpha/final-97830de/installed-daily-screenshot-viewer.png)
+are retained. The original crescent also rendered in normal fish/Ghostty at
+[1280×800](assets/usable-alpha/978-fastfetch-1280-fish.png) and
+[1600×1000](assets/usable-alpha/978-fastfetch-1600-fish.png) on the same production
+packages during a separately labelled diagnostic boot.
+
+## Reproduce and limits
+
+Build the recorded source with
+`nix build github:sleepylinux/sleepy/97830de29099483356a7cff1a28751edfcc538d9#installer-iso --max-jobs 1 --cores 2 -L`.
+Use the recorded runner revision and
+`python3 scripts/vm/installable-alpha.py --iso PATH_TO_ISO --image-source-revision 97830de29099483356a7cff1a28751edfcc538d9 --output work/fresh-acceptance --memory 8192 --interrupt-install --keyboard ru --flatpak-recovery --daily-usability --update-safety`.
+The runner needs QEMU, OVMF, Python pexpect/Pillow and Tesseract; its help describes
+firmware/cache options. Use a new output directory and a disposable disk.
+
+This measured run additionally used `--cache-url http://10.0.2.2:8080` and its
+recorded public key. It verifies a signed local binary-cache installation;
+it does not prove installation using only public caches. Building uncached
+components requires network, additional time, memory and disk space. The final
+cache warmed home activation, system PATH and actual assembled user units.
+
+The failed-update test covers evaluation rejection, not every failure of an
+already-selected generation. The final Flatpak gate covers registration and
+Software opening; the earlier real Kalk installation/Firefox portal/polkit
+checks below are separate diagnostic evidence. The doctor currently reports its
+SDK screenshot capability unavailable even though the verified Print path
+works through Quickshell CUtils and Swappy. The unavailable capability is a
+separate session SDK capture provider. Gaming and NVIDIA profiles have configuration checks, not physical GPU
+or game-performance acceptance. Hybrid graphics, real microphone/Bluetooth,
+battery/brightness/suspend/VRR, Secure Boot and encryption remain unverified or
+deferred. Reviewed public channels remain follow-up work. Guided recovery is verified in
+the current snapshot above.
+
+## Earlier investigation history
+
+The entries below preserve their original revisions and then-current status.
+Their failed runs remain failed; references to pending combined acceptance in
+this historical section are resolved only by the final run above. Temporary
+runtime overrides are never presented as fresh-image proof.
 
 ## Flatpak registration regression
 
@@ -343,3 +468,37 @@ shell/locker checks. [Package graph and results](assets/usable-alpha/nmcli-faile
 record a nonfatal unused IPC-path warning in the new direct-Process fixture;
 that fixture does not establish IPC-server behavior. Independent review passed.
 Remote CI and a fresh installed-image run remain separate gates.
+
+
+### Fresh 97830de installation and menu input readiness
+
+Image `97830de29099483356a7cff1a28751edfcc538d9` completed fresh TUI installation,
+disk-only boot, actual login, Flathub timer recovery, cold idle-lock password
+unlock, locked shell SIGKILL/input-DPMS wake, locked VT/keyboard-layout roundtrip,
+Fastfetch, healthy doctor with virtual audio and keyring store/lookup. The
+[combined run then failed](assets/usable-alpha/978-first-run-failed.json) waiting
+for Escape to close the system menu; update/rollback was not reached.
+
+On that retained disk, the menu was the correct active window after VT return,
+but Hyprland reported no main keyboard. Escape left the menu alive. After an
+ordinary Shift wake and keyboard/focus readback, Escape closed the same menu.
+[Actual observations](assets/usable-alpha/978-system-menu-vt-ab.json) support the
+runner correction `0c30bd6`: mapped menu → active VT acknowledgement → ordinary
+wake → main keyboard and focused-address confirmation → Escape. Existing timeout,
+window-closure and unchanged-generations assertions remain. Fourteen runner
+regressions pass; a fresh combined rerun remains required.
+
+Further diagnostics on the same production packages saved and opened a real PNG
+in Swappy/imv and replaced a known text clipboard value with a complete PNG.
+[Results](assets/usable-alpha/978-daily-manual-results.json) and
+[viewer](assets/usable-alpha/978-diagnostic-screenshot-viewer.png) are separate from
+fresh acceptance. The first manual selection was sent before the picker was
+ready; repeating normal pointer movement after visible readiness worked. The
+normal runner already captures the visible picker before selecting.
+
+The custom Fastfetch crescent rendered in an ordinary interactive fish/Ghostty
+terminal at [1280×800](assets/usable-alpha/978-fastfetch-1280-fish.png) and
+[1600×1000](assets/usable-alpha/978-fastfetch-1600-fish.png). These are real installed
+desktop screenshots; the second resolution is a temporary diagnostic monitor
+setting. Desktop PR #9 passed exact CI and merged as
+`d092cfd2a7cf48bb7026b0cbc0dfc2d05a528131`.

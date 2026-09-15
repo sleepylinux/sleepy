@@ -1,0 +1,55 @@
+# Gate markers and backend commands/output; repeated lsblk JSON omitted. Full raw log is compressed alongside.
+INSTALL_BUSY_DESCENDANT_REJECTED_OK
+RECOVERY_BUSY_TARGET_REJECTED_OK
+/dev/vda1: OK
+/dev/vda2: OK
+RECOVERY_INSPECT_CANCEL_OK
+> lsblk --json --tree --bytes --paths --properties-by blkid --output PATH,TYPE,SIZE,RO,RM,MAJ:MIN,MODEL,SERIAL,WWN,MOUNTPOINTS,UUID,PARTUUID,PTUUID,FSTYPE
+> mount --make-rprivate /
+> lsblk --json --tree --bytes --paths --properties-by blkid --output PATH,TYPE,SIZE,RO,RM,MAJ:MIN,MODEL,SERIAL,WWN,MOUNTPOINTS,UUID,PARTUUID,PTUUID,FSTYPE
+> mount --make-rprivate /
+> lsblk --json --tree --bytes --paths --properties-by blkid --output PATH,TYPE,SIZE,RO,RM,MAJ:MIN,MODEL,SERIAL,WWN,MOUNTPOINTS,UUID,PARTUUID,PTUUID,FSTYPE
+> lsblk --json --tree --paths --properties-by blkid --output PATH,TYPE,FSTYPE,PARTTYPE,PTTYPE,UUID /dev/vda
+> lsblk --json --tree --bytes --paths --properties-by blkid --output PATH,TYPE,SIZE,RO,RM,MAJ:MIN,MODEL,SERIAL,WWN,MOUNTPOINTS,UUID,PARTUUID,PTUUID,FSTYPE
+> mount -t btrfs -o ro,rescue=nologreplay,nosuid,nodev,noexec /dev/vda2 /mnt/sleepy-recovery
+> umount --recursive /mnt/sleepy-recovery
+> mount --make-rprivate /
+> lsblk --json --tree --bytes --paths --properties-by blkid --output PATH,TYPE,SIZE,RO,RM,MAJ:MIN,MODEL,SERIAL,WWN,MOUNTPOINTS,UUID,PARTUUID,PTUUID,FSTYPE
+> lsblk --json --tree --paths --properties-by blkid --output PATH,TYPE,FSTYPE,PARTTYPE,PTTYPE,UUID /dev/vda
+> lsblk --json --tree --bytes --paths --properties-by blkid --output PATH,TYPE,SIZE,RO,RM,MAJ:MIN,MODEL,SERIAL,WWN,MOUNTPOINTS,UUID,PARTUUID,PTUUID,FSTYPE
+> mount -t btrfs -o ro,rescue=nologreplay,nosuid,nodev,noexec /dev/vda2 /mnt/sleepy-recovery
+> umount --recursive /mnt/sleepy-recovery
+> mount --make-rprivate /
+> lsblk --json --tree --bytes --paths --properties-by blkid --output PATH,TYPE,SIZE,RO,RM,MAJ:MIN,MODEL,SERIAL,WWN,MOUNTPOINTS,UUID,PARTUUID,PTUUID,FSTYPE
+> lsblk --json --tree --paths --properties-by blkid --output PATH,TYPE,FSTYPE,PARTTYPE,PTTYPE,UUID /dev/vda
+> lsblk --json --tree --bytes --paths --properties-by blkid --output PATH,TYPE,SIZE,RO,RM,MAJ:MIN,MODEL,SERIAL,WWN,MOUNTPOINTS,UUID,PARTUUID,PTUUID,FSTYPE
+> mount -t btrfs -o ro,rescue=nologreplay,nosuid,nodev,noexec /dev/vda2 /mnt/sleepy-recovery
+> umount --recursive /mnt/sleepy-recovery
+> lsblk --json --tree --bytes --paths --properties-by blkid --output PATH,TYPE,SIZE,RO,RM,MAJ:MIN,MODEL,SERIAL,WWN,MOUNTPOINTS,UUID,PARTUUID,PTUUID,FSTYPE
+> lsblk --json --tree --paths --properties-by blkid --output PATH,TYPE,FSTYPE,PARTTYPE,PTTYPE,UUID /dev/vda
+> lsblk --json --tree --bytes --paths --properties-by blkid --output PATH,TYPE,SIZE,RO,RM,MAJ:MIN,MODEL,SERIAL,WWN,MOUNTPOINTS,UUID,PARTUUID,PTUUID,FSTYPE
+> mount -t btrfs -o rw,nosuid,nodev /dev/vda2 /mnt/sleepy-recovery
+> mount -t vfat -o rw,nosuid,nodev,noexec,umask=0077 /dev/vda1 /mnt/sleepy-recovery/boot
+> mount --rbind /dev /mnt/sleepy-recovery/dev
+> mount --rbind /sys /mnt/sleepy-recovery/sys
+> mount --rbind /proc /mnt/sleepy-recovery/proc
+> mount -t tmpfs -o mode=0755,nosuid,nodev tmpfs /mnt/sleepy-recovery/run
+> mount --bind /run/systemd/journal/dev-log /mnt/sleepy-recovery/run/systemd/journal/dev-log
+> timeout --signal=TERM --kill-after=10s 300s env NIXOS_INSTALL_BOOTLOADER=1 chroot /mnt/sleepy-recovery /nix/var/nix/profiles/system/bin/switch-to-configuration boot
+Not checking switch inhibitors (action = boot)
+Running in a chroot, enabling --graceful.
+Created directory "/boot/EFI".
+Created directory "/boot/EFI/systemd".
+Created directory "/boot/EFI/BOOT".
+Created directory "/boot/loader".
+Created directory "/boot/loader/keys".
+Created directory "/boot/loader".
+Created directory "/boot/loader/entries".
+Created directory "/boot/EFI".
+Created directory "/boot/EFI/Linux".
+Copied "/nix/store/mc901k2s1n3v1disrj0356l7lwz7l6vg-systemd-261.1/lib/systemd/boot/efi/systemd-bootx64.efi" to "/boot/EFI/systemd/systemd-bootx64.efi".
+Copied "/nix/store/mc901k2s1n3v1disrj0356l7lwz7l6vg-systemd-261.1/lib/systemd/boot/efi/systemd-bootx64.efi" to "/boot/EFI/BOOT/BOOTX64.EFI".
+Random seed file /boot/loader/random-seed successfully refreshed (32 bytes).
+> sync
+> umount --recursive /mnt/sleepy-recovery
+RECOVERY_LOG_END_OK

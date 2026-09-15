@@ -6,6 +6,7 @@ Only disks created in a NEW output directory are used. Never attach a host disk.
 This is an integration runner, not a replacement for a successful VM result.
 """
 import argparse
+import boot_recovery
 import base64
 import hashlib
 import json
@@ -119,7 +120,8 @@ class Machine:
                    '-smp', '4', '-cpu', 'host' if self.acceleration == 'kvm' else 'max',
                    '-drive', f'if=pflash,format=raw,readonly=on,file={self.firmware}',
                    '-drive', f'if=pflash,format=raw,file={self.output / "OVMF_VARS.fd"}',
-                   '-drive', f'if=virtio,format=qcow2,file={self.output / "installed.qcow2"}',
+                   '-drive', f'if=none,id=installed-disk,format=qcow2,file={self.output / "installed.qcow2"}',
+                   '-device', f'virtio-blk-pci,drive=installed-disk,bootindex={2 if iso else 1}',
                    '-device', 'virtio-vga', '-display', 'none',
                    '-device', 'virtio-net-pci,id=nic0,netdev=net0', '-netdev', 'user,id=net0',
                    '-qmp', f'unix:{self.output / "qmp.sock"},server=on,wait=off',
@@ -131,8 +133,11 @@ class Machine:
             command += ['-audiodev', 'none,id=audio0', '-device', 'intel-hda',
                         '-device', 'hda-duplex,audiodev=audio0', '-device', 'qemu-xhci',
                         '-device', 'usb-tablet']
-        if iso: command += ['-cdrom', str(iso), '-boot', 'order=d']
-        else: command += ['-boot', 'order=c']
+        # Explicit firmware device order also applies when OVMF retains an
+        # installed-disk BootOrder. Do not mix bootindex with legacy -boot order.
+        if iso:
+            command += ['-drive', f'if=none,id=installer-media,format=raw,media=cdrom,readonly=on,file={iso}',
+                        '-device', 'ide-cd,drive=installer-media,bus=ide.0,bootindex=1']
         offline_start = getattr(self, 'flatpak_recovery', False) and phase == 'installed'
         if offline_start: command += ['-S']
         self.process = subprocess.Popen(command, stdout=self.log, stderr=subprocess.STDOUT)
@@ -153,12 +158,15 @@ class Machine:
     def screen(self, name):
         return self.qmp.screenshot(self.output / (name + '.png'))
 
-    def wait_screen(self, fragment, name, timeout=180):
+    def wait_screen(self, fragment, name, timeout=180, reject=()):
         deadline = time.monotonic() + timeout
         while time.monotonic() < deadline:
             text = self.screen(name)
             fragments = [fragment] if isinstance(fragment, str) else fragment
             normalized = ' '.join(text.lower().split())
+            for failure in reject:
+                if ' '.join(failure.lower().split()) in normalized:
+                    raise RuntimeError(f'Recovery reported {failure!r}; inspect {name}.png and recovery-serial.log')
             if all(' '.join(part.lower().split()) in normalized for part in fragments): return text
             if self.process.poll() is not None: raise RuntimeError('VM stopped unexpectedly')
             time.sleep(3)
@@ -592,6 +600,45 @@ def advance_locked_vt(qmp, report, sent):
             sent.add(marker)
 
 
+def daily_menu_focus_fixture():
+    """Wait for the real graphical seat before accepting menu key input."""
+    return r'''
+system_menu_input_ready() {
+  test "$(cat /sys/class/tty/tty0/active)" = tty1 || return 1
+  if test "${system_menu_vt_announced:-false}" != true; then
+    system_menu_vt_announced=true
+    printf 'DAILY_SYSTEM_MENU_VT_READY\n'
+  fi
+  hypr devices -j | jq -e '[.keyboards[] | select(.main)] | length == 1' > /dev/null || return 1
+  hypr dispatch focuswindow "address:$system_menu_address" > /dev/null || return 1
+  hypr activewindow -j | jq -e --arg address "$system_menu_address" '.address == $address' > /dev/null
+}
+wait_daily system_menu_input_ready
+printf 'DAILY_SYSTEM_MENU_READY\n'
+'''
+
+
+def advance_daily_menu(machine, report, sent, stage):
+    """Wake the mapped menu's seat, then send Escape only after guest readback."""
+    if b'DAILY_SYSTEM_MENU_MAPPED\n' not in report:
+        return
+    if 'system-menu-wake' not in sent:
+        sent.add('system-menu-wake')
+        machine.qmp.keys('ctrl', 'alt', 'f1')
+    if b'DAILY_SYSTEM_MENU_VT_READY\n' not in report:
+        return
+    if 'system-menu-seat-wake' not in sent:
+        sent.add('system-menu-seat-wake')
+        machine.qmp.keys('shift')
+    if b'DAILY_SYSTEM_MENU_READY\n' in report and 'system-menu' not in sent:
+        sent.add('system-menu')
+        machine.wait_screen(
+            ('Sleepy system', 'Current and booted system', 'List recovery generations',
+             'Apply the configuration', 'Return to the previous'),
+            f'{stage}-system-menu', timeout=25)
+        machine.qmp.keys('esc')
+
+
 def flatpak_fixture(after_reboot):
     """Public Flathub registration through the installed timer, without mocks."""
     if after_reboot:
@@ -742,8 +789,8 @@ system_menu_visible() {
   test -n "$system_menu_address"
 }
 wait_daily system_menu_visible
-hypr dispatch focuswindow "address:$system_menu_address"
-printf 'DAILY_SYSTEM_MENU_READY\n'
+printf 'DAILY_SYSTEM_MENU_MAPPED\n'
+''' + daily_menu_focus_fixture() + r'''
 system_menu_closed() { hypr clients -j | jq -e --arg address "$system_menu_address" 'all(.[]; .address != $address)' > /dev/null; }
 wait_daily system_menu_closed
 uenv timeout 5 sleepy-system status > /tmp/sleepy-alpha-system-after-menu.txt
@@ -860,7 +907,7 @@ printf 'DAILY_IDLE_SHELL_STABLE_OK\n'
 '''
 
 
-def guest_report(machine, password, stage, after_reboot=False, update_phase=None, final=False):
+def guest_report(machine, password, stage, after_reboot=False, update_phase=None, final=False, recovery_phase=None):
     """Authenticate on a real VT, then explicitly sudo fixed disposable-VM checks."""
     machine.qmp.keys('ctrl', 'alt', 'f2')
     machine.wait_screen('login:', f'{stage}-console')
@@ -958,7 +1005,7 @@ runuser -u sleepy -- mkdir -p /home/sleepy/.config/sleepy
 runuser -u sleepy -- sh -c 'printf sleepy-alpha-state > /home/sleepy/.config/sleepy/alpha-persistence'
 sync
 printf 'PERSISTENCE_MARKER_WRITTEN\n'
-''') + (flatpak_fixture(after_reboot) if getattr(machine, 'flatpak_recovery', False) else '') + lock_fixture(getattr(machine, 'keyboard', 'us')) + (daily_fixture(after_reboot) + daily_idle_fixture() if getattr(machine, 'daily_usability', False) else '') + update_fixture(update_phase) + (r'''
+''') + (flatpak_fixture(after_reboot) if getattr(machine, 'flatpak_recovery', False) else '') + lock_fixture(getattr(machine, 'keyboard', 'us')) + (daily_fixture(after_reboot) + daily_idle_fixture() if getattr(machine, 'daily_usability', False) else '') + update_fixture(update_phase) + boot_recovery.fixture(recovery_phase) + (r'''
 cp -p /var/lib/sleepy-alpha/hypr-user.before /home/sleepy/.config/hypr/sleepy-user.conf
 hypr reload
 printf 'USER_SETTING_FIXTURE_RESTORED_OK\n'
@@ -1024,14 +1071,7 @@ printf 'SLEEPY_REPORT_COMPLETE\n'
                 time.sleep(2)
                 machine.screen(f'{stage}-software')
             if getattr(machine, 'daily_usability', False):
-                if b'DAILY_SYSTEM_MENU_READY' in report and 'system-menu' not in daily_sent:
-                    daily_sent.add('system-menu')
-                    machine.qmp.keys('ctrl', 'alt', 'f1')
-                    machine.wait_screen(
-                        ('Sleepy system', 'Current and booted system', 'List recovery generations',
-                         'Apply the configuration', 'Return to the previous'),
-                        f'{stage}-system-menu', timeout=25)
-                    machine.qmp.keys('esc')
+                advance_daily_menu(machine, report, daily_sent, stage)
                 for marker, action in [
                     (b'DAILY_PRESS_PRINT', 'print'),
                     (b'DAILY_SELECT_AREA', 'select'),
@@ -1117,11 +1157,14 @@ def main():
     parser.add_argument('--keyboard', choices=('us', 'ru', 'de', 'cz'), default='us', help='Select the installed keyboard through the real TUI and test lock-screen switching')
     parser.add_argument('--flatpak-recovery', action='store_true', help='Select Flatpak in TUI; prove offline first desktop and real Flathub timer recovery, then launch Software')
     parser.add_argument('--daily-usability', action='store_true', help='Verify installed daily defaults, real Print save/clipboard and PNG persistence; adds virtual audio')
+    parser.add_argument('--boot-recovery', action='store_true', help='Damage only disposable ESP entries, prove failed boot, repair through the real ISO TUI and verify unchanged system/user data')
     parser.add_argument('--update-safety', action='store_true', help='Also test failed rebuild boot safety, boot a second generation, then rollback and boot the original')
     parser.add_argument('--pause-at-greeter', action='store_true', help='Pause and release QMP before first graphical login for field inspection; see printed continuation instructions')
     parser.add_argument('--cache-url', help='Optional signed binary cache reachable inside VM (e.g. http://10.0.2.2:8080)')
     parser.add_argument('--cache-public-key', help='Public signing key for the optional cache; private key must stay on host')
     args = parser.parse_args()
+    if args.boot_recovery and args.update_safety:
+        parser.error('--boot-recovery and --update-safety are separate destructive-fixture scenarios')
     output, iso = args.output.resolve(), args.iso.resolve()
     if bool(args.cache_url) != bool(args.cache_public_key): parser.error('--cache-url and --cache-public-key must be supplied together')
     if args.cache_url and not re.fullmatch(r'https?://[A-Za-z0-9.:/_-]+', args.cache_url): parser.error('Invalid cache URL')
@@ -1154,6 +1197,7 @@ def main():
     result['flatpak_recovery'] = args.flatpak_recovery
     result['daily_usability'] = args.daily_usability
     result['keyboard'] = args.keyboard
+    result['boot_recovery'] = args.boot_recovery
     try:
         print('Booting installer and driving the visible tty1 TUI.', flush=True)
         machine.boot('installer', iso)
@@ -1164,7 +1208,8 @@ def main():
         print('Booting installed disk without installer media.', flush=True)
         machine.boot('installed')
         login_desktop(machine, password, 'installed')
-        guest_report(machine, password, 'installed', update_phase='seed' if args.update_safety else None)
+        guest_report(machine, password, 'installed', update_phase='seed' if args.update_safety else None,
+                     recovery_phase='damage' if args.boot_recovery else None)
         result['completed'] += ['installed-disk-boot', 'real-password-login', 'desktop-units-and-socket',
                                 'shell-SIGKILL-recovery', 'session-daemon-SIGKILL-recovery', 'terminal-and-file-manager-windows', 'real-Hyprland-setting-applied']
         if args.update_safety:
@@ -1180,13 +1225,20 @@ def main():
         machine.qmp.call('system_powerdown')
         machine.process.wait(timeout=120)
         machine.stop()
+        if args.boot_recovery:
+            result['completed'].append('disposable-ESP-entries-removed-after-authentication')
+            boot_recovery.repair(machine, iso, serial_line, SHELL_PROMPT)
+            result['completed'] += ['damaged-disk-no-entry-boot', 'recovery-inspect-cancel-partitions-unchanged', 'recovery-busy-target-rejected',
+                                    'real-TUI-boot-repair-and-shutdown']
         machine.boot('offline-reboot')
         machine.qmp.call('set_link', name='nic0', up=False)
         login_desktop(machine, password, 'offline-reboot')
         guest_report(machine, password, 'offline-reboot', after_reboot=True,
-                     update_phase='verify' if args.update_safety else None, final=True)
+                     update_phase='verify' if args.update_safety else None, final=True,
+                     recovery_phase='verify' if args.boot_recovery else None)
         result['completed'] += ['offline-disk-reboot', 'offline-password-login', 'user-state-persistence', 'real-Hyprland-setting-persistence']
         if args.update_safety: result['completed'].append('previous-generation-real-boot')
+        if args.boot_recovery: result['completed'].append('repaired-disk-password-login-profile-userdata-preserved')
         machine.qmp.call('system_powerdown')
         machine.process.wait(timeout=120)
         result['completed'].append('clean-final-shutdown')

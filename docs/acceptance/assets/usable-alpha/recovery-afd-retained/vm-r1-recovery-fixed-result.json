@@ -1,0 +1,10 @@
+{
+  "status": "failed",
+  "kind": "retained-disk-recovery-resume",
+  "original_result": "../vm-r1/result.json",
+  "runner_source_revision": "7876db3279279bac00a1f8cf80b4cf9dc217c385",
+  "installed_image_source_revision": "229a794618a694ce3b66bc0d95c32976f10f1531",
+  "recovery_image_source_revision": "7876db3",
+  "completed": [],
+  "error": ""
+}

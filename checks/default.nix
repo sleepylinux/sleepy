@@ -155,6 +155,8 @@
         ${source}/docs/architecture/shell-runtime-integrations.md
       ${pkgs.bash}/bin/bash ${source}/checks/vm-acceptance-assets-test.sh
       ${pkgs.python3}/bin/python ${source}/scripts/vm/test_installable_protocol.py
+      ${pkgs.python3}/bin/python ${source}/scripts/vm/test_boot_recovery.py
+      ${pkgs.python3}/bin/python ${source}/scripts/vm/test_boot_order.py
       touch "$out"
     '';
   freshCloneSource = pkgs.runCommand "sleepy-fresh-clone-source-check" {} ''
