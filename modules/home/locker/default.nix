@@ -20,6 +20,7 @@
           Type = "simple";
           ExecStart = "${config.sleepy.lockerPackage}/bin/sleepy-locker";
           Environment = [
+            "LD_LIBRARY_PATH=${pkgs.sleepy-qt-wayland-focus}/lib"
             "SLEEPY_LOCKER_PAM_SERVICE=sleepy-locker"
             "SLEEPY_LOCKER_SOCKET=%t/sleepy/locker.sock"
           ];

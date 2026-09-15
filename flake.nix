@@ -77,6 +77,7 @@
         sleepy-contract
         sleepy-journal-fault-runner
         sleepy-locker
+        sleepy-qt-wayland-focus
         sleepy-session
         sleepy-session-user-unit
         sleepy-settings-preview

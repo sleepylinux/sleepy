@@ -154,6 +154,7 @@
         ${inputs.sleepy-desktop}/tests/direct-integrations.json \
         ${source}/docs/architecture/shell-runtime-integrations.md
       ${pkgs.bash}/bin/bash ${source}/checks/vm-acceptance-assets-test.sh
+      ${pkgs.python3}/bin/python ${source}/scripts/vm/test_installable_protocol.py
       touch "$out"
     '';
   freshCloneSource = pkgs.runCommand "sleepy-fresh-clone-source-check" {} ''
@@ -200,6 +201,7 @@ in
     nixos = nixosConfiguration.config.system.build.toplevel;
     home = homeConfiguration.activationPackage;
     nix-private-git = import ./nix-private-git.nix {inherit pkgs;};
+    qt-wayland-keyboard-focus = import ../packages/vendor/qt-wayland-focus/check.nix {inherit pkgs;};
     greetd-sessions = import ./greetd-sessions.nix {
       inherit pkgs;
       inherit (nixosConfiguration) config;

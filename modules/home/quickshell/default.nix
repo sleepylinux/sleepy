@@ -1,6 +1,7 @@
 {
   config,
   lib,
+  pkgs,
   ...
 }: {
   config = lib.mkIf config.sleepy.enable {
@@ -19,7 +20,10 @@
       Service = {
         Type = "simple";
         ExecStart = "${config.sleepy.shellPackage}/bin/sleepy-shell";
-        Environment = ["QML_XHR_ALLOW_FILE_READ=1"];
+        Environment = [
+          "QML_XHR_ALLOW_FILE_READ=1"
+          "LD_LIBRARY_PATH=${pkgs.sleepy-qt-wayland-focus}/lib"
+        ];
         Restart = "on-failure";
         RestartSec = 2;
       };
