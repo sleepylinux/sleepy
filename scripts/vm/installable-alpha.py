@@ -1011,7 +1011,7 @@ runuser -u sleepy -- mkdir -p /home/sleepy/.config/sleepy
 runuser -u sleepy -- sh -c 'printf sleepy-alpha-state > /home/sleepy/.config/sleepy/alpha-persistence'
 sync
 printf 'PERSISTENCE_MARKER_WRITTEN\n'
-''') + (flatpak_fixture(after_reboot) if getattr(machine, 'flatpak_recovery', False) else '') + lock_fixture(getattr(machine, 'keyboard', 'us')) + (daily_fixture(after_reboot) + daily_idle_fixture() if getattr(machine, 'daily_usability', False) else '') + (capture_jobs.fixture() if getattr(machine, 'capture_jobs', False) and not after_reboot else '') + update_fixture(update_phase) + (encrypted_install.fixture() if getattr(machine, 'encrypt_install', False) else '') + boot_recovery.fixture(recovery_phase) + candidate_updates.fixture(candidate_phase, getattr(machine, 'candidate_revision', None), getattr(machine, 'candidate_nar_hash', None)) + (r'''
+''') + (flatpak_fixture(after_reboot) if getattr(machine, 'flatpak_recovery', False) else '') + lock_fixture(getattr(machine, 'keyboard', 'us')) + (daily_fixture(after_reboot) + daily_idle_fixture() if getattr(machine, 'daily_usability', False) else '') + (capture_jobs.fixture() if getattr(machine, 'capture_jobs', False) and not after_reboot else '') + update_fixture(update_phase) + (encrypted_install.fixture() if getattr(machine, 'encrypt_install', False) else '') + boot_recovery.fixture(recovery_phase, encrypted=getattr(machine, 'encrypt_install', False)) + candidate_updates.fixture(candidate_phase, getattr(machine, 'candidate_revision', None), getattr(machine, 'candidate_nar_hash', None)) + (r'''
 cp -p /var/lib/sleepy-alpha/hypr-user.before /home/sleepy/.config/hypr/sleepy-user.conf
 hypr reload
 printf 'USER_SETTING_FIXTURE_RESTORED_OK\n'
@@ -1178,8 +1178,6 @@ def main():
     parser.add_argument('--cache-url', help='Optional signed binary cache reachable inside VM (e.g. http://10.0.2.2:8080)')
     parser.add_argument('--cache-public-key', help='Public signing key for the optional cache; private key must stay on host')
     args = parser.parse_args()
-    if args.encrypt_install and args.boot_recovery:
-        parser.error('--encrypt-install with --boot-recovery awaits the encrypted recovery VM flow')
     if args.boot_recovery and args.update_safety:
         parser.error('--boot-recovery and --update-safety are separate destructive-fixture scenarios')
     try:

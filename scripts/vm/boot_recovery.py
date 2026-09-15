@@ -5,7 +5,7 @@ import time
 import shlex
 
 
-def fixture(phase):
+def fixture(phase, encrypted=False):
     if phase is None:
         return ''
     common = r'''
@@ -13,8 +13,22 @@ state=/var/lib/sleepy-alpha/boot-recovery
 # Machine only attaches its newly created qcow2 as vda. Refuse any other layout.
 test "$(findmnt -no SOURCE /boot)" = /dev/vda1
 test "$(findmnt -no FSTYPE /boot)" = vfat
-test "$(findmnt -no SOURCE / | cut -d '[' -f 1)" = /dev/vda2
 '''
+    if encrypted:
+        common += r'''
+root_device=$(findmnt -no SOURCE / | cut -d '[' -f 1)
+python3 - "$root_device" <<'RECOVERY_ROOT_DEVICE'
+import os, pathlib, stat, sys
+info = os.stat(sys.argv[1])
+assert stat.S_ISBLK(info.st_mode), 'Root is not a block device'
+node = pathlib.Path(f'/sys/dev/block/{os.major(info.st_rdev)}:{os.minor(info.st_rdev)}')
+assert (node / 'dm/uuid').read_text().startswith('CRYPT-LUKS2-'), 'Root is not LUKS2'
+slaves = list((node / 'slaves').iterdir())
+assert len(slaves) == 1 and slaves[0].name == 'vda2', 'Root is not the disposable vda2 mapping'
+RECOVERY_ROOT_DEVICE
+'''
+    else:
+        common += "test \"$(findmnt -no SOURCE / | cut -d '[' -f 1)\" = /dev/vda2\n"
     if phase == 'damage':
         return common + r'''
 test ! -e "$state"
@@ -52,6 +66,12 @@ def recovery_tui(machine, verify_cancel):
     def wait(fragment, name, **kwargs):
         return machine.wait_screen(fragment, name, reject=(
             'Recovery needs attention', 'Boot repair stopped', 'Confirmation did not match'), **kwargs)
+    encrypted = getattr(machine, 'encrypt_install', False)
+    def unlock(name):
+        if encrypted:
+            wait(['Unlock for boot recovery', 'Your input stays hidden'], name)
+            machine.qmp.text(machine.disk_passphrase + '\n')
+
     wait('Welcome home', 'recovery-welcome', timeout=300)
     machine.qmp.keys('down')
     machine.qmp.keys('down')
@@ -59,6 +79,18 @@ def recovery_tui(machine, verify_cancel):
     wait('Recover Sleepy boot', 'recovery-disk')
     machine.qmp.keys('home')  # sole eligible VM disk, independent of safe default
     machine.qmp.keys('ret')
+    if encrypted:
+        wait(['Unlock for boot recovery', 'Your input stays hidden'], 'recovery-wrong-passphrase-prompt')
+        machine.qmp.text('intentionally-wrong-disk-passphrase\n')
+        # Require a real backend unlock failure, not a generic dialog or timeout.
+        machine.wait_screen(['Recovery needs attention', 'cryptsetup failed'], 'recovery-wrong-passphrase-rejected')
+        machine.qmp.keys('ret')
+        wait('Recover Sleepy boot', 'recovery-after-wrong-passphrase')
+        verify_cancel()
+        machine.encryption_completed.append('recovery-wrong-passphrase-preserved-partitions')
+        machine.qmp.keys('home')
+        machine.qmp.keys('ret')
+    unlock('recovery-unlock-inspect')
     wait(['Installed Sleepy', 'Current generation:', 'Retained generations:'], 'recovery-inspection')
     # Back is deliberately the default: Enter must not perform a repair.
     machine.qmp.keys('ret')
@@ -66,6 +98,7 @@ def recovery_tui(machine, verify_cancel):
     verify_cancel()
     machine.qmp.keys('home')
     machine.qmp.keys('ret')
+    unlock('recovery-unlock-again')
     wait(['Installed Sleepy', 'Current generation:', 'Retained generations:'], 'recovery-inspection-again')
     machine.qmp.keys('up')
     machine.qmp.keys('ret')
@@ -155,6 +188,8 @@ def repair(machine, iso, serial_line, shell_prompt):
                          'cmp /run/recovery-partitions.before /run/recovery-partitions.after; '
                          'sha256sum --check /run/recovery-blocks.before; '
                          'test -z "$(lsblk -nr -o MOUNTPOINT /dev/vda | tr -d "[:space:]")"; '
+                         'lsblk -nr -o TYPE /dev/vda > /run/recovery-types.after; '
+                         '! grep -qx crypt /run/recovery-types.after; '
                          'printf "RECOVERY_INSPECT_CANCEL_%s\\n" OK')
                 serial_line(terminal, 'sudo -n sh -c ' + shlex.quote(check), 'RECOVERY_INSPECT_CANCEL_OK')
             try:
