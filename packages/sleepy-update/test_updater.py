@@ -256,6 +256,76 @@ class UpdateTests(unittest.TestCase):
                         with self.assertRaises(u.UpdateError):
                             u.status()
 
+    def test_ready_releases_only_its_attempt_root_and_keeps_journal_directory(self):
+        orphan = self.STATE / ("attempt-" + "f" * 32)
+        orphan.mkdir(mode=0o700)
+        (orphan / "built-system").symlink_to(self.old)
+        self.prepare()
+        root = Path(u.status()["gc_root"])
+        self.assertFalse(root.is_symlink())
+        self.assertTrue(root.parent.is_dir())
+        self.assertTrue((orphan / "built-system").is_symlink())
+        self.assertEqual(self.PROFILE.resolve(), self.new)
+
+    def test_failed_preselection_and_recovered_selection_release_attempt_roots(self):
+        for failure in ("preselection", "boot"):
+            with self.subTest(failure=failure):
+                if failure == "preselection":
+                    self.mutate = lambda: (self.CONFIG / "flake.nix").write_text("changed")
+                    self.fail = None
+                else:
+                    self.mutate = None
+                    self.fail = lambda a: a == [str(self.new / "bin/switch-to-configuration"), "boot"]
+                with self.assertRaises(u.UpdateError): self.prepare()
+                journal = u.status()
+                self.assertEqual(journal["phase"], "failed" if failure == "preselection" else "recovered")
+                self.assertFalse(Path(journal["gc_root"]).is_symlink())
+                self.assertEqual(self.PROFILE.resolve(), self.old)
+
+    def test_failed_recovery_retains_attempt_root(self):
+        self.fail = lambda a: a[-1:] == ["boot"]
+        with self.assertRaises(u.UpdateError): self.prepare()
+        journal = u.status()
+        self.assertEqual(journal["phase"], "recovery-failed")
+        self.assertTrue(Path(journal["gc_root"]).is_symlink())
+
+    def test_cleanup_unlink_error_warns_without_rolling_back_ready(self):
+        real_unlink = Path.unlink
+        def fail_root(path, *args, **kwargs):
+            if path.name == "built-system" and path.is_symlink():
+                raise PermissionError("cannot unlink")
+            return real_unlink(path, *args, **kwargs)
+        with patch.object(Path, "unlink", fail_root), patch.object(u, "run", side_effect=self.fake_run), patch.object(u, "emit") as emit:
+            u.prepare("alpha-2")
+        self.assertEqual(u.status()["phase"], "ready")
+        self.assertEqual(self.PROFILE.resolve(), self.new)
+        self.assertTrue(any(call.args[0] == "warning" for call in emit.call_args_list))
+        self.assertFalse(any("--switch-generation" in command for command in self.calls))
+
+    def test_cleanup_never_removes_regular_file_or_unrelated_reference(self):
+        self.prepare()
+        journal = u.status()
+        root = Path(journal["gc_root"])
+        root.write_text("not an owned GC symlink")
+        outside = self.STATE / "unrelated"
+        outside.symlink_to(self.old)
+        with patch.object(u, "emit") as emit:
+            u.release_completed_root(journal)
+            u.release_completed_root(dict(journal, gc_root=str(outside)))
+        self.assertEqual(root.read_text(), "not an owned GC symlink")
+        self.assertTrue(outside.is_symlink())
+        self.assertEqual(len(emit.call_args_list), 2)
+
+    def test_cleanup_keeps_pending_root(self):
+        self.prepare()
+        journal = u.status()
+        root = Path(journal["gc_root"])
+        root.symlink_to(self.new)
+        for phase in ("preparing", "selecting", "selected", "booting", "recovering", "recovery-failed"):
+            with self.subTest(phase=phase):
+                u.release_completed_root(dict(journal, phase=phase))
+                self.assertTrue(root.is_symlink())
+
     def test_ready_requires_reboot_or_explicit_rollback_before_next_prepare(self):
         self.prepare()
         with self.assertRaisesRegex(u.UpdateError, "reboot"):

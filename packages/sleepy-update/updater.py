@@ -450,6 +450,39 @@ def run(argv, timeout=1800, capture=True, progress_stage=None):
         process.stderr.close()
 
 
+def release_completed_root(journal):
+    """Release this reaped attempt only; orphaned attempts may still be building."""
+    if journal.get("phase") not in {"ready", "failed", "recovered"}:
+        return
+    try:
+        validate_journal(journal)
+        root = Path(journal["gc_root"])
+        try:
+            info = root.lstat()
+        except FileNotFoundError:
+            return
+        if not stat.S_ISLNK(info.st_mode) or info.st_uid != OWNER_UID:
+            raise UpdateError("Attempt GC root is not a trusted symlink")
+        root.unlink()
+        # Keep the private attempt directory referenced by the durable journal.
+        fd = os.open(root.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+    except (UpdateError, OSError, ValueError, KeyError):
+        # Failure to reclaim a reference is not an update/boot failure. In
+        # particular, never roll back a durably ready system because of cleanup.
+        try:
+            emit(
+                "warning",
+                "Could not finish temporary GC-root cleanup; system selection is unchanged",
+                100,
+            )
+        except OSError:
+            pass
+
+
 def rollback(journal):
     old = journal["old"]
     built = journal.get("built")
@@ -482,6 +515,7 @@ def rollback(journal):
         raise UpdateError("Previous generation was not restored")
     journal["phase"] = "recovered"
     write_journal(journal)
+    release_completed_root(journal)
     emit("recovered", "Previous generation restored for next boot", 100)
 
 
@@ -635,6 +669,7 @@ def prepare(candidate_id):
                 raise UpdateError("Selected system profile changed")
             journal["phase"] = "ready"
             write_journal(journal)
+            release_completed_root(journal)
             emit(
                 "ready",
                 "Candidate prepared. Reboot to use it; the running desktop is unchanged.",
@@ -654,6 +689,7 @@ def prepare(candidate_id):
             else:
                 journal["phase"] = "failed"
                 write_journal(journal)
+                release_completed_root(journal)
             raise
 
 
