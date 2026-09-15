@@ -303,3 +303,18 @@ Session [PR #13](https://github.com/sleepylinux/sleepy-session/pull/13) merged a
 ignored), exact-head CI, independent review and this VM comparison. The final
 production image also suppresses upstream update news through an overridable
 Hyprland option, leaving the Sleepy welcome as its first-login introduction.
+
+
+### Fresh 52d44f7 installation: duplicate portal unit
+
+A clean ISO run of `52d44f767009630b9e5616e4e85267c3f0df1c62` passed invalid
+target rejection, offline rejection and real interrupted-install cleanup, then
+failed during the actual target-system build. `user-units` could not link two
+`xdg-desktop-portal-hyprland.service` files. The new compositor default exposed
+redundant portal registration. The installer displayed the failure and unmounted
+the target; no successful install or boot is claimed.
+[Failed run](assets/usable-alpha/52d44f7-install-failed.json) and
+[exact builder error](assets/usable-alpha/52d44f7-duplicate-portal-unit.txt) are retained.
+The dependency-only cache warmup did not build system user units and therefore
+did not catch this integration fault. The correction must build the assembled
+user units before repeating fresh installation.
