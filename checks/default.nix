@@ -25,6 +25,7 @@
   };
   appsContract = import ./apps-contract.nix {
     inherit pkgs integratedHomeConfig;
+    extendStandaloneHome = homeConfiguration.extendModules;
     standaloneHomeConfig = homeConfiguration.config;
     nixosConfig = nixosConfiguration.config;
   };
