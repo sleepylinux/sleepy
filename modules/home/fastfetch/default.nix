@@ -3,7 +3,7 @@
   lib,
   ...
 }: let
-  defaults = builtins.fromJSON (builtins.readFile ./settings.json);
+  defaults = builtins.fromJSON (builtins.readFile ./defaults.json);
 in {
   config = lib.mkIf config.sleepy.enable {
     programs.fastfetch = {
