@@ -34,4 +34,7 @@ jq -e '.schema == 1 and .revision == null' "$metadata" > /dev/null
 test "$(nix hash path "$normalized")" = "$(jq -er .nar_hash "$metadata")"
 test "$(nix hash path "$source")" = "$(jq -er .nar_hash "$metadata")"
 nix-store -q --references "$metadata" | grep -Fx -- "$normalized"
+overridden=$(nix build "path:$fixture" --no-link --print-out-paths \
+  --override-input sleepy "path:$normalized" --no-write-lock-file)
+cmp --silent -- "$metadata" "$overridden"
 printf '%s\n' 'Installed relative source metadata and closure identity passed.'
