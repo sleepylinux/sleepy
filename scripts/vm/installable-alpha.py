@@ -120,7 +120,8 @@ class Machine:
                    '-smp', '4', '-cpu', 'host' if self.acceleration == 'kvm' else 'max',
                    '-drive', f'if=pflash,format=raw,readonly=on,file={self.firmware}',
                    '-drive', f'if=pflash,format=raw,file={self.output / "OVMF_VARS.fd"}',
-                   '-drive', f'if=virtio,format=qcow2,file={self.output / "installed.qcow2"}',
+                   '-drive', f'if=none,id=installed-disk,format=qcow2,file={self.output / "installed.qcow2"}',
+                   '-device', f'virtio-blk-pci,drive=installed-disk,bootindex={2 if iso else 1}',
                    '-device', 'virtio-vga', '-display', 'none',
                    '-device', 'virtio-net-pci,id=nic0,netdev=net0', '-netdev', 'user,id=net0',
                    '-qmp', f'unix:{self.output / "qmp.sock"},server=on,wait=off',
@@ -132,8 +133,11 @@ class Machine:
             command += ['-audiodev', 'none,id=audio0', '-device', 'intel-hda',
                         '-device', 'hda-duplex,audiodev=audio0', '-device', 'qemu-xhci',
                         '-device', 'usb-tablet']
-        if iso: command += ['-cdrom', str(iso), '-boot', 'order=d']
-        else: command += ['-boot', 'order=c']
+        # Explicit firmware device order also applies when OVMF retains an
+        # installed-disk BootOrder. Do not mix bootindex with legacy -boot order.
+        if iso:
+            command += ['-drive', f'if=none,id=installer-media,format=raw,media=cdrom,readonly=on,file={iso}',
+                        '-device', 'ide-cd,drive=installer-media,bus=ide.0,bootindex=1']
         offline_start = getattr(self, 'flatpak_recovery', False) and phase == 'installed'
         if offline_start: command += ['-S']
         self.process = subprocess.Popen(command, stdout=self.log, stderr=subprocess.STDOUT)
