@@ -1,5 +1,9 @@
 """Explicit local candidate catalog fixture for disposable installed VMs only."""
 import base64
+import contextlib
+import os
+import time
+import uuid
 import hashlib
 import inspect
 import json
@@ -38,6 +42,75 @@ def tree_state(root):
             raise RuntimeError(f'Unexpected fixture filesystem entry: {path}')
         result[str(path.relative_to(root))] = [stat.S_IMODE(mode), *value]
     return result
+
+
+@contextlib.contextmanager
+def temporary_configuration(config, options):
+    """Import the original module at the same depth; restore its inode on all exits."""
+    original = config / 'configuration.nix'
+    backup = config / 'candidate-original.nix'
+    assert original.is_file() and not original.is_symlink()
+    assert not backup.exists() and not backup.is_symlink(), 'fixture backup already exists'
+    original.rename(backup)
+    try:
+        with original.open('x') as stream:
+            stream.write('{ pkgs, ... }: { imports = [ ./candidate-original.nix ];\n' + options + '\n}\n')
+        original.chmod(0o600)
+        yield
+    finally:
+        backup.replace(original)
+
+
+def interrupt_build(state, marker):
+    """Interrupt only after this attempt's real builder emits its unique marker."""
+    log = Path('/var/lib/sleepy-update/update.log')
+    old = log.stat() if log.exists() else None
+    inode = old.st_ino if old else None
+    offset = old.st_size if old else 0
+    environment = dict(os.environ)
+    environment['NIX_CONFIG'] = environment.get('NIX_CONFIG', '') + '\nprint-build-logs = true\n'
+    output_path = state / 'interrupted-prepare.log'
+    with output_path.open('x') as output:
+        output_path.chmod(0o600)
+        process = subprocess.Popen(['sleepy-update', 'prepare', 'vm-reviewed'],
+                                   stdout=output, stderr=subprocess.STDOUT, env=environment)
+        try:
+            deadline = time.monotonic() + 180
+            pending = b''
+            observed = False
+            while time.monotonic() < deadline:
+                if log.exists():
+                    info = log.stat()
+                    if info.st_ino != inode or info.st_size < offset:
+                        inode, offset, pending = info.st_ino, 0, b''
+                    with log.open('rb') as stream:
+                        stream.seek(offset)
+                        chunk = stream.read(8 * 1024 * 1024)
+                        offset += len(chunk)
+                    pending += chunk
+                    lines = pending.split(b'\n')
+                    pending = lines.pop()
+                    # Nix --print-build-logs may prepend the derivation name.
+                    if any(line.rsplit(b'> ', 1)[-1].strip() == marker.encode() for line in lines):
+                        observed = True
+                        break
+                if process.poll() is not None:
+                    raise RuntimeError('prepare exited before the controlled builder marker')
+                time.sleep(0.25)
+            assert observed, 'real controlled Nix build did not start within deadline'
+            assert process.poll() is None, 'backend exited before interruption'
+            print('CANDIDATE_CONTROLLED_BUILD_STARTED', flush=True)
+            process.terminate()
+            assert process.wait(timeout=20) == 1, 'SIGTERM did not produce a reaped failed prepare'
+        finally:
+            if process.poll() is None:
+                process.terminate()
+                try:
+                    process.wait(timeout=20)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait(timeout=5)
+    print(output_path.read_text()[-65536:], end='', flush=True)
 
 
 def guest(phase, revision, nar_hash):
@@ -100,6 +173,30 @@ def guest(phase, revision, nar_hash):
         assert tree_state(Path('/boot')) == before['boot']
         config_unchanged(before)
         print('CANDIDATE_WRONG_HASH_PRESERVED_BOOT_CONFIG_OK', flush=True)
+        def unchanged_after_failed_prepare():
+            assert json.loads(command('sleepy-update', 'status').stdout)['phase'] == 'failed'
+            assert str(profile.resolve()) == before['profile'] and str(profile.readlink()) == before['profile_link']
+            assert str(live.resolve()) == before['live']
+            assert tree_state(Path('/boot')) == before['boot']
+            config_unchanged(before)
+
+        assert (config / 'configuration.nix').stat().st_uid == 0
+        invalid_marker = 'SLEEPY_CANDIDATE_INVALID_CONFIGURATION'
+        with temporary_configuration(config, 'assertions = [ { assertion = false; message = "' + invalid_marker + '"; } ];'):
+            rejected = command('sleepy-update', 'prepare', 'vm-reviewed', timeout=300, ok=False)
+            assert rejected.returncode == 1, 'invalid configuration unexpectedly prepared'
+            # Require the actual evaluator assertion, not an unrelated fetch error.
+            assert invalid_marker in Path('/var/lib/sleepy-update/update.log').read_text()
+        unchanged_after_failed_prepare()
+        print('CANDIDATE_INVALID_CONFIG_PRESERVED_BOOT_CONFIG_OK', flush=True)
+
+        build_marker = 'SLEEPY_CANDIDATE_BUILD_' + uuid.uuid4().hex
+        controlled_build = ("system.extraDependencies = [ (pkgs.runCommand \"sleepy-candidate-interrupt\" {} ''"
+                            + "echo " + build_marker + " >&2\nsleep 600\ntouch $out\n'' ) ];")
+        with temporary_configuration(config, controlled_build):
+            interrupt_build(state, build_marker)
+        unchanged_after_failed_prepare()
+        print('CANDIDATE_SIGTERM_PRESERVED_BOOT_CONFIG_OK', flush=True)
         command('sleepy-update', 'prepare', 'vm-reviewed', timeout=1500)
         status = json.loads(command('sleepy-update', 'status').stdout)
         assert status['phase'] == 'ready' and status['candidate']['revision'] == revision
@@ -154,7 +251,7 @@ def fixture(phase, revision, nar_hash):
     validate(revision, nar_hash)
     if phase not in ('prepare', 'rollback', 'verify'):
         raise ValueError('unknown candidate phase')
-    program = 'import base64, hashlib, json, stat, subprocess\nfrom pathlib import Path\n'
-    program += inspect.getsource(tree_state) + '\n' + inspect.getsource(guest)
+    program = 'import base64, contextlib, hashlib, json, os, stat, subprocess, time, uuid\nfrom pathlib import Path\n'
+    program += '\n'.join(inspect.getsource(function) for function in (tree_state, temporary_configuration, interrupt_build, guest))
     program += '\nguest(' + ', '.join(repr(x) for x in (phase, revision, nar_hash)) + ')\n'
     return '\n"$python" - <<\'SLEEPY_CANDIDATE_PY\'\n' + program + 'SLEEPY_CANDIDATE_PY\n'

@@ -7,6 +7,7 @@ import io
 import json
 import os
 import sys
+import time
 from unittest.mock import patch
 import tempfile
 import unittest
@@ -98,6 +99,62 @@ class CandidateProtocol(unittest.TestCase):
                     m.guest('prepare', 'a' * 40, 'sha256-' + 'A' * 43 + '=')
             self.assertNotIn(('sleepy-update', 'prepare', 'vm-reviewed'), calls)
             self.assertEqual(calls[-1], ('sleepy-update', 'status'))
+
+    def test_temporary_configuration_restores_exact_original_after_failure(self):
+        m = self.module()
+        self.assertTrue(hasattr(m, 'temporary_configuration'), 'temporary configuration helper missing')
+        with tempfile.TemporaryDirectory() as directory:
+            config = Path(directory)
+            original = config / 'configuration.nix'
+            original.write_bytes(b'{ ... }: { imports = [ ./hardware.nix ]; }\n')
+            original.chmod(0o640)
+            before = m.tree_state(config)
+            with self.assertRaisesRegex(RuntimeError, 'build rejected'):
+                with m.temporary_configuration(config, 'assertions = [];'):
+                    self.assertIn('imports = [ ./candidate-original.nix ];', original.read_text())
+                    self.assertEqual((config / 'candidate-original.nix').read_bytes(), b'{ ... }: { imports = [ ./hardware.nix ]; }\n')
+                    raise RuntimeError('build rejected')
+            self.assertEqual(m.tree_state(config), before)
+
+    def test_temporary_configuration_refuses_existing_backup(self):
+        m = self.module()
+        self.assertTrue(hasattr(m, 'temporary_configuration'), 'temporary configuration helper missing')
+        with tempfile.TemporaryDirectory() as directory:
+            config = Path(directory)
+            (config / 'configuration.nix').write_text('original')
+            (config / 'candidate-original.nix').write_text('existing')
+            before = m.tree_state(config)
+            with self.assertRaises(AssertionError):
+                with m.temporary_configuration(config, 'assertions = [];'): pass
+            self.assertEqual(m.tree_state(config), before)
+
+    def test_interruption_waits_for_new_log_marker_and_reaps_real_child(self):
+        m = self.module()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            log = root / 'update.log'
+            marker = 'UNIQUE_TEST_BUILDER_STARTED'
+            log.write_text(marker + '\n')  # A prior marker must not release the wait.
+            worker = (
+                'import pathlib,signal,sys,time\n'
+                'signal.signal(signal.SIGTERM, lambda *_: sys.exit(1))\n'
+                'time.sleep(0.4)\n'
+                'with pathlib.Path(sys.argv[1]).open("a") as f: f.write("builder> " + sys.argv[2] + "\\n"); f.flush()\n'
+                'time.sleep(5)\n')
+            original_popen = subprocess.Popen
+            children = []
+            def spawn(argv, **kwargs):
+                self.assertEqual(argv, ['sleepy-update', 'prepare', 'vm-reviewed'])
+                self.assertIn('print-build-logs = true', kwargs['env']['NIX_CONFIG'])
+                child = original_popen([sys.executable, '-c', worker, str(log), marker], **kwargs)
+                children.append(child)
+                return child
+            started = time.monotonic()
+            with patch.object(m, 'Path', lambda _: log), patch.object(m.subprocess, 'Popen', spawn), contextlib.redirect_stdout(io.StringIO()):
+                m.interrupt_build(root, marker)
+            self.assertGreaterEqual(time.monotonic() - started, 0.4)
+            self.assertEqual(len(children), 1)
+            self.assertEqual(children[0].returncode, 1)
 
     def test_all_guest_phases_compile_and_shell_parse(self):
         m = self.module()

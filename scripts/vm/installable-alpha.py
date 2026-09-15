@@ -1292,6 +1292,8 @@ def main():
             if check not in result['completed']: result['completed'].append(check)
         # Preserve verified substeps even if a later update or reboot gate fails.
         markers = {
+            'CANDIDATE_INVALID_CONFIG_PRESERVED_BOOT_CONFIG_OK': 'candidate-invalid-config-preserved-boot-config',
+            'CANDIDATE_SIGTERM_PRESERVED_BOOT_CONFIG_OK': 'candidate-SIGTERM-preserved-boot-config',
             'IDLE_LOCK_NATIVE_UNLOCK_OK': 'preexisting-idle-lock-native-password-unlock',
             'FLATPAK_OFFLINE_DESKTOP_AND_FAILED_REGISTRATION_OK': 'flatpak-offline-first-desktop',
             'FLATPAK_REAL_FLATHUB_TIMER_RECOVERY_OK': 'flatpak-real-Flathub-timer-recovery',
