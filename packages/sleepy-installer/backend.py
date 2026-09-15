@@ -11,6 +11,7 @@ import shutil
 import stat
 import signal
 import tempfile
+import time
 import urllib.request
 import subprocess
 import sys
@@ -87,13 +88,27 @@ def run(argv, secret=None):
                         captured_size += len(chunk)
                 code = process.wait()
             except BaseException:
-                try: os.killpg(process.pid, signal.SIGTERM)
-                except ProcessLookupError: pass
-                try: process.wait(timeout=10)
-                except subprocess.TimeoutExpired: pass
-                # Also stop descendant build/install processes before unmounting.
-                try: os.killpg(process.pid, signal.SIGKILL)
-                except ProcessLookupError: pass
+                if process.returncode is None:
+                    try: os.killpg(process.pid, signal.SIGTERM)
+                    except ProcessLookupError: pass
+                # Observe exit without reaping: the retained child pins its PID
+                # until the entire process group has been signalled. Reaping the
+                # leader first could target a newly reused group ID below.
+                owned = process.returncode is None
+                deadline = time.monotonic() + 10
+                while owned and time.monotonic() < deadline:
+                    try:
+                        exited = os.waitid(os.P_PID, process.pid,
+                                          os.WEXITED | os.WNOHANG | os.WNOWAIT)
+                    except ChildProcessError:
+                        owned = False
+                        break
+                    if exited is not None:
+                        break
+                    time.sleep(0.02)
+                if owned:
+                    try: os.killpg(process.pid, signal.SIGKILL)
+                    except ProcessLookupError: pass
                 process.wait()
                 raise
         output = ''.join(captured)

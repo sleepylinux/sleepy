@@ -144,6 +144,33 @@ class ValidationTests(unittest.TestCase):
             self.assertEqual(popen.call_args.kwargs['stderr'], backend.subprocess.DEVNULL)
             self.assertEqual(process.communicate.call_args.kwargs['input'], 'alice:'+request()['password']+'\n')
 
+    def test_nonsecret_interruption_kills_group_before_any_leader_reap(self):
+        events=[]
+        with patch.object(backend.subprocess,'Popen') as popen, patch.object(backend.os,'killpg',side_effect=lambda pid,sig:events.append(('signal',sig))):
+            process=popen.return_value.__enter__.return_value
+            process.pid=12345
+            process.returncode=None
+            process.stdout.read1.side_effect=backend.InstallError('interrupted')
+            process.wait.side_effect=lambda **kwargs:events.append(('reap',None))
+            with patch.object(backend.os,'waitid',return_value=object()):
+                with self.assertRaisesRegex(backend.InstallError,'interrupted'):
+                    backend.run(['nixos-install','--root','/mnt/sleepy'])
+        self.assertLess(events.index(('signal',backend.signal.SIGKILL)),events.index(('reap',None)))
+
+    def test_real_nonsecret_interrupted_child_is_reaped(self):
+        import os
+        import sys
+        observed=[]
+        def interrupt_ready(value):
+            if value.startswith('OWNED_READY '):
+                observed.append(int(value.split()[1]))
+                raise backend.InstallError('interrupted after real child readiness')
+        with patch.object(backend,'log_output',side_effect=interrupt_ready):
+            with self.assertRaisesRegex(backend.InstallError,'real child readiness'):
+                backend.run([sys.executable,'-c','import os,time; print("OWNED_READY",os.getpid(),flush=True); time.sleep(60)'])
+        self.assertEqual(len(observed),1)
+        with self.assertRaises(ChildProcessError): os.waitpid(observed[0],os.WNOHANG)
+
     def test_real_secret_child_output_is_discarded_even_on_failure(self):
         import contextlib
         import io
