@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Packaged with fixed executable/theme paths by the NixOS module.
 set -euo pipefail
 export DIALOGRC=@dialogrc@
@@ -8,7 +9,7 @@ usage() {
 }
 
 system_status() {
-  local label path resolved
+  local label path resolved identity
   for label in 'Current system' 'Booted system' 'Selected system profile'; do
     case "$label" in
       'Current system') path=/run/current-system ;;
@@ -18,7 +19,11 @@ system_status() {
     resolved=$(readlink -e "$path") || resolved='unavailable'
     if test "${1:-full}" = brief; then
       case "$resolved" in
-        /nix/store/*) resolved=${resolved##*/}; resolved=${resolved#*-} ;;
+        /nix/store/*)
+          resolved=${resolved##*/}
+          identity=${resolved%%-*}
+          resolved="${resolved#*-} [${identity:0:8}]"
+          ;;
       esac
     fi
     printf '%s: %s\n' "$label" "${resolved:-unavailable}"
@@ -35,8 +40,18 @@ run_saved() {
   esac
   umask 077
   log_directory="${XDG_STATE_HOME:-$HOME/.local/state}/sleepy/system"
-  mkdir -p "$log_directory"
-  log=$(mktemp "$log_directory/$operation.XXXXXXXX.log")
+  # This function is also called in an if condition, where Bash suppresses
+  # errexit. Guard prerequisites explicitly before invoking any system change.
+  mkdir -p "$log_directory" || {
+    status=$?
+    printf 'Cannot create diagnostic directory; no system change started.\n' >&2
+    return "$status"
+  }
+  log=$(mktemp "$log_directory/$operation.XXXXXXXX.log") || {
+    status=$?
+    printf 'Cannot create diagnostic log; no system change started.\n' >&2
+    return "$status"
+  }
   printf '%s\n' "Sleepy: $operation. Administrator authentication may be requested." \
     "Live progress follows. Diagnostics: $log"
   # sudo uses its normal terminal prompt. Only command output is recorded;

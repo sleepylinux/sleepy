@@ -19,7 +19,8 @@
   systemTools = pkgs.writeShellApplication {
     name = "sleepy-system";
     runtimeInputs = [config.nix.package config.system.build.nixos-rebuild pkgs.coreutils pkgs.dialog];
-    text = builtins.replaceStrings
+    text =
+      builtins.replaceStrings
       ["@rebuild@" "@dialogrc@"]
       ["${config.system.build.nixos-rebuild}/bin/nixos-rebuild" "${../../../packages/sleepy-installer/dialogrc}"]
       (builtins.readFile ../../../packages/sleepy-system/sleepy-system.sh);

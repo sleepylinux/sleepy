@@ -87,6 +87,28 @@ esac''')
         self.assertEqual(self.run_tool('menu', CHOICE='rebuild', REBUILD_STATUS='23').returncode, 23)
         self.assertIn('rebuild switch --flake /etc/nixos#installed', self.calls_text())
 
+    def test_menu_log_directory_failure_never_runs_sudo(self):
+        occupied = self.root / 'occupied'
+        occupied.write_text('not a directory')
+        p = self.run_tool('menu', CHOICE='rebuild', XDG_STATE_HOME=str(occupied))
+        self.assertNotEqual(p.returncode, 0)
+        self.assertNotIn('sudo', self.calls_text())
+
+    def test_menu_log_creation_failure_never_runs_sudo(self):
+        self.command('mktemp', 'exit 19')
+        p = self.run_tool('menu', CHOICE='rebuild')
+        self.assertEqual(p.returncode, 19)
+        self.assertNotIn('sudo', self.calls_text())
+
+    def test_menu_status_distinguishes_same_name_different_closures(self):
+        self.command('readlink', 'case "$2" in /run/current-system) echo /nix/store/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-nixos-system-sleepy;; *) echo /nix/store/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb-nixos-system-sleepy;; esac')
+        p = self.run_tool('menu', CHOICE='status')
+        self.assertEqual(p.returncode, 0)
+        calls = self.calls_text()
+        self.assertIn('nixos-system-sleepy', calls)
+        self.assertIn('aaaaaaaa', calls)
+        self.assertIn('bbbbbbbb', calls)
+
     def test_unknown_command_rejected_without_mutation(self):
         self.assertEqual(self.run_tool('arbitrary-command').returncode, 2)
         self.assertNotIn('sudo', self.calls_text())
