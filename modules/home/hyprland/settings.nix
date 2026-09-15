@@ -35,6 +35,9 @@
 
   gesture = ["3, horizontal, workspace"];
 
+  # Sleepy's welcome and update workflow own the first-login experience.
+  ecosystem.no_update_news = true;
+
   dwindle = {
     preserve_split = true;
     smart_split = false;
