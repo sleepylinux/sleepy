@@ -25,7 +25,8 @@ validate_production_contract() {
     'selectedSessionName = "Hyprland (uwsm-managed)";' \
     'lazy = "${selectedSessionName}"' \
     'assert session_name == "${selectedSessionName}"' \
-    'machine.wait_for_text(re.escape("${selectedSessionName}"), timeout=timedelta(seconds=30))' \
+    'machine.wait_for_text("Session:", timeout=timedelta(seconds=30))' \
+    'assert_selected_session(regreet_state, session_name)' \
     'machine.send_key("ret")' \
     'regreet_ready = "pgrep -f' \
     '${pkgs.cage}/bin/cage -s -d -- ${pkgs.regreet}/bin/regreet' \
@@ -72,6 +73,33 @@ validate_production_contract "$repo_root/checks/hyprland-production-vm.nix" || {
   printf 'VM acceptance assets: production VM contract is incomplete or bypasses ReGreet/UWSM\n' >&2
   exit 1
 }
+# Execute the production selection assertion with real TOML, including the
+# direct-session regression. This does not substitute for the graphical gate.
+python3 - "$repo_root/checks/hyprland-production-vm.nix" <<'PY_STATE'
+import ast
+import sys
+import textwrap
+import tomllib
+
+source = open(sys.argv[1], encoding="utf-8").read()
+start = source.index("        def assert_selected_session(")
+end = source.index("        start_all()", start)
+namespace = {}
+exec(compile(ast.parse(textwrap.dedent(source[start:end])), "selection-check", "exec"), namespace)
+check = namespace["assert_selected_session"]
+for user, selected, accepted in [
+    ("lazy", "Hyprland (uwsm-managed)", True),
+    ("lazy", "Hyprland", False),
+    ("another", "Hyprland (uwsm-managed)", False),
+]:
+    state = tomllib.loads(f'last_user = "{user}"\n[user_to_last_sess]\nlazy = "{selected}"\n')
+    try:
+        check(state, "Hyprland (uwsm-managed)")
+    except AssertionError:
+        assert not accepted
+    else:
+        assert accepted, "incorrect ReGreet selection accepted"
+PY_STATE
 for rollback_guard in \
   "test \"\$live_disk\" = \"\$original_disk\"" \
   "test \"\$live_nvram\" = \"\$original_nvram\""; do
@@ -207,7 +235,7 @@ if validate_production_contract "$mutated_production"; then
   exit 1
 fi
 install -m 0600 -- "$repo_root/checks/hyprland-production-vm.nix" "$mutated_production"
-sed -i 's/machine.wait_for_text(re.escape("${selectedSessionName}"), timeout=timedelta(seconds=30))/pass # neutralized visible UWSM selection/' "$mutated_production"
+sed -i 's/machine.wait_for_text("Session:", timeout=timedelta(seconds=30))/pass # neutralized visible UWSM selection/' "$mutated_production"
 if validate_production_contract "$mutated_production"; then
   printf 'VM acceptance assets: neutralized visible UWSM selection mutation passed\n' >&2
   exit 1
