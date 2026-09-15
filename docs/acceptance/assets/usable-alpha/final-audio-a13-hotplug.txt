@@ -1,0 +1,6 @@
+uenv "$python" /tmp/sleepy-audio-hotplug.py; printf '\nSLEEPY_COMMAND_DONE:%s\n' "$?"
+AUDIO_VIRTUAL_NODE_ADDED_OK
+{"kind": "output", "field": "id", "value": "audio-node:61", "observed_seconds": 1.912}
+AUDIO_EXTERNAL_DEFAULT_CHANGE_OK
+{"kind": "output", "field": "id", "value": "audio-node:51", "observed_seconds": 2.017}
+AUDIO_VIRTUAL_NODE_REMOVED_AND_DEFAULT_RESTORED_OK

@@ -232,5 +232,29 @@ cycle restored the password view without unlocking. A downstream compositor
 activation-frame fix is under test; the failed run remains failed. Separately,
 real PipeWire client events exposed an audio readback feedback loop in session:
 pausing only its monitor reduced task creation from 1708 to 93 over two seconds.
-A typed event filter is under test. Both fixes require new runtime validation
-and a fresh combined image gate before promotion.
+The audio correction is validated below. The compositor correction and a fresh
+combined image gate remain required before promotion.
+
+
+### PipeWire observation loop: installed-disk A/B
+
+Session `a13aa9fbe063df0474b1a8b49f354f81c7b0c442` replaces unrestricted
+`pw-mon` refresh triggers with bounded, typed `pw-dump` events. Observation
+clients no longer recursively trigger readbacks. On the retained `bfa319a` disk,
+exact package `/nix/store/d2wknl2pxx8r55rwc56ifjcnmpqj36cj-sleepy-session-0.1.0`
+reduced two-second task creation from 1708 to 73. External output/input volume
+and mute changes remained observable within about two seconds. Adding a
+disposable virtual sink, selecting it as default, removing it and restoring the
+original default also passed. Existing audio values were restored.
+
+[Idle sample](assets/usable-alpha/final-audio-a13-idle.txt),
+[external changes](assets/usable-alpha/final-audio-a13-external-behavior.txt), and
+[virtual device lifecycle](assets/usable-alpha/final-audio-a13-hotplug.txt) retain
+compact output. A diagnostic fixture initially supplied the SDK's prefixed ID
+to `wpctl`; correcting that test adapter produced the lifecycle result above.
+Raw PipeWire application metadata is intentionally not published.
+
+Session [PR #12](https://github.com/sleepylinux/sleepy-session/pull/12) merged as
+`f7ce52d5e315f9494620425029a455a35907031f` after exact-head CI and automated
+review. This A/B used a temporary user-service override and does not replace
+fresh-image or physical audio-device acceptance.
