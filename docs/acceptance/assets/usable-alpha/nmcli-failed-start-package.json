@@ -1,0 +1,22 @@
+{
+  "root_revision": "52d44f767009630b9e5616e4e85267c3f0df1c62",
+  "desktop_revision": "45f721a037693523ba1886eba20784ac9e8102fc",
+  "graph": "desktop nixpkgs, artwork, SDK, session explicitly follow frozen root; asserted from flake.lock",
+  "status": "passed",
+  "shell": "/nix/store/sbifihfd0fpcdpxsx52i2lwv3iy3jw6h-sleepy-shell-0.2.0",
+  "qml_check": "/nix/store/2c6whi0lk4inxvhykdnzkgiwfs5gnpww-sleepy-desktop-qml-contracts",
+  "package_check": "/nix/store/n7sg1ixs9y6ccgr9946h5s3i4zvnxi37-sleepy-desktop-package-contracts",
+  "checks": [
+    "real pinned Quickshell nonexistent executable, exit0 stdout/stderr, exit7, SIGTERM: callback and finish once, Process and collectors destroyed",
+    "main QML suite 485 passed, 1 skipped",
+    "adjacent RHI suites passed",
+    "real private Wayland CoreDesktopWindows host passed",
+    "packaged shell/full-shell smoke passed",
+    "packaged locker covered two private outputs and acknowledged lock"
+  ],
+  "cache": "existing signed local cache; recursive signature verification passed; identity unchanged",
+  "fixture_warning": "Private temporary path exceeded IPC socket length in new Process fixture. Test does not use IPC; direct actual Process signals/callbacks/destruction all passed. This is not a test of the IPC server.",
+  "ci_run": "34934444152",
+  "ci_status_at_handoff": "x86_64/aarch64 evaluation passed; all x86_64 checks pending",
+  "vm": "not run for this package by this agent"
+}

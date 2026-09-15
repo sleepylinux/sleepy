@@ -327,3 +327,19 @@ the collision before the fix and now builds the actual default and Flatpak
 user-unit directories successfully, including a host portal-package override
 assertion. [Red/green provenance](assets/usable-alpha/portal-user-units-regression.json)
 is retained. Future cache warmups also build this assembled user-unit root.
+
+
+### Failed-to-start process cleanup follow-up
+
+Desktop `45f721a037693523ba1886eba20784ac9e8102fc` also handles Quickshell's
+`FailedToStart` path, which emits `runningChanged` without `exited`. A real
+nonexistent executable previously left its Process and two collectors alive
+without resolving the callback. The bounded fix finishes once and retires the
+objects; real normal exit, error exit and signal exit remain covered.
+
+The exact root-graph package passed the real Process regression, 485 main QML
+tests (one skipped), adjacent rendering/private-Wayland checks and packaged
+shell/locker checks. [Package graph and results](assets/usable-alpha/nmcli-failed-start-package.json)
+record a nonfatal unused IPC-path warning in the new direct-Process fixture;
+that fixture does not establish IPC-server behavior. Independent review passed.
+Remote CI and a fresh installed-image run remain separate gates.
