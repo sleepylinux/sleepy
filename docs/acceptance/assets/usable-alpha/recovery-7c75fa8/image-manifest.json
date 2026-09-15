@@ -1,0 +1,17 @@
+{
+  "status": "passed: fresh TUI installation and offline boot recovery, 40 gates/two password disk boots; source predates rollback dispatch fix",
+  "source_revision": "7c75fa825a747420fc453c7be0e8f9bab18c59cd",
+  "sha256": "4296e5cb33ec4624094a98a7276d0c8ff9abb97f3b14f42d75674e65150764da",
+  "bytes": 860880896,
+  "drv": "/nix/store/zj62w8x0pssx3bmcsar8zj3byx4mk4h5-sleepy-0.1.0-alpha-x86_64-linux.iso.drv",
+  "out": "/nix/store/7bi9ysl43pjfrr1vv8c6kvhl30n1673x-sleepy-0.1.0-alpha-x86_64-linux.iso",
+  "flake_lock_sha256": "99ba51c7e41253b837693335dea9a099c7c556238a401a00cff6f4b0b260a9c5",
+  "components": {
+    "sleepy-sdk": "dff28bb596950d862ae5d219e478460dfa13e8f4",
+    "sleepy-session": "210cbaad7a50280e4406281f90cbe36def50086c",
+    "sleepy-desktop": "0a72d23ad6ed4a4c384020e7e5c0999df7c23970",
+    "sleepy-artwork": "ac3feed1e81b4e74a84a326c1f53f3ddaf94aa3e"
+  },
+  "shell_store_path": "/nix/store/66ad4fv737bn2zds059d78qz38q2lcr7-sleepy-shell-0.2.0",
+  "vm_result": "recovery-7c75fa8/result.json"
+}

@@ -12,7 +12,7 @@ Generic defaults stay overridable. No custom compositor or package manager.
 - [x] Actual mounted-descendant rejection before preflight, descendant identity
   fingerprinting and changed-target checks. The lsblk topology regression is
   fixed; older installer images are superseded.
-- [x] Image `afd713c`: fresh installation, two disk-only password boots and
+- [x] Image `7c75fa8`: fresh installation, two disk-only password boots and
   40 gates. Delete boot entries on the disposable disk, prove failed boot,
   inspect/cancel with unchanged GPT and full partition hashes, then restore
   through the offline TUI and retain configuration, profile and personal files.
@@ -34,7 +34,7 @@ Generic defaults stay overridable. No custom compositor or package manager.
 
 [Acceptance and exact limits](../acceptance/usable-alpha.md),
 [installation](../runbooks/installable-alpha.md), [recovery](../recovery.md).
-The final ISO is 820 MiB. Keep the verified artifact and labelled signed cache;
+The current installer ISO is 821 MiB. Keep the verified artifact and labelled signed cache;
 remove disposable disks, credentials and the task-owned builder after validation.
 
 ## Next cycle, in dependency order
@@ -47,22 +47,22 @@ remove disposable disks, credentials and the task-owned builder after validation
    assignable IOMMU group exposed; no repository self-hosted runner is registered.
    Do not unbind or alter that host OS. Configuration evaluation and virtual audio
    are useful evidence, not physical GPU or suspend acceptance.
-2. **Reviewed-candidate updates — active implementation.** Keep saved-config rebuild semantics. The
-   next implementable slice is an explicitly approved immutable candidate,
-   staged while preserving installation settings and system.stateVersion,
-   built before selection for the next boot. Keep the installation configuration
-   unchanged and retain the evaluated source in each generation's closure so
-   rollback and the next rebuild agree. Backend, TUI and VM gates are being
-   implemented. Source253 passed a separate fresh installation and offline TUI
-   repair (40 gates/two password boots). The update run passed invalid hash,
-   invalid config, real builder interruption and candidate password boot, then
-   exposed a lost lock request after daemon reconnection. Fix that stale-generation
-   path with bounded idempotent-lock handling before completing candidate
-   rebuild/GC-root/rollback acceptance; keep the failed run failed. Gates: rejected
-   or changed candidate, concurrent config edits, offline/build failure,
-   interruption, failed boot and previous-generation password desktop recovery.
-   A content hash proves identity, not maintainer approval. Automatic channels
-   require an approved signing/catalog/promotion policy; none exists yet.
+2. **Reviewed-candidate updates — final VM acceptance active.** Backend and TUI
+   now stage approved immutable sources while preserving installed settings and
+   the running system. Each generation retains its source; GC cleanup and the
+   ready/rollback lifecycle have behavioral regressions. Source d16 passed fresh
+   installation, two password boots, rejected hash/config, actual builder SIGTERM,
+   candidate selection, same-candidate cleanup and saved rebuild. It then exposed
+   rollback auto-reexec evaluating the wrong flake output. Fix8624092 bypasses
+   evaluation, with actual pinned-tool tests for absent/broken configuration;
+   the new862→d408 full installed/updated/offline-rollback VM is running.
+   Desktop lock reconnection and session PID-readiness fixes passed full component
+   CI and merged as desktop PR10/session PR14. Root CI independently found cleanup
+   permissions after its source-identity check passed; repair only the copied
+   fixture. Source7c75 also passed40 recovery gates with two disk password boots.
+   Keep failed/interrupted runs labelled. Do not promote this to a public channel:
+   a content hash proves identity, and signing/catalog/promotion policy remains
+   a separate decision.
 3. **Complete the session capture provider.** Print already uses native
    Quickshell screencopy and Swappy. The separate SDK capture action expects an
    unimplemented helper; keep doctor honest until consent/output contracts and

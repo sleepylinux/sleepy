@@ -1,0 +1,79 @@
+SLEEPY_REPORT_START
+REAL_USER_LOGIN_OK
+/dev/vda2 btrfs
+/dev/vda1 vfat
+INSTALLED_DISK_BOOT_OK
+active
+active
+active
+active
+active
+DESKTOP_UNITS_AND_SOCKET_OK
+FIRST_BOOT_WELCOME_DISMISSED_AND_INACTIVE_OK
+FIRST_BOOT_WELCOME_STATE_PERSISTED_OK
+ok
+ok
+TERMINAL_AND_FILE_MANAGER_WINDOWS_OK
+CRASH_RECOVERY_OK sleepy-shell.service
+CRASH_RECOVERY_OK sleepy-session.service
+active
+true
+REAL_HYPRLAND_SETTING_PERSISTED_OK
+PERSISTENCE_AFTER_REBOOT_OK
+true
+LOCK_RETURN_TO_DESKTOP
+LOCK_GRAPHICAL_VT_READY
+ok
+true
+KEYBOARD_LAYOUT_SELECTED_OK
+ok
+ok
+true
+LOCK_SHELL_CRASH_WAKE_READY
+true
+LOCK_SHELL_CRASH_INPUT_WAKE_OK
+LOCK_SWITCH_TO_CONSOLE
+LOCK_CONSOLE_VT_READY
+LOCK_RETURNED_GRAPHICAL_VT_READY
+ok
+true
+LOCK_VT_ROUNDTRIP_READY
+LOCK_READY_FOR_REAL_PASSWORD
+true
+LOCK_SCREEN_LAYOUT_SWITCH_OK
+REAL_PASSWORD_LOCK_UNLOCK_OK
+$2    S L E E P Y
+     S L E E P Y
+DAILY_FASTFETCH_ASSET_AND_EXECUTION_OK
+gtk-theme-name=adw-gtk3-dark
+gtk-icon-theme-name=Papirus-Dark
+DAILY_GTK_DARK_CONFIG_OK
+Current system: /nix/store/ckjmkkx4r2fsybsjgm082d4psg08zwi1-nixos-system-sleepy-26.11.20260822.2c423e0
+Booted system: /nix/store/ckjmkkx4r2fsybsjgm082d4psg08zwi1-nixos-system-sleepy-26.11.20260822.2c423e0
+Selected system profile: /nix/store/ckjmkkx4r2fsybsjgm082d4psg08zwi1-nixos-system-sleepy-26.11.20260822.2c423e0
+DAILY_SYSTEM_STATUS_OK
+{"ok":true,"generation":484,"checks":[{"capability":"hyprland","status":"available","required":true},{"capability":"lock","status":"available","required":true},{"capability":"network","status":"available","required":false},{"capability":"audio","status":"available","required":false},{"capability":"bluetooth","status":"unavailable","required":false},{"capability":"battery","status":"unsupported","required":false},{"capability":"brightness","status":"available","required":false},{"capability":"power","status":"available","required":false},{"capability":"media","status":"available","required":false},{"capability":"night-light","status":"available","required":false},{"capability":"resources","status":"available","required":false},{"capability":"screenshot","status":"unavailable","required":false},{"capability":"recording","status":"available","required":false}]}
+true
+DAILY_DOCTOR_HEALTHY_WITH_VIRTUAL_AUDIO_OK
+DAILY_KEYRING_PERSISTED_UNLOCKED_OK
+/home/sleepy/Pictures/Screenshots/Sleepy-20260915-123222.png: OK
+DAILY_SCREENSHOT_PERSISTED_OK
+DAILY_IDLE_SAMPLE_READY
+DAILY_IDLE_SAMPLE {"cpu_seconds": 0.0, "cpu_ticks": 601, "elapsed_seconds": 0.0, "pid": 4817, "rss_kib": 474732, "start_ticks": 9661, "threads": 38}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 1.73, "cpu_ticks": 774, "elapsed_seconds": 10.0, "pid": 4817, "rss_kib": 463380, "start_ticks": 9661, "threads": 38}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 1.75, "cpu_ticks": 776, "elapsed_seconds": 20.0, "pid": 4817, "rss_kib": 463404, "start_ticks": 9661, "threads": 38}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 1.77, "cpu_ticks": 778, "elapsed_seconds": 30.0, "pid": 4817, "rss_kib": 461668, "start_ticks": 9661, "threads": 31}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 1.8, "cpu_ticks": 781, "elapsed_seconds": 40.0, "pid": 4817, "rss_kib": 467668, "start_ticks": 9661, "threads": 31}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 1.81, "cpu_ticks": 782, "elapsed_seconds": 50.0, "pid": 4817, "rss_kib": 467656, "start_ticks": 9661, "threads": 31}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 1.81, "cpu_ticks": 782, "elapsed_seconds": 60.0, "pid": 4817, "rss_kib": 467660, "start_ticks": 9661, "threads": 31}
+active
+DAILY_IDLE_SHELL_STABLE_OK
+/home/sleepy/boot-recovery-proof.txt: OK
+/etc/nixos/configuration.nix: OK
+/etc/nixos/flake.nix: OK
+/etc/nixos/flake.lock: OK
+/boot/loader/entries/nixos-40218601193aa3ab147111b8cecfa04f055d0cbc52a8053cfc82950dc853facd.conf:options init=/nix/store/ckjmkkx4r2fsybsjgm082d4psg08zwi1-nixos-system-sleepy-26.11.20260822.2c423e0/init root=fstab loglevel=4 lsm=landlock,yama,bpf
+BOOT_RECOVERY_PROFILE_USERDATA_AND_ENTRIES_OK
+ok
+USER_SETTING_FIXTURE_RESTORED_OK
+SLEEPY_REPORT_COMPLETE
