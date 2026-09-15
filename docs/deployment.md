@@ -6,17 +6,18 @@ The Hyprland integration consumes only these exact reviewed, publicly
 fetchable component commits:
 
 ```text
-sleepy-sdk      dff28bb596950d862ae5d219e478460dfa13e8f4
-sleepy-session  ca37debffa9d01f1d0c9369a31faf85e88a1198a
+sleepy-sdk      c7d7452163d4fdfa000634e2196212a53d8b159f
+sleepy-session  341d69fcb245f41b56e72e8ac89630a5e1b7d4e2
 sleepy-artwork  ac3feed1e81b4e74a84a326c1f53f3ddaf94aa3e
-sleepy-desktop  15b8dab9bd2534be7f054e62b6e36cb46fd74a1f
+sleepy-desktop  7958ed0587c63f881814dae51110aab007add278
 ```
 
 The generated candidate lock SHA-256 is
-`2fcc6168af4d79072e79bf08b68e56f9e2298597d8208c0d10f843e0032946af`.
+`49f627c594fd9bc5391f1315c698971b09525fc02e63b0bf339c23ea4cde3f9a`.
 Regenerate it only with Nix and validate both the current graph and immutable
-historical M2/M1 graphs. A derivation build is not real-VM acceptance; the
-protected `Sleepy` domain stays off until rollback capture and restore drill.
+historical M2/M1 graphs. Capture v1 installed-VM acceptance is pending;
+use only a disposable test VM for this candidate. Previous verified installer
+artifacts remain documented in the installer runbook.
 
 ## Desktop Milestone 3 candidate gate
 

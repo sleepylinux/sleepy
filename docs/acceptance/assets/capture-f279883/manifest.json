@@ -1,0 +1,41 @@
+{
+  "status": "failed",
+  "image_source_revision": "f279883bab2d0f770e806e916bfa07b5e44ff0c0",
+  "initial_runner_revision": "f279883bab2d0f770e806e916bfa07b5e44ff0c0",
+  "diagnostic_runner_revision": "f05368ac9e813d798e6a0fe7acfc83f3ef7c543d",
+  "diagnostic_scope": "Same installed disk booted again without ISO; daily suite omitted to isolate capture. This is not a fresh-install acceptance pass.",
+  "findings": [
+    "Initial daily run: doctor returned nonzero during capture consent; stdout was not retained by the original assertion. Cause unresolved.",
+    "Diagnostic run: capture status and doctor responded in milliseconds; Escape after VT roundtrip left the job awaitingConsent."
+  ],
+  "files": {
+    "result.json": {
+      "bytes": 1827,
+      "sha256": "9e5761117c2203f7c937e3eac278fa532f923e222e696056968d16569a5da2eb"
+    },
+    "installed-guest-report.txt": {
+      "bytes": 5010,
+      "sha256": "f8b6e010e67f8ebc04b4f650dfa27c830038b76ad97f50d06fbf2cf03f887c99"
+    },
+    "failure.png": {
+      "bytes": 164364,
+      "sha256": "00d61511745e0dffc95e77c89f63a560d06518ddc15248364c35fe8bb3c1318b"
+    },
+    "failure.ocr.txt": {
+      "bytes": 1341,
+      "sha256": "d433c53a9cad32f9b0467f9a92de607f50a4d076e78f311c08351fe2151b68c0"
+    },
+    "diagnostic-capture-guest-report.txt": {
+      "bytes": 1259,
+      "sha256": "0693e2a1ed76aa614a85831cf6969b90c03dbd9b23dc6ecdef2e4f6512f3b2cf"
+    },
+    "diagnostic-capture-final.png": {
+      "bytes": 86872,
+      "sha256": "a03a825d2b4793df4de21bfbe9e353ce82c5004e558d77e328d9afc22fa084e4"
+    },
+    "diagnostic-capture-final.ocr.txt": {
+      "bytes": 1111,
+      "sha256": "e8d98db326ff971c3eafeb6de715c57a22f0b874615c2f926500f422b465e4c1"
+    }
+  }
+}

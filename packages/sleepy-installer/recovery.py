@@ -24,8 +24,10 @@ SYSTEM = re.compile(r'/nix/store/[0-9a-z]{32}-nixos-system-[A-Za-z0-9._+-]+')
 
 def validate_request(data, restore):
     fields = {'disk', 'identity'} | ({'installation', 'confirm_restore'} if restore else set())
-    if not isinstance(data, dict) or set(data) != fields or any(not isinstance(v, str) for v in data.values()):
+    if not isinstance(data, dict) or not fields <= set(data) or set(data) - fields - {'encryption_passphrase'} or any(not isinstance(v, str) for v in data.values()):
         raise backend.InstallError('Invalid recovery request fields')
+    if 'encryption_passphrase' in data and not backend.encryption_passphrase_valid(data['encryption_passphrase']):
+        raise backend.InstallError('Disk passphrase must contain 12–128 printable ASCII characters for the US boot keyboard')
     if not re.fullmatch(r'/dev/[A-Za-z0-9_-]+', data['disk']) or not re.fullmatch(r'[0-9a-f]{64}', data['identity']):
         raise backend.InstallError('Invalid recovery disk identity')
     if restore and (not re.fullmatch(r'[0-9a-f]{64}', data['installation']) or data['confirm_restore'] != data['disk']):
@@ -116,11 +118,21 @@ def partition_layout(data):
     expected = [(data['disk'] + suffix + '1', 'vfat', ESP_TYPE), (data['disk'] + suffix + '2', 'btrfs', LINUX_TYPE)]
     if len(parts) != 2: raise backend.InstallError('Guided recovery supports exactly an ESP and Btrfs root')
     parts.sort(key=lambda item: item.get('path', ''))
+    encrypted = parts[1].get('fstype') == 'crypto_LUKS'
+    if encrypted:
+        expected[1] = (expected[1][0], 'crypto_LUKS', LINUX_TYPE)
     for part, (path, filesystem, kind) in zip(parts, expected):
         if (part.get('path'), part.get('fstype'), str(part.get('parttype', '')).lower()) != (path, filesystem, kind) or part.get('type') != 'part' or part.get('children') or not part.get('uuid'):
             raise backend.InstallError('Selected partitions do not match the supported Sleepy layout')
+    layout = dict(esp=expected[0][0], root=expected[1][0])
+    if encrypted:
+        luks_uuid = parts[1]['uuid']
+        if not re.fullmatch(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}', luks_uuid):
+            raise backend.InstallError('Invalid encrypted partition UUID')
+        backend.run(['cryptsetup', 'isLuks', '--type', 'luks2', layout['root']])
+        layout['luks_uuid'] = luks_uuid
     backend.verify_target(data)
-    return dict(esp=expected[0][0], root=expected[1][0])
+    return layout
 
 
 def private_namespace():
@@ -152,21 +164,63 @@ def recovery_lock():
         os.close(descriptor)
 
 
+class RecoveryLuksRoot(backend.LuksRoot):
+    """Reuse installer ownership checks, but never format or change a keyslot."""
+    def __init__(self, partition, expected_uuid):
+        super().__init__(partition)
+        # The random mapping name remains private to this attempt. The UUID in
+        # the kernel mapping identity belongs to the already installed header.
+        self.uuid = expected_uuid
+
+    def unlock(self, passphrase, writable):
+        current = backend.run(['blkid', '-s', 'UUID', '-o', 'value', self.partition]).strip()
+        if current != self.uuid:
+            raise backend.InstallError('Encrypted partition changed before unlock')
+        if os.path.lexists(self.path):
+            raise backend.InstallError('Recovery mapping appeared before unlock')
+        self.open_attempted = True
+        command = ['cryptsetup', 'open', '--type', 'luks2', '--key-file', '-']
+        if not writable:
+            command.append('--readonly')
+        command.extend([self.partition, self.name])
+        backend.run(command, secret=passphrase)
+        if not self.owned():
+            raise backend.InstallError('Recovery mapping identity could not be verified')
+
+
 @contextmanager
-def mounted_root(layout, writable=False):
+def mounted_root(layout, writable=False, passphrase=None):
     if os.path.ismount(ROOT):
         raise backend.InstallError('Recovery mount directory already has an unowned mount')
-    # Linux 6.18 accepts rescue=nologreplay, not the old standalone spelling.
-    # Preserve replay protection: a plain read-only Btrfs mount may write its log.
-    options = 'rw,nosuid,nodev' if writable else 'ro,rescue=nologreplay,nosuid,nodev,noexec'
+    mapping = None
     try:
-        backend.run(['mount', '-t', 'btrfs', '-o', options, layout['root'], str(ROOT)])
-        yield
+        root = layout['root']
+        if 'luks_uuid' in layout:
+            if not backend.encryption_passphrase_valid(passphrase):
+                raise backend.InstallError('Unlock the encrypted root before recovery')
+            mapping = RecoveryLuksRoot(root, layout['luks_uuid'])
+            mapping.unlock(passphrase, writable)
+            root = mapping.path
+            # An unlocked LUKS container is not automatically a supported root.
+            if backend.run(['blkid', '-s', 'TYPE', '-o', 'value', root]).strip() != 'btrfs':
+                raise backend.InstallError('Encrypted root must contain Btrfs')
+        # Read-only dm-crypt plus no Btrfs log replay for inspection; writable
+        # opening is separate and happens only after explicit repair confirmation.
+        options = 'rw,nosuid,nodev' if writable else 'ro,rescue=nologreplay,nosuid,nodev,noexec'
+        try:
+            backend.run(['mount', '-t', 'btrfs', '-o', options, root, str(ROOT)])
+            yield
+        finally:
+            if os.path.ismount(ROOT):
+                backend.run(['umount', '--recursive', str(ROOT)])
     finally:
-        # The command may have completed mounting just before SIGTERM arrived.
-        # Our private namespace and initially empty mountpoint identify ownership.
-        if os.path.ismount(ROOT):
-            backend.run(['umount', '--recursive', str(ROOT)])
+        if mapping is not None:
+            if os.path.ismount(ROOT):
+                # Closing a busy mapper is never attempted or forced. Namespace
+                # exit drops mounts, but we report retained mapping for recovery.
+                print('Recovery filesystem is still mounted; encrypted mapping was not closed.', file=sys.stderr)
+            else:
+                mapping.close()
 
 
 def prepare_chroot():
@@ -184,16 +238,24 @@ def prepare_chroot():
 def recover(data, restore=False):
     with recovery_lock():
         layout = partition_layout(data)
-        with mounted_root(layout):
+        encrypted = 'luks_uuid' in layout
+        if encrypted and 'encryption_passphrase' not in data:
+            if restore:
+                raise backend.InstallError('Unlock the encrypted root before confirming repair')
+            return dict(disk=data['disk'], identity=data['identity'], encrypted=True, locked=True)
+        if not encrypted and 'encryption_passphrase' in data:
+            raise backend.InstallError('The selected root is not encrypted')
+        unlock = {'passphrase': data['encryption_passphrase']} if encrypted else {}
+        with mounted_root(layout, **unlock):
             metadata = inspect_installation(ROOT)
-        if not restore: return dict(metadata, disk=data['disk'], identity=data['identity'])
+        if not restore: return dict(metadata, disk=data['disk'], identity=data['identity'], encrypted=encrypted, locked=False)
         if metadata['installation'] != data['installation']:
             raise backend.InstallError('Installed generations changed; inspect and confirm again')
         # Final busy/hotplug/fingerprint check immediately before writable mounts.
         if partition_layout(data) != layout:
             raise backend.InstallError('Installed partition layout changed')
         backend.emit('repair', 'Restoring boot entries from the inspected installed system', 20)
-        with mounted_root(layout, writable=True):
+        with mounted_root(layout, writable=True, **unlock):
             if inspect_installation(ROOT)['installation'] != data['installation']:
                 raise backend.InstallError('Installed system changed before boot repair')
             backend.run(['mount', '-t', 'vfat', '-o', 'rw,nosuid,nodev,noexec,umask=0077', layout['esp'], str(ROOT / 'boot')])

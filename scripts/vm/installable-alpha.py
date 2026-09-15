@@ -8,6 +8,8 @@ This is an integration runner, not a replacement for a successful VM result.
 import argparse
 import boot_recovery
 import candidate_updates
+import capture_jobs
+import encrypted_install
 import base64
 import hashlib
 import json
@@ -177,10 +179,12 @@ class Machine:
 SHELL_PROMPT = r'[$#](?:\x1b\[[0-9;]*m)* '
 
 
-def serial_line(terminal, command, marker=None, timeout=300):
+def serial_line(terminal, command, marker=None, timeout=300, failure_marker=None):
     terminal.sendline(command)
     if marker is not None:
-        terminal.expect(marker, timeout=timeout)
+        matched = terminal.expect([marker, failure_marker] if failure_marker else marker, timeout=timeout)
+        if failure_marker and matched == 1:
+            raise RuntimeError("Installer safety fixture failed; inspect installer-safety.log for bounded backend diagnostics")
     # sudo/login restore terminal modes on exit. Wait until bash owns the TTY
     # again; sending after a progress marker alone can be lost by TCSAFLUSH.
     terminal.expect(SHELL_PROMPT, timeout=timeout)
@@ -188,6 +192,29 @@ def serial_line(terminal, command, marker=None, timeout=300):
 
 def safety_checks(machine, terminal, interrupt_install=False):
     script = r'''import fcntl, json, os, secrets, shutil, signal, subprocess, sys
+# Retain only bounded diagnostics, never the request or a traceback containing it.
+recent_events = []
+private_values = []
+def scrub(value):
+    text = str(value)
+    for secret in private_values:
+        if secret: text = text.replace(secret, "[REDACTED]")
+    return text
+def remember(event):
+    recent_events.append({key: scrub(event.get(key, ""))[:2048] for key in ("stage", "message")})
+    del recent_events[:-8]
+def failed(kind, value, trace):
+    print("SLEEPY_SAFETY_ERROR_EVENTS " + json.dumps(recent_events), flush=True)
+    try:
+        fd = os.open("/var/log/sleepy-installer.log", os.O_RDONLY | os.O_NOFOLLOW)
+        with os.fdopen(fd, "rb") as log:
+            log.seek(max(0, os.fstat(log.fileno()).st_size - 8192))
+            tail = log.read(8192).decode("utf-8", errors="replace")
+        print("SLEEPY_SAFETY_BACKEND_LOG " + json.dumps(scrub(tail)), flush=True)
+    except OSError:
+        print("SLEEPY_SAFETY_BACKEND_LOG_UNAVAILABLE", flush=True)
+    print("SLEEPY_SAFETY_FAILED", flush=True)
+sys.excepthook = failed
 backend = shutil.which("sleepy-install-backend")
 disks = json.loads(subprocess.check_output([backend, "--list"], text=True))
 disk = next(d for d in disks if d["path"] == "/dev/vda")
@@ -199,6 +226,7 @@ def no_partitions():
 no_partitions()
 mode = sys.argv[1]
 data = dict(disk="/dev/vda", identity=disk["identity"], confirm_erase="/dev/vda", username="sleepy", password=secrets.token_hex(16), hostname="sleepy", locale="en_US.UTF-8", keyboard="us", timezone="UTC", options={})
+private_values.append(data["password"])
 if mode == "invalid":
     data.update(disk="/dev/sr0", confirm_erase="/dev/sr0", identity="0"*64)
 if mode == "interrupt":
@@ -209,6 +237,7 @@ if mode == "interrupt":
     try:
         for line in process.stdout:
             event = json.loads(line)
+            remember(event)
             if event["stage"] == "configure":
                 os.kill(process.pid, signal.SIGTERM)
                 interrupted = True
@@ -228,6 +257,8 @@ else:
     result = subprocess.run([backend, "--install"], input=json.dumps(data), capture_output=True, text=True, timeout=180)
     data.clear()
     assert result.returncode != 0, "Unsafe request unexpectedly succeeded"
+    for line in result.stdout.splitlines()[-8:]:
+        remember(json.loads(line))
     event = json.loads(result.stdout.splitlines()[-1])
     assert event["stage"] == "error", event
     assert ("identity changed" if mode == "invalid" else "Connect the network") in event["message"], event
@@ -243,11 +274,11 @@ print("SLEEPY_SAFETY_" + mode.upper() + "_OK", flush=True)
     for offset in range(0, len(encoded), 512):
         serial_line(terminal, 'printf %s ' + shlex.quote(encoded[offset:offset + 512]) + ' >> /tmp/sleepy-safety.b64')
     serial_line(terminal, 'base64 -d /tmp/sleepy-safety.b64 > /tmp/sleepy-safety.py')
-    serial_line(terminal, 'sudo -n "$sleepy_python" /tmp/sleepy-safety.py invalid', 'SLEEPY_SAFETY_INVALID_OK', timeout=240)
+    serial_line(terminal, 'sudo -n "$sleepy_python" /tmp/sleepy-safety.py invalid', 'SLEEPY_SAFETY_INVALID_OK', timeout=240, failure_marker='SLEEPY_SAFETY_FAILED')
     machine.safety_completed = ['invalid-target-rejected-without-disk-writes']
     machine.qmp.call('set_link', name='nic0', up=False)
     try:
-        serial_line(terminal, 'sudo -n "$sleepy_python" /tmp/sleepy-safety.py offline', 'SLEEPY_SAFETY_OFFLINE_OK', timeout=240)
+        serial_line(terminal, 'sudo -n "$sleepy_python" /tmp/sleepy-safety.py offline', 'SLEEPY_SAFETY_OFFLINE_OK', timeout=240, failure_marker='SLEEPY_SAFETY_FAILED')
         machine.safety_completed.append('offline-install-rejected-without-disk-writes')
     except Exception:
         # Do not restore connectivity while an unexpected backend may still run.
@@ -256,7 +287,7 @@ print("SLEEPY_SAFETY_" + mode.upper() + "_OK", flush=True)
     else:
         machine.qmp.call('set_link', name='nic0', up=True)
     if interrupt_install:
-        serial_line(terminal, 'sudo -n "$sleepy_python" /tmp/sleepy-safety.py interrupt', 'SLEEPY_SAFETY_INTERRUPT_OK', timeout=300)
+        serial_line(terminal, 'sudo -n "$sleepy_python" /tmp/sleepy-safety.py interrupt', 'SLEEPY_SAFETY_INTERRUPT_OK', timeout=300, failure_marker='SLEEPY_SAFETY_FAILED')
         machine.safety_completed.append('real-install-SIGTERM-cleanup-and-lock-release')
 
 
@@ -325,6 +356,7 @@ def install(machine, password, timeout, cache_url=None, cache_public_key=None, i
                 machine.qmp.keys('spc')
                 machine.screen('installer-flatpak-selected')
             machine.qmp.text(value + '\n')
+        encrypted_install.select_protection(machine)
         machine.wait_screen('One last check', 'installer-confirmation')
         machine.qmp.text('/dev/vda\n')
         deadline = time.monotonic() + timeout
@@ -925,6 +957,8 @@ def guest_report(machine, password, stage, after_reboot=False, update_phase=None
         audit_timeout += 510
     if getattr(machine, 'daily_usability', False):
         audit_timeout += 90  # 30s graphical VT acknowledgement + 60s idle samples.
+    if getattr(machine, 'capture_jobs', False) and not after_reboot:
+        audit_timeout += 180  # Separate opt-in consent/PNG/crash phases, no global timeout change.
     channel.settimeout(audit_timeout)
     channel.connect(str(machine.output / 'report.sock'))
     script = r'''#!/usr/bin/env bash
@@ -1006,7 +1040,7 @@ runuser -u sleepy -- mkdir -p /home/sleepy/.config/sleepy
 runuser -u sleepy -- sh -c 'printf sleepy-alpha-state > /home/sleepy/.config/sleepy/alpha-persistence'
 sync
 printf 'PERSISTENCE_MARKER_WRITTEN\n'
-''') + (flatpak_fixture(after_reboot) if getattr(machine, 'flatpak_recovery', False) else '') + lock_fixture(getattr(machine, 'keyboard', 'us')) + (daily_fixture(after_reboot) + daily_idle_fixture() if getattr(machine, 'daily_usability', False) else '') + update_fixture(update_phase) + boot_recovery.fixture(recovery_phase) + candidate_updates.fixture(candidate_phase, getattr(machine, 'candidate_revision', None), getattr(machine, 'candidate_nar_hash', None)) + (r'''
+''') + (flatpak_fixture(after_reboot) if getattr(machine, 'flatpak_recovery', False) else '') + lock_fixture(getattr(machine, 'keyboard', 'us')) + (daily_fixture(after_reboot) + daily_idle_fixture() if getattr(machine, 'daily_usability', False) else '') + (capture_jobs.fixture() if getattr(machine, 'capture_jobs', False) and not after_reboot else '') + update_fixture(update_phase) + (encrypted_install.fixture() if getattr(machine, 'encrypt_install', False) else '') + boot_recovery.fixture(recovery_phase, encrypted=getattr(machine, 'encrypt_install', False)) + candidate_updates.fixture(candidate_phase, getattr(machine, 'candidate_revision', None), getattr(machine, 'candidate_nar_hash', None)) + (r'''
 cp -p /var/lib/sleepy-alpha/hypr-user.before /home/sleepy/.config/hypr/sleepy-user.conf
 hypr reload
 printf 'USER_SETTING_FIXTURE_RESTORED_OK\n'
@@ -1104,6 +1138,8 @@ printf 'SLEEPY_REPORT_COMPLETE\n'
             # Coalesced unlock/UI markers may return to VT2; idle acknowledgement
             # must run last so the new sampling phase remains on the desktop.
             advance_daily_idle(machine.qmp, report, daily_sent)
+            if getattr(machine, 'capture_jobs', False) and not after_reboot:
+                capture_jobs.advance(machine, report, daily_sent, stage)
             if len(report) > 1024 * 1024: raise RuntimeError('Guest audit exceeded 1 MiB output bound')
     finally:
         channel.close()
@@ -1118,7 +1154,10 @@ printf 'SLEEPY_REPORT_COMPLETE\n'
 
 
 def login_desktop(machine, password, name):
+    encrypted_install.unlock(machine, name)
     machine.wait_screen(('Welcome back', 'User:', 'Session:'), f'{name}-greeter', timeout=300)
+    if getattr(machine, 'encrypt_install', False):
+        machine.encryption_completed.append(name + '-real-disk-unlock')
     if getattr(machine, 'pause_at_greeter', False):
         continuation = machine.output / 'continue-greeter'
         machine.qmp.close()
@@ -1157,6 +1196,8 @@ def main():
     parser.add_argument('--interrupt-install', action='store_true', help='Before visible TUI installation, interrupt a real disposable-disk install after mounting and verify cleanup')
     parser.add_argument('--keyboard', choices=('us', 'ru', 'de', 'cz'), default='us', help='Select the installed keyboard through the real TUI and test lock-screen switching')
     parser.add_argument('--flatpak-recovery', action='store_true', help='Select Flatpak in TUI; prove offline first desktop and real Flathub timer recovery, then launch Software')
+    parser.add_argument('--encrypt-install', action='store_true', help='Select LUKS2 in the real TUI and prove rejected wrong passphrase plus disk unlock on every installed boot')
+    parser.add_argument('--capture-jobs', action='store_true', help='Verify actual opt-in capture consent, Escape, region PNG and daemon-crash cleanup on the first installed boot')
     parser.add_argument('--daily-usability', action='store_true', help='Verify installed daily defaults, real Print save/clipboard and PNG persistence; adds virtual audio')
     parser.add_argument('--boot-recovery', action='store_true', help='Damage only disposable ESP entries, prove failed boot, repair through the real ISO TUI and verify unchanged system/user data')
     parser.add_argument('--update-safety', action='store_true', help='Also test failed rebuild boot safety, boot a second generation, then rollback and boot the original')
@@ -1197,10 +1238,16 @@ def main():
                   ['git', 'rev-parse', 'HEAD'], capture_output=True, text=True).stdout.strip(),
               'runner_source_dirty': bool(subprocess.run(['git', 'status', '--porcelain'], capture_output=True, text=True).stdout)}
     machine = Machine(output, args.firmware.resolve(), args.memory, acceleration)
+    machine.encrypt_install = args.encrypt_install
+    machine.encryption_completed = []
+    machine.disk_passphrase = encrypted_install.credential(output) if args.encrypt_install else None
+    result['encrypt_install'] = args.encrypt_install
     machine.pause_at_greeter = args.pause_at_greeter
     machine.candidate_revision = args.candidate_revision
     machine.candidate_nar_hash = args.candidate_nar_hash
     machine.keyboard = args.keyboard
+    machine.capture_jobs = args.capture_jobs
+    result['capture_jobs'] = args.capture_jobs
     machine.daily_usability = args.daily_usability
     machine.flatpak_recovery = args.flatpak_recovery
     result['flatpak_recovery'] = args.flatpak_recovery
@@ -1292,6 +1339,7 @@ def main():
             if check not in result['completed']: result['completed'].append(check)
         # Preserve verified substeps even if a later update or reboot gate fails.
         markers = {
+            **capture_jobs.MARKERS,
             'CANDIDATE_POST_ROLLBACK_VALIDATION_PRESERVED_STATE_OK': 'candidate-post-rollback-validation-preserved-state',
             'CANDIDATE_COMPLETED_GC_ROOT_RELEASED_OTHERS_PRESERVED_OK': 'candidate-completed-gc-root-released-others-preserved',
             'CANDIDATE_INVALID_CONFIG_PRESERVED_BOOT_CONFIG_OK': 'candidate-invalid-config-preserved-boot-config',
@@ -1336,6 +1384,7 @@ def main():
             'SECOND_GENERATION_REAL_BOOT_OK': 'second-generation-real-boot',
             'PREVIOUS_GENERATION_SELECTED_FOR_BOOT_OK': 'previous-generation-selected',
             'PREVIOUS_GENERATION_REAL_BOOT_OK': 'previous-generation-real-boot',
+            'ENCRYPTED_ROOT_ACTIVE_OK': 'actual-LUKS2-root-mapping',
             'PERSISTENCE_AFTER_REBOOT_OK': 'user-state-persistence',
             'REAL_HYPRLAND_SETTING_PERSISTED_OK': 'real-Hyprland-setting-persistence',
         }
@@ -1344,6 +1393,7 @@ def main():
             for marker, check in markers.items():
                 if marker in lines and check not in result['completed']:
                     result['completed'].append(check)
+        result['completed'] += [gate for gate in machine.encryption_completed if gate not in result['completed']]
         machine.stop()
         (output / 'result.json').write_text(json.dumps(result, indent=2) + '\n')
     print(f'Result and evidence: {output}', flush=True)

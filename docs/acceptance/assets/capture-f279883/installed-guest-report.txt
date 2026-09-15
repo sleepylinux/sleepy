@@ -1,0 +1,108 @@
+SLEEPY_REPORT_START
+REAL_USER_LOGIN_OK
+/dev/vda2 btrfs
+/dev/vda1 vfat
+INSTALLED_DISK_BOOT_OK
+active
+active
+active
+active
+active
+DESKTOP_UNITS_AND_SOCKET_OK
+FIRST_BOOT_WELCOME_DISMISSED_AND_INACTIVE_OK
+ok
+ok
+TERMINAL_AND_FILE_MANAGER_WINDOWS_OK
+CRASH_RECOVERY_OK sleepy-shell.service
+CRASH_RECOVERY_OK sleepy-session.service
+active
+ok
+true
+REAL_HYPRLAND_SETTING_APPLIED_OK
+PERSISTENCE_MARKER_WRITTEN
+true
+LOCK_RETURN_TO_DESKTOP
+LOCK_GRAPHICAL_VT_READY
+ok
+true
+KEYBOARD_LAYOUT_SELECTED_OK
+ok
+ok
+true
+LOCK_SHELL_CRASH_WAKE_READY
+true
+LOCK_SHELL_CRASH_INPUT_WAKE_OK
+LOCK_SWITCH_TO_CONSOLE
+LOCK_CONSOLE_VT_READY
+LOCK_RETURNED_GRAPHICAL_VT_READY
+ok
+true
+LOCK_VT_ROUNDTRIP_READY
+LOCK_READY_FOR_REAL_PASSWORD
+true
+LOCK_SCREEN_LAYOUT_SWITCH_OK
+REAL_PASSWORD_LOCK_UNLOCK_OK
+$2    S L E E P Y
+     S L E E P Y
+DAILY_FASTFETCH_ASSET_AND_EXECUTION_OK
+gtk-theme-name=adw-gtk3-dark
+gtk-icon-theme-name=Papirus-Dark
+DAILY_GTK_DARK_CONFIG_OK
+Current system: /nix/store/ran4ll1cg13rppk6k6nh4spkbzh0c3jk-nixos-system-sleepy-26.11.20260822.2c423e0
+Booted system: /nix/store/ran4ll1cg13rppk6k6nh4spkbzh0c3jk-nixos-system-sleepy-26.11.20260822.2c423e0
+Selected system profile: /nix/store/ran4ll1cg13rppk6k6nh4spkbzh0c3jk-nixos-system-sleepy-26.11.20260822.2c423e0
+DAILY_SYSTEM_STATUS_OK
+{"ok":true,"generation":168,"checks":[{"capability":"hyprland","status":"available","required":true},{"capability":"lock","status":"available","required":true},{"capability":"network","status":"available","required":false},{"capability":"audio","status":"available","required":false},{"capability":"bluetooth","status":"unavailable","required":false},{"capability":"battery","status":"unsupported","required":false},{"capability":"brightness","status":"available","required":false},{"capability":"power","status":"available","required":false},{"capability":"media","status":"available","required":false},{"capability":"night-light","status":"available","required":false},{"capability":"resources","status":"available","required":false},{"capability":"screenshot","status":"unavailable","required":false},{"capability":"recording","status":"available","required":false}]}
+true
+DAILY_DOCTOR_HEALTHY_WITH_VIRTUAL_AUDIO_OK
+DAILY_KEYRING_STORE_LOOKUP_OK
+ok
+DAILY_SYSTEM_MENU_MAPPED
+DAILY_SYSTEM_MENU_VT_READY
+DAILY_SYSTEM_MENU_READY
+DAILY_SYSTEM_MENU_CANCEL_UNCHANGED_OK
+DAILY_PRESS_PRINT
+DAILY_SELECT_AREA
+DAILY_SAVE_SWAPPY
+DAILY_SCREENSHOT_SAVED_PNG_OK
+ok
+DAILY_SCREENSHOT_VIEWER_OPEN_OK
+DAILY_PRESS_CLIPBOARD
+DAILY_SELECT_CLIPBOARD_AREA
+DAILY_SCREENSHOT_CLIPBOARD_PNG_OK
+DAILY_IDLE_SAMPLE_READY
+DAILY_IDLE_SAMPLE {"cpu_seconds": 0.0, "cpu_ticks": 996, "elapsed_seconds": 0.0, "pid": 20339, "rss_kib": 620080, "start_ticks": 10981, "threads": 33}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 0.4, "cpu_ticks": 1036, "elapsed_seconds": 10.0, "pid": 20339, "rss_kib": 548300, "start_ticks": 10981, "threads": 32}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 0.41, "cpu_ticks": 1037, "elapsed_seconds": 20.0, "pid": 20339, "rss_kib": 547256, "start_ticks": 10981, "threads": 31}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 0.42, "cpu_ticks": 1038, "elapsed_seconds": 30.0, "pid": 20339, "rss_kib": 547452, "start_ticks": 10981, "threads": 31}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 0.44, "cpu_ticks": 1040, "elapsed_seconds": 40.0, "pid": 20339, "rss_kib": 547356, "start_ticks": 10981, "threads": 31}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 0.45, "cpu_ticks": 1041, "elapsed_seconds": 50.0, "pid": 20339, "rss_kib": 547364, "start_ticks": 10981, "threads": 31}
+DAILY_IDLE_SAMPLE {"cpu_seconds": 0.47, "cpu_ticks": 1043, "elapsed_seconds": 60.0, "pid": 20339, "rss_kib": 547432, "start_ticks": 10981, "threads": 31}
+active
+DAILY_IDLE_SHELL_STABLE_OK
+true
+CAPTURE_RETURN_TO_DESKTOP
+true
+true
+CAPTURE_WRONG_OUTPUT_REJECTED_OK
+true
+CAPTURE_RESPONSE_SECONDS 0.005
+Traceback (most recent call last):
+  File "<stdin>", line 6, in <module>
+AssertionError
+GUEST_AUDIT_ERROR line=453 command="$python" - "$uid" "$capture_cancel" <<'CAPTURE_RESPONSIVENESS'
+import json,os,subprocess,sys,time
+uid,job=sys.argv[1:]
+base=['runuser','-u','sleepy','--','env','HOME=/home/sleepy','PATH=/etc/profiles/per-user/sleepy/bin:/home/sleepy/.nix-profile/bin:'+os.environ['PATH'],'XDG_RUNTIME_DIR=/run/user/'+uid,'DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/'+uid+'/bus','sleepyctl']
+for args in [['capture','request',json.dumps({'schemaVersion':1,'command':{'type':'status','jobId':job}})],['doctor','--json']]:
+ start=time.monotonic();result=subprocess.run(base+args,capture_output=True,text=True,timeout=3);elapsed=time.monotonic()-start
+ assert result.returncode==0, result.stderr
+ reply=json.loads(result.stdout)
+ if args[0]=='capture':assert reply['payload']['job']['state']=='awaitingConsent'
+ else:assert 'checks' in reply
+ # Existing endpoint deadline is 2s; allow only bounded CLI startup overhead.
+ assert elapsed<2.5, 'Capture or desktop query blocked behind human consent'
+ print('CAPTURE_RESPONSE_SECONDS '+str(round(elapsed,3)),flush=True)
+CAPTURE_RESPONSIVENESS
+ status=1
+SLEEPY_REPORT_FAILED line=453

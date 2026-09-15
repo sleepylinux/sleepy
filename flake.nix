@@ -9,12 +9,12 @@
     };
 
     sleepy-sdk = {
-      url = "github:sleepylinux/sleepy-sdk/dff28bb596950d862ae5d219e478460dfa13e8f4";
+      url = "github:sleepylinux/sleepy-sdk/c7d7452163d4fdfa000634e2196212a53d8b159f";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
     sleepy-session = {
-      url = "github:sleepylinux/sleepy-session/ca37debffa9d01f1d0c9369a31faf85e88a1198a";
+      url = "github:sleepylinux/sleepy-session/341d69fcb245f41b56e72e8ac89630a5e1b7d4e2";
       inputs = {
         nixpkgs.follows = "nixpkgs";
         sleepy-sdk.follows = "sleepy-sdk";
@@ -27,7 +27,7 @@
     };
 
     sleepy-desktop = {
-      url = "github:sleepylinux/sleepy-desktop/15b8dab9bd2534be7f054e62b6e36cb46fd74a1f";
+      url = "github:sleepylinux/sleepy-desktop/7958ed0587c63f881814dae51110aab007add278";
       inputs = {
         nixpkgs.follows = "nixpkgs";
         sleepy-artwork.follows = "sleepy-artwork";

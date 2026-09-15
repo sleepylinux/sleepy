@@ -57,12 +57,28 @@ system profile; it cannot fix a missing Nix store or an invalid system
 configuration. Diagnostics remain in `/var/log/sleepy-installer.log` on the
 recovery image, so copy them before shutting down if needed.
 
-Guided repair supports only the installer's original two-partition GPT layout:
-first a FAT32 ESP, then Btrfs root. Mounted/busy, changed, encrypted, removable,
-and unrecognized targets are rejected. A complete retained installation can be
+The accepted unencrypted image supports the original two-partition GPT layout:
+first a FAT32 ESP, then Btrfs root. It rejects encrypted targets. Mounted/busy,
+changed, removable and unrecognized targets are rejected in both variants. A complete retained installation can be
 repaired offline. Other layouts require manual diagnosis from **Leave installer**;
 identify partitions with `lsblk -f` and never format them during recovery.
 Do not run repair against the computer hosting a test VM.
+
+## Encrypted recovery under development
+
+This branch also recognizes the installer's ESP plus LUKS2/Btrfs layout.
+**Unlock for boot recovery** asks for the disk passphrase using US keys and
+hidden input. A wrong passphrase returns an error without starting repair.
+Inspection opens a private read-only mapping with Btrfs log replay disabled
+and closes it before displaying the result. **Back** starts no repair. Repair requires the existing disk-path
+confirmation and rechecks the disk identity and retained generation before
+opening a writable mapping. The backend never formats a recovery target.
+
+The passphrase is required again at the next boot, before account login.
+It is not the login password, and recovery cannot bypass a lost disk passphrase.
+If cleanup reports a busy mount, preserve the diagnostics and do not force-close
+its mapper. These encrypted flows have behavioral tests; actual VM unlock,
+unchanged-partition inspection and repaired boot are still pending acceptance.
 
 ## Historical Niri deployment record
 

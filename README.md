@@ -20,7 +20,7 @@ Start with:
 - [runtime ownership and failure semantics](docs/architecture/shell-runtime-integrations.md);
 - [real VM runbook](docs/runbooks/sleepy-vm-hyprland.md);
 - [acceptance record](docs/acceptance/hyprland-sleepy-desktop.md);
-- [active usable-alpha roadmap](docs/roadmaps/installable-alpha.md);
+- [active MVP roadmap and next-agent handoff](docs/roadmaps/installable-alpha.md);
 - [verified daily desktop snapshot and remaining limits](docs/acceptance/usable-alpha.md).
 
 Sleepy Linux is licensed under `GPL-3.0-only`; see [LICENSE](LICENSE).

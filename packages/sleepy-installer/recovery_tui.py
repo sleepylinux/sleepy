@@ -6,7 +6,8 @@ import subprocess
 import signal
 import sys
 
-from tui import Dialog, clean, disk_description, list_disks
+from tui import Dialog, clean, clear_secrets, disk_description, input_step, list_disks
+from backend import encryption_passphrase_valid
 
 
 def command(operation):
@@ -38,12 +39,14 @@ def inspect(request):
 
 
 def restore(dialog, request):
-    process = subprocess.Popen(command('--restore'), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, start_new_session=True)
+    process = None
     gauge = None
     complete = False
     message = 'Repair did not finish; see /var/log/sleepy-installer.log.'
     try:
+        process = subprocess.Popen(command('--restore'), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, start_new_session=True)
         process.stdin.write(json.dumps(request)); process.stdin.close()
+        clear_secrets(request)
         gauge = subprocess.Popen(dialog.command('Restoring boot entries') + ['--gauge', 'Preparing boot repair… Keep the computer powered on.', '12', '76', '0'], stdin=subprocess.PIPE, text=True, env=dialog.env)
         for line in process.stdout:
             event = json.loads(line)
@@ -57,8 +60,10 @@ def restore(dialog, request):
                 except BrokenPipeError: pass
         succeeded = process.wait() == 0 and complete
     finally:
-        stop_process(process)
-        process.stdout.close()
+        clear_secrets(request)
+        if process is not None:
+            stop_process(process)
+            process.stdout.close()
         if gauge is not None:
             try: gauge.stdin.close()
             except BrokenPipeError: pass
@@ -69,18 +74,31 @@ def restore(dialog, request):
 
 def wizard(dialog):
     while True:
+        request = None
         try:
             disks = [disk for disk in list_disks() if disk['eligible']]
             items = [value for disk in disks for value in (disk['path'], disk_description(disk))]
             selected = dialog.ask('Recover Sleepy boot', 'menu',
                 'Inspect an installed Sleepy disk without changing it.\n'
-                'Only the original GPT / EFI / Btrfs layout is supported.\n'
-                'Encrypted disks and other layouts require manual recovery.',
+                'Supports Sleepy GPT / EFI / Btrfs installations, including LUKS2.\n'
+                'Encrypted disks require their disk passphrase (US keyboard).',
                 *items, 'back', 'Return to the installer', default=disks[0]['path'] if disks else 'back')
             if selected in (None, 'back'): return
             disk = next(disk for disk in disks if disk['path'] == selected)
             request = dict(disk=disk['path'], identity=disk['identity'])
             metadata = inspect(request)
+            if metadata.get('encrypted') is True and metadata.get('locked') is True:
+                passphrase = input_step(dialog, 'Unlock for boot recovery',
+                    'Enter the disk passphrase, not your login password.\n\n'
+                    'Use the US keyboard. Your input stays hidden.\n'
+                    'Inspection reads the installed system without changing it.\n'
+                    'Back returns without starting a repair.',
+                    validator=encryption_passphrase_valid, secret=True,
+                    invalid_message='Use 12–128 printable ASCII characters (spaces allowed).')
+                if passphrase is None: continue
+                request['encryption_passphrase'] = passphrase
+                del passphrase
+                metadata = inspect(request)
             retained = metadata['generations']
             generations = ', '.join(str(item['generation']) for item in retained[-12:])
             if len(retained) > 12: generations = '… ' + generations
@@ -106,6 +124,9 @@ def wizard(dialog):
             if restore(dialog, request): return
         except (OSError, ValueError, KeyError, StopIteration, RuntimeError, subprocess.TimeoutExpired) as error:
             dialog.message('Recovery needs attention', clean(error))
+        finally:
+            if request is not None:
+                clear_secrets(request)
 
 
 def main():

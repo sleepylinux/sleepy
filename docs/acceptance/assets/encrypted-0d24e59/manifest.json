@@ -1,0 +1,28 @@
+{
+  "status": "failed",
+  "image_source_revision": "0d24e593a7072c4940115d417aff225ec069146e",
+  "runner_source_revision": "8e96b09be38f58a3ef9bb75879c44f6f40899f23",
+  "scope": "Actual encrypted TUI installation and disk-only initrd boot; explicit wrong-passphrase feedback missing. No authenticated desktop or encrypted recovery acceptance.",
+  "files": [
+    {
+      "file": "result.json",
+      "sha256": "b49f0b06f3ca02d9c188b274bfad70ab523a4ff9a6b950dac6df4c174ec4a823"
+    },
+    {
+      "file": "installer-confirmation.png",
+      "sha256": "07cbc9a78e9e67764ef402e065a23d564993afe37d0e95e78940de636e337867"
+    },
+    {
+      "file": "installer-complete.png",
+      "sha256": "504ea50b77120506135a92017b34cb3ac8268a29cefa089ecbfd78d3b7da4fac"
+    },
+    {
+      "file": "installed-disk-wrong-passphrase.png",
+      "sha256": "0017590274bffefcf1cfb37aa1e240dea80e271dec75535db139ecb559ce4f3a"
+    },
+    {
+      "file": "installed-disk-wrong-passphrase.ocr.txt",
+      "sha256": "b75dff7b6ecbefb2ba2a22f2aee6d8f648810c28bb3ad0e7a6de6d2d69571f63"
+    }
+  ]
+}
