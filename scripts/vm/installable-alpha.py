@@ -127,6 +127,10 @@ class Machine:
                    '-device', 'virtio-serial-pci',
                    '-chardev', f'socket,id=report,path={self.output / "report.sock"},server=on,wait=off',
                    '-device', 'virtserialport,chardev=report,name=org.sleepy.test']
+        if getattr(self, 'daily_usability', False):
+            command += ['-audiodev', 'none,id=audio0', '-device', 'intel-hda',
+                        '-device', 'hda-duplex,audiodev=audio0', '-device', 'qemu-xhci',
+                        '-device', 'usb-tablet']
         if iso: command += ['-cdrom', str(iso), '-boot', 'order=d']
         else: command += ['-boot', 'order=c']
         self.process = subprocess.Popen(command, stdout=self.log, stderr=subprocess.STDOUT)
@@ -456,6 +460,81 @@ printf 'REAL_PASSWORD_LOCK_UNLOCK_OK\n'
         '__LAYOUT_COMPARISON__', '==' if keyboard == 'us' else '!=')
 
 
+def daily_fixture(after_reboot):
+    """Installed default-profile assertions; invoked only by --daily-usability."""
+    common = r'''
+uenv() { runuser -u sleepy -- env HOME=/home/sleepy PATH="/etc/profiles/per-user/sleepy/bin:/home/sleepy/.nix-profile/bin:$PATH" XDG_RUNTIME_DIR=/run/user/$uid DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$uid/bus "$@"; }
+fast_config=/home/sleepy/.config/fastfetch/config.jsonc
+logo=$(jq -er '.logo.source' "$fast_config")
+test -s "$logo"
+case "$logo" in /nix/store/*/share/sleepy-artwork/branding/fastfetch.txt) ;; *) exit 1;; esac
+grep -F 'S L E E P Y' "$logo"
+uenv timeout 20 fastfetch > /tmp/sleepy-alpha-fastfetch.txt
+grep -F 'S L E E P Y' /tmp/sleepy-alpha-fastfetch.txt
+printf 'DAILY_FASTFETCH_ASSET_AND_EXECUTION_OK\n'
+grep -F 'gtk-theme-name=adw-gtk3-dark' /home/sleepy/.config/gtk-3.0/settings.ini
+grep -F 'gtk-icon-theme-name=Papirus-Dark' /home/sleepy/.config/gtk-3.0/settings.ini
+test "$(uenv gsettings get org.gnome.desktop.interface color-scheme)" = "'prefer-dark'"
+printf 'DAILY_GTK_DARK_CONFIG_OK\n'
+# Only doctor summaries enter evidence, never raw desktop payloads.
+set +e
+uenv timeout 5 sleepyctl doctor --json > /tmp/sleepy-alpha-doctor.json
+doctor_status=$?
+set -e
+cat /tmp/sleepy-alpha-doctor.json
+test "$doctor_status" = 0
+jq -e '.ok == true and any(.checks[]; .capability == "audio" and .status == "available")' /tmp/sleepy-alpha-doctor.json
+printf 'DAILY_DOCTOR_HEALTHY_WITH_VIRTUAL_AUDIO_OK\n'
+'''
+    if after_reboot:
+        return common + r'''
+sha256sum -c /var/lib/sleepy-alpha/screenshot.sha256
+printf 'DAILY_SCREENSHOT_PERSISTED_OK\n'
+'''
+    return common + r'''
+wait_daily() {
+  for attempt in $(seq 1 30); do if "$@"; then return 0; fi; sleep 1; done
+  return 1
+}
+picker_visible() { hypr layers -j | jq -e '.. | objects | select(.namespace? == "sleepy-area-picker")' > /dev/null; }
+swappy_visible() { hypr clients -j | jq -e 'any(.[]; (.class | ascii_downcase | contains("swappy")) and .mapped)' > /dev/null; }
+# The host presses Print and selects a rectangle using actual pointer input.
+install -d -m 0700 /var/lib/sleepy-alpha
+uenv mkdir -p /home/sleepy/Pictures/Screenshots
+touch /tmp/sleepy-alpha-before-screenshot
+printf 'DAILY_PRESS_PRINT\n'
+wait_daily picker_visible
+printf 'DAILY_SELECT_AREA\n'
+wait_daily swappy_visible
+printf 'DAILY_SAVE_SWAPPY\n'
+new_png() {
+  screenshot=$(find /home/sleepy/Pictures/Screenshots -maxdepth 1 -name '*.png' -newer /tmp/sleepy-alpha-before-screenshot -print -quit)
+  test -n "$screenshot" && test -s "$screenshot"
+}
+wait_daily new_png
+test "$(od -An -tx1 -N8 "$screenshot" | tr -d ' \n')" = 89504e470d0a1a0a
+sha256sum "$screenshot" > /var/lib/sleepy-alpha/screenshot.sha256
+printf 'DAILY_SCREENSHOT_SAVED_PNG_OK\n'
+# Explicit graphical opening must produce a new mapped client. The screenshot records what actually rendered.
+hypr clients -j | jq '[.[] | .address]' > /tmp/sleepy-alpha-before-open.json
+hypr dispatch exec "xdg-open $screenshot"
+viewer_visible() { hypr clients -j | jq -e --slurpfile before /tmp/sleepy-alpha-before-open.json 'any(.[]; .mapped and (.class | ascii_downcase | contains("imv")) and (.address as $a | $before[0] | index($a) | not))' > /dev/null; }
+wait_daily viewer_visible
+printf 'DAILY_SCREENSHOT_VIEWER_OPEN_OK\n'
+printf 'DAILY_PRESS_CLIPBOARD\n'
+wait_daily picker_visible
+printf 'DAILY_SELECT_CLIPBOARD_AREA\n'
+wayland_display=$(uenv systemctl --user show-environment | sed -n 's/^WAYLAND_DISPLAY=//p')
+test -n "$wayland_display"
+clipboard_png() {
+  uenv env WAYLAND_DISPLAY="$wayland_display" timeout 2 wl-paste --type image/png > /tmp/sleepy-alpha-clipboard.png 2>/dev/null || return 1
+  test "$(od -An -tx1 -N8 /tmp/sleepy-alpha-clipboard.png | tr -d ' \n')" = 89504e470d0a1a0a
+}
+wait_daily clipboard_png
+printf 'DAILY_SCREENSHOT_CLIPBOARD_PNG_OK\n'
+'''
+
+
 def guest_report(machine, password, stage, after_reboot=False, update_phase=None, final=False):
     """Authenticate on a real VT, then explicitly sudo fixed disposable-VM checks."""
     machine.qmp.keys('ctrl', 'alt', 'f2')
@@ -549,7 +628,7 @@ runuser -u sleepy -- mkdir -p /home/sleepy/.config/sleepy
 runuser -u sleepy -- sh -c 'printf sleepy-alpha-state > /home/sleepy/.config/sleepy/alpha-persistence'
 sync
 printf 'PERSISTENCE_MARKER_WRITTEN\n'
-''') + lock_fixture(getattr(machine, 'keyboard', 'us')) + update_fixture(update_phase) + (r'''
+''') + lock_fixture(getattr(machine, 'keyboard', 'us')) + (daily_fixture(after_reboot) if getattr(machine, 'daily_usability', False) else '') + update_fixture(update_phase) + (r'''
 cp -p /var/lib/sleepy-alpha/hypr-user.before /home/sleepy/.config/hypr/sleepy-user.conf
 hypr reload
 printf 'USER_SETTING_FIXTURE_RESTORED_OK\n'
@@ -566,6 +645,7 @@ printf 'SLEEPY_REPORT_COMPLETE\n'
     machine.qmp.text(password + '\n')
     channel.sendall(script.encode())
     report = b''
+    daily_sent = set()
     lock_desktop_shown = False
     lock_input_sent = False
     lock_returned_to_console = False
@@ -591,6 +671,36 @@ printf 'SLEEPY_REPORT_COMPLETE\n'
                 machine.screen(f'{stage}-unlocked')
                 machine.qmp.keys('ctrl', 'alt', 'f2')
                 lock_returned_to_console = True
+            if getattr(machine, 'daily_usability', False):
+                for marker, action in [
+                    (b'DAILY_PRESS_PRINT', 'print'),
+                    (b'DAILY_SELECT_AREA', 'select'),
+                    (b'DAILY_SAVE_SWAPPY', 'save'),
+                    (b'DAILY_PRESS_CLIPBOARD', 'clipboard'),
+                    (b'DAILY_SELECT_CLIPBOARD_AREA', 'select-clipboard'),
+                ]:
+                    if marker not in report or marker in daily_sent: continue
+                    daily_sent.add(marker)
+                    machine.qmp.keys('ctrl', 'alt', 'f1')
+                    time.sleep(1)
+                    machine.screen(f'{stage}-{action}-before')
+                    if action in ('print', 'clipboard'):
+                        if action == 'clipboard': machine.qmp.keys('shift', 'print')
+                        else: machine.qmp.keys('print')
+                    elif action == 'save':
+                        machine.qmp.keys('ctrl', 's')
+                    else:
+                        for x, y, down in [(10000, 10000, True), (23000, 23000, False)]:
+                            machine.qmp.call('input-send-event', events=[
+                                {'type': 'abs', 'data': {'axis': 'x', 'value': x}},
+                                {'type': 'abs', 'data': {'axis': 'y', 'value': y}},
+                                {'type': 'btn', 'data': {'button': 'left', 'down': down}},
+                            ])
+                            time.sleep(.3)
+                if b'DAILY_SCREENSHOT_CLIPBOARD_PNG_OK' in report and 'finished' not in daily_sent:
+                    daily_sent.add('finished')
+                    machine.screen(f'{stage}-daily-screenshot-viewer')
+                    machine.qmp.keys('ctrl', 'alt', 'f2')
             if len(report) > 1024 * 1024: raise RuntimeError('Guest audit exceeded 1 MiB output bound')
     finally:
         channel.close()
@@ -643,6 +753,7 @@ def main():
     parser.add_argument('--install-timeout', type=int, default=10800)
     parser.add_argument('--interrupt-install', action='store_true', help='Before visible TUI installation, interrupt a real disposable-disk install after mounting and verify cleanup')
     parser.add_argument('--keyboard', choices=('us', 'ru', 'de', 'cz'), default='us', help='Select the installed keyboard through the real TUI and test lock-screen switching')
+    parser.add_argument('--daily-usability', action='store_true', help='Verify installed daily defaults, real Print save/clipboard and PNG persistence; adds virtual audio')
     parser.add_argument('--update-safety', action='store_true', help='Also test failed rebuild boot safety, boot a second generation, then rollback and boot the original')
     parser.add_argument('--pause-at-greeter', action='store_true', help='Pause and release QMP before first graphical login for field inspection; see printed continuation instructions')
     parser.add_argument('--cache-url', help='Optional signed binary cache reachable inside VM (e.g. http://10.0.2.2:8080)')
@@ -675,6 +786,8 @@ def main():
     machine = Machine(output, args.firmware.resolve(), args.memory, acceleration)
     machine.pause_at_greeter = args.pause_at_greeter
     machine.keyboard = args.keyboard
+    machine.daily_usability = args.daily_usability
+    result['daily_usability'] = args.daily_usability
     result['keyboard'] = args.keyboard
     try:
         print('Booting installer and driving the visible tty1 TUI.', flush=True)
@@ -739,6 +852,15 @@ def main():
             if check not in result['completed']: result['completed'].append(check)
         # Preserve verified substeps even if a later update or reboot gate fails.
         markers = {
+            **{f'DAILY_{key}_OK': value for key, value in {
+                'FASTFETCH_ASSET_AND_EXECUTION': 'daily-fastfetch',
+                'GTK_DARK_CONFIG': 'daily-gtk-dark-config',
+                'DOCTOR_HEALTHY_WITH_VIRTUAL_AUDIO': 'daily-doctor-with-virtual-audio',
+                'SCREENSHOT_SAVED_PNG': 'daily-Print-saved-PNG',
+                'SCREENSHOT_VIEWER_OPEN': 'daily-screenshot-viewer-open',
+                'SCREENSHOT_CLIPBOARD_PNG': 'daily-ShiftPrint-clipboard-PNG',
+                'SCREENSHOT_PERSISTED': 'daily-screenshot-persistence',
+            }.items()},
             'REAL_PASSWORD_LOCK_UNLOCK_OK': 'real-password-lock-unlock',
             'LOCK_SCREEN_LAYOUT_SWITCH_OK': 'lock-screen-layout-switch',
             'REAL_USER_LOGIN_OK': 'real-password-login',
