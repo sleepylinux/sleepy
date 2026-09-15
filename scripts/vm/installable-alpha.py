@@ -548,15 +548,13 @@ grep -F 'S L E E P Y' /tmp/sleepy-alpha-fastfetch.txt
 printf 'DAILY_FASTFETCH_ASSET_AND_EXECUTION_OK\n'
 grep -F 'gtk-theme-name=adw-gtk3-dark' /home/sleepy/.config/gtk-3.0/settings.ini
 grep -F 'gtk-icon-theme-name=Papirus-Dark' /home/sleepy/.config/gtk-3.0/settings.ini
-# Home Manager retains dconf in the activation closure, not necessarily PATH.
-# Resolve an installed tool without fetching packages, then read the user's DB.
-dconf_tools=()
-while IFS= read -r store_path; do
-  if test -x "$store_path/bin/dconf"; then dconf_tools+=("$store_path/bin/dconf"); fi
-done < <(nix-store --query --requisites /run/current-system)
-test "${#dconf_tools[@]}" -eq 1
-dconf_tool=${dconf_tools[0]}
-test "$(uenv env XDG_CONFIG_HOME=/home/sleepy/.config "$dconf_tool" read /org/gnome/desktop/interface/color-scheme)" = "'prefer-dark'"
+# The installed system exports dconf. Query the actual user's database with
+# the graphical session's data paths, not sudo's root Flatpak environment.
+dconf_tool=/run/current-system/sw/bin/dconf
+test -x "$dconf_tool"
+session_data_dirs=$(uenv systemctl --user show-environment | sed -n 's/^XDG_DATA_DIRS=//p')
+test -n "$session_data_dirs"
+test "$(uenv env XDG_CONFIG_HOME=/home/sleepy/.config XDG_DATA_DIRS="$session_data_dirs" "$dconf_tool" read /org/gnome/desktop/interface/color-scheme)" = "'prefer-dark'"
 printf 'DAILY_GTK_DARK_CONFIG_OK\n'
 uenv timeout 5 sleepy-system status > /tmp/sleepy-alpha-system-status.txt
 grep -Fx "Current system: $(readlink -e /run/current-system)" /tmp/sleepy-alpha-system-status.txt
