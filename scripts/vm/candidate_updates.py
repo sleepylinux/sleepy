@@ -9,6 +9,7 @@ import inspect
 import json
 from pathlib import Path
 import re
+import shlex
 import stat
 import subprocess
 
@@ -80,6 +81,12 @@ def marker_processes(marker, proc=Path('/proc')):
     return matches
 
 
+def builder_command(marker, bash):
+    # Coreutils may dispatch by argv[0], so the marker belongs to Bash. The
+    # trailing builtin prevents Bash from replacing itself with multicall sleep.
+    return 'exec -a ' + shlex.quote(marker) + ' ' + shlex.quote(bash) + " -c 'sleep 600; :'"
+
+
 def interrupt_build(state, marker):
     """Interrupt only after observing this attempt's actual controlled builder."""
     assert not marker_processes(marker), 'controlled builder already exists'
@@ -115,7 +122,8 @@ def interrupt_build(state, marker):
                 except subprocess.TimeoutExpired:
                     process.kill()
                     process.wait(timeout=5)
-    print(output_path.read_text()[-65536:], end='', flush=True)
+            output.flush()
+            print(output_path.read_text()[-65536:], end='', flush=True)
 
 
 def guest(phase, revision, nar_hash):
@@ -197,7 +205,7 @@ def guest(phase, revision, nar_hash):
 
         build_marker = 'SLEEPY_CANDIDATE_BUILD_' + uuid.uuid4().hex
         controlled_build = ("system.extraDependencies = [ (pkgs.runCommand \"sleepy-candidate-interrupt\" {} ''"
-                            + "exec -a " + build_marker + " sleep 600\n'' ) ];")
+                            + builder_command(build_marker, "${pkgs.bash}/bin/bash") + "\n'' ) ];")
         with temporary_configuration(config, controlled_build):
             interrupt_build(state, build_marker)
         unchanged_after_failed_prepare()
@@ -272,7 +280,7 @@ def fixture(phase, revision, nar_hash):
     validate(revision, nar_hash)
     if phase not in ('prepare', 'rollback', 'verify'):
         raise ValueError('unknown candidate phase')
-    program = 'import base64, contextlib, hashlib, json, os, stat, subprocess, time, uuid\nfrom pathlib import Path\n'
-    program += '\n'.join(inspect.getsource(function) for function in (tree_state, temporary_configuration, marker_processes, interrupt_build, guest))
+    program = 'import base64, contextlib, hashlib, json, os, shlex, stat, subprocess, time, uuid\nfrom pathlib import Path\n'
+    program += '\n'.join(inspect.getsource(function) for function in (tree_state, temporary_configuration, marker_processes, builder_command, interrupt_build, guest))
     program += '\nguest(' + ', '.join(repr(x) for x in (phase, revision, nar_hash)) + ')\n'
     return '\n"$python" - <<\'SLEEPY_CANDIDATE_PY\'\n' + program + 'SLEEPY_CANDIDATE_PY\n'

@@ -134,11 +134,11 @@ class CandidateProtocol(unittest.TestCase):
             root = Path(directory)
             marker = 'SLEEPY_TEST_' + os.urandom(12).hex()
             worker = (
-                'import signal,subprocess,sys,time\n'
+                'import os,signal,subprocess,sys,time\n'
                 'time.sleep(0.4)\n'
-                "child=subprocess.Popen(['bash','-c','exec -a \"$1\" sleep 10','bash',sys.argv[1]])\n"
+                "child=subprocess.Popen(['bash','-c',sys.argv[1]], start_new_session=True)\n"
                 'def stop(*_):\n'
-                ' child.terminate(); child.wait(timeout=2); sys.exit(1)\n'
+                ' os.killpg(child.pid,signal.SIGTERM); child.wait(timeout=2); sys.exit(1)\n'
                 'signal.signal(signal.SIGTERM, stop)\n'
                 'child.wait()\n')
             original_popen = subprocess.Popen
@@ -146,7 +146,7 @@ class CandidateProtocol(unittest.TestCase):
             def spawn(argv, **kwargs):
                 self.assertEqual(argv, ['sleepy-update', 'prepare', 'vm-reviewed'])
                 self.assertFalse('env' in kwargs, 'must preserve the ordinary backend environment')
-                child = original_popen([sys.executable, '-c', worker, marker], **kwargs)
+                child = original_popen([sys.executable, '-c', worker, m.builder_command(marker, '/bin/bash')], **kwargs)
                 children.append(child)
                 return child
             started = time.monotonic()
@@ -156,6 +156,25 @@ class CandidateProtocol(unittest.TestCase):
             self.assertEqual(len(children), 1)
             self.assertEqual(children[0].returncode, 1)
             self.assertEqual(m.marker_processes(marker), set())
+
+    def test_controlled_builder_uses_shell_as_argv0_carrier(self):
+        m = self.module()
+        self.assertTrue(hasattr(m, 'builder_command'), 'fixed controlled builder command missing')
+        marker = 'SLEEPY_TEST_' + os.urandom(12).hex()
+        command = m.builder_command(marker, '/bin/bash')
+        process = subprocess.Popen(['/bin/bash', '-c', command], start_new_session=True)
+        try:
+            deadline = time.monotonic() + 3
+            while process.pid not in m.marker_processes(marker) and time.monotonic() < deadline:
+                time.sleep(0.05)
+            self.assertIn(process.pid, m.marker_processes(marker))
+            with Path('/proc', str(process.pid), 'cmdline').open('rb') as stream:
+                self.assertEqual(stream.read(1024).split(b'\0')[:3], [marker.encode(), b'-c', b'sleep 600; :'])
+        finally:
+            import signal
+            os.killpg(process.pid, signal.SIGTERM)
+            process.wait(timeout=3)
+        self.assertEqual(m.marker_processes(marker), set())
 
     def test_process_observer_requires_exact_first_cmdline_field(self):
         m = self.module()
