@@ -9,11 +9,13 @@ The root integration pins this exact reviewed public component graph:
 | `sleepy-sdk` | `dff28bb596950d862ae5d219e478460dfa13e8f4` |
 | `sleepy-session` | `4d48082a0ff22cfefa6ebd007f41b6192709aa27` |
 | `sleepy-artwork` | `ac3feed1e81b4e74a84a326c1f53f3ddaf94aa3e` |
-| `sleepy-desktop` | `008d8bc662c6b10045a24a4bd05f0852837fa5e9` |
+| `sleepy-desktop` | `815b403b5016a41027b396b0c5efac6a5160cb6e` |
 
 The generated `flake.lock` SHA-256 is
-`a9ac297f16f511b7f78b73219b6b75f9eef304b0f7263cf21ab3302f7e84f009`. This candidate includes the SDK UTF-8 fix, deterministic session process tests,
-consistent Hyprland command readback deadlines, and the native locker unlock fix.
+`a35098283643522723fbd8f4dca6fe25e665bb458f19130b0758f5c9ab4cadb3`. This candidate includes the SDK UTF-8 fix, deterministic session process tests,
+consistent Hyprland command readback deadlines, and the native locker unlock fix. The current desktop adds a dark native lock
+view and hides optional panels without data; its offscreen QML checks pass,
+while actual installed-VM visual acceptance of this revision is pending.
 Component review and CI are tracked in
 [SDK PR #8](https://github.com/sleepylinux/sleepy-sdk/pull/8),
 [session PR #9](https://github.com/sleepylinux/sleepy-session/pull/9), and
