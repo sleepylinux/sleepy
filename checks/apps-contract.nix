@@ -21,6 +21,7 @@
           programs.ghostty.settings.background = "202020";
           programs.fuzzel.settings.main.width = 42;
           programs.swappy.settings.Default.save_dir = "/fixture/Captures";
+          xdg.mimeApps.defaultApplications."image/png" = ["fixture-viewer.desktop"];
           gtk.theme.name = "Fixture GTK theme";
           gtk.iconTheme.name = "Fixture icons";
           dconf.settings."org/gnome/desktop/interface".color-scheme = "default";
@@ -32,6 +33,7 @@
       modules = [
         {
           programs.fastfetch.enable = false;
+          programs.imv.enable = false;
           gtk.enable = false;
         }
       ];
@@ -80,6 +82,13 @@
     swappyFilenamePreserved = overridden.programs.swappy.settings.Default.save_filename_format == standaloneHomeConfig.programs.swappy.settings.Default.save_filename_format;
     swappyUsesPicturesDirectory = customPictures.programs.swappy.settings.Default.save_dir == "/fixture/Pictures/Screenshots";
     swappyNullPicturesFallback = withoutPictures.programs.swappy.settings.Default.save_dir == "${standaloneHomeConfig.home.homeDirectory}/Pictures/Screenshots";
+    imageViewerDefault = standaloneHomeConfig.programs.imv.enable && standaloneHomeConfig.xdg.mimeApps.defaultApplications."image/png" == ["imv.desktop"];
+    imageViewerOverride = overridden.xdg.mimeApps.defaultApplications."image/png" == ["fixture-viewer.desktop"];
+    imageViewerDisableRemovesMimeDefault = !(disabled.xdg.mimeApps.defaultApplications ? "image/png");
+    imageViewerDisableRemovesPackage =
+      !(builtins.elem
+        (toString standaloneHomeConfig.programs.imv.package)
+        (map toString disabled.home.packages));
   };
 in
   assert pkgs.lib.all
