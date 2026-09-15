@@ -140,7 +140,7 @@ def describe_disk(node, swaps):
 
 
 def list_disks():
-    payload = json.loads(run(['lsblk', '--json', '--bytes', '--paths', '--properties-by', 'blkid', '--output',
+    payload = json.loads(run(['lsblk', '--json', '--tree', '--bytes', '--paths', '--properties-by', 'blkid', '--output',
                             'PATH,TYPE,SIZE,RO,RM,MAJ:MIN,MODEL,SERIAL,WWN,MOUNTPOINTS,UUID,PARTUUID,PTUUID,FSTYPE']))
     swaps = set()
     for line in Path('/proc/swaps').read_text().splitlines()[1:]:

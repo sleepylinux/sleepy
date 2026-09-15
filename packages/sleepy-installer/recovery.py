@@ -106,7 +106,7 @@ def inspect_installation(root):
 
 def partition_layout(data):
     backend.verify_target(data)
-    result = json.loads(backend.run(['lsblk', '--json', '--paths', '--properties-by', 'blkid', '--output',
+    result = json.loads(backend.run(['lsblk', '--json', '--tree', '--paths', '--properties-by', 'blkid', '--output',
         'PATH,TYPE,FSTYPE,PARTTYPE,PTTYPE,UUID', data['disk']]))
     nodes = result.get('blockdevices', [])
     if len(nodes) != 1 or nodes[0].get('path') != data['disk'] or nodes[0].get('pttype') != 'gpt':

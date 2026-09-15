@@ -1,6 +1,6 @@
 {pkgs, ...}:
 pkgs.runCommand "sleepy-installer-tests" {
-  nativeBuildInputs = [pkgs.python3 pkgs.dialog];
+  nativeBuildInputs = [pkgs.python3 pkgs.dialog pkgs.util-linux];
   SLEEPY_ZONEINFO = "${pkgs.tzdata}/share/zoneinfo";
   PYTHONTZPATH = "${pkgs.tzdata}/share/zoneinfo";
 } ''
