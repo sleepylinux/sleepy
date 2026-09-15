@@ -64,16 +64,19 @@ remove disposable disks, credentials and the task-owned builder after validation
    Quickshell screencopy and Swappy. The separate SDK capture action expects an
    unimplemented legacy helper. A separate opt-in capture v1 endpoint now has
    typed asynchronous jobs, cancellation and bounded temporary PNG publication;
-   session and SDK changes have passed full CI and merged. The existing picker supplies
+   session and SDK changes passed full CI and merged. The existing picker supplies
    visible region consent through an anonymous image descriptor. Native writer,
    QML lifecycle, real daemon shutdown and production packaging checks pass.
-   Desktop component CI is green; a fresh `f279883` installer VM is running,
-   so installed-VM capture acceptance remains pending. Keep legacy doctor honest and
+   Image `f279883` installed and booted without ISO, but capture acceptance
+   failed: one run returned an unexplained doctor error; a second reproduced
+   Escape failure after a VT roundtrip. The capture service now inherits the
+   existing Qt focus fix, pending rebuilt-image verification. Keep both failed
+   reports in `docs/acceptance/assets/capture-f279883`. Keep legacy doctor honest and
    do not alias its status to the Print picker.
 3. **Encryption and public distribution.** The separate encrypted-install
    branch implements optional LUKS2/Btrfs, hidden TUI passphrase entry and
    generated initrd configuration with a US keyboard. The full packaged installer suite, including real lsblk and ncurses,
-   passes (90 passed, one root-only skip); generated NixOS configuration
+   passes (92 passed, one root-only skip); generated NixOS configuration
    evaluates. Guided encrypted recovery implements read-only inspection and
    separately confirmed repair. Actual install/unlock/reboot/recovery
    acceptance remains pending. These checks do not

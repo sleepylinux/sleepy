@@ -51,16 +51,22 @@ in {
           Type = "notify";
           NotifyAccess = "main";
           ExecStart = "${config.sleepy.sessionPackage}/bin/sleepy-sessiond";
-          Environment = [
-            "PATH=${sessionRuntimePath}"
-            "SLEEPY_LOCKER_SOCKET=%t/sleepy/locker.sock"
-            "SLEEPY_NOTIFICATION_BUS_OWNER=shell"
-            "SLEEPY_CAPTURE_ENABLE=${
-              if config.sleepy.capture.enable
-              then "1"
-              else "0"
-            }"
-          ];
+          Environment =
+            [
+              "PATH=${sessionRuntimePath}"
+              "SLEEPY_LOCKER_SOCKET=%t/sleepy/locker.sock"
+              "SLEEPY_NOTIFICATION_BUS_OWNER=shell"
+              "SLEEPY_CAPTURE_ENABLE=${
+                if config.sleepy.capture.enable
+                then "1"
+                else "0"
+              }"
+            ]
+            ++ lib.optionals config.sleepy.capture.enable [
+              # The consent helper is a Qt Wayland client launched by this service.
+              # Preserve keyboard focus after a VT roundtrip, as for shell/locker.
+              "LD_LIBRARY_PATH=${pkgs.sleepy-qt-wayland-focus}/lib"
+            ];
           Restart = "on-failure";
           RestartSec = 2;
           RuntimeDirectory = "sleepy";
