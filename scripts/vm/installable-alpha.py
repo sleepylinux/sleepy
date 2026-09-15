@@ -133,8 +133,13 @@ class Machine:
                         '-device', 'usb-tablet']
         if iso: command += ['-cdrom', str(iso), '-boot', 'order=d']
         else: command += ['-boot', 'order=c']
+        offline_start = getattr(self, 'flatpak_recovery', False) and phase == 'installed'
+        if offline_start: command += ['-S']
         self.process = subprocess.Popen(command, stdout=self.log, stderr=subprocess.STDOUT)
         self.qmp = QMP(self.output / 'qmp.sock')
+        if offline_start:
+            self.qmp.call('set_link', name='nic0', up=False)
+            self.qmp.call('cont')
         return self
 
     def stop(self):
@@ -306,6 +311,10 @@ def install(machine, password, timeout, cache_url=None, cache_public_key=None, i
                 for _ in range(('us', 'ru', 'de', 'cz').index(keyboard)):
                     machine.qmp.keys('down')
                 machine.screen('installer-keyboard-selected')
+            if screenshot == 'installer-options' and getattr(machine, 'flatpak_recovery', False):
+                for _ in range(3): machine.qmp.keys('down')
+                machine.qmp.keys('spc')
+                machine.screen('installer-flatpak-selected')
             machine.qmp.text(value + '\n')
         machine.wait_screen('One last check', 'installer-confirmation')
         machine.qmp.text('/dev/vda\n')
@@ -460,6 +469,51 @@ printf 'REAL_PASSWORD_LOCK_UNLOCK_OK\n'
         '__LAYOUT_COMPARISON__', '==' if keyboard == 'us' else '!=')
 
 
+def flatpak_fixture(after_reboot):
+    """Public Flathub registration through the installed timer, without mocks."""
+    if after_reboot:
+        return r'''
+flatpak remotes --system --columns=name,url | grep -E '^flathub[[:space:]]+https://dl.flathub.org/repo/$'
+printf 'FLATPAK_REMOTE_PERSISTED_OK\n'
+'''
+    return r'''
+systemctl is-active multi-user.target
+usystem is-active graphical-session.target
+! flatpak remotes --system --columns=name | grep -Fx flathub
+# NIC has been down since before guest firmware execution. Wait for the real
+# registration attempt to fail, without shortening its production timeout.
+registration_failed=false
+for attempt in $(seq 1 60); do
+  if systemctl is-failed --quiet sleepy-flathub.service; then registration_failed=true; break; fi
+  sleep 1
+done
+test "$registration_failed" = true
+systemctl is-active multi-user.target
+usystem is-active graphical-session.target
+printf 'FLATPAK_OFFLINE_DESKTOP_AND_FAILED_REGISTRATION_OK\n'
+printf 'FLATPAK_ENABLE_NETWORK\n'
+# Natural five-minute timer; never manually start/restart the service here.
+registered=false
+for attempt in $(seq 1 210); do
+  if systemctl is-active --quiet sleepy-flathub.service && flatpak remotes --system --columns=name,url | grep -Eq '^flathub[[:space:]]+https://dl.flathub.org/repo/$'; then registered=true; break; fi
+  sleep 2
+done
+journalctl -b -u sleepy-flathub.service --no-pager -n 30
+test "$registered" = true
+printf 'FLATPAK_REAL_FLATHUB_TIMER_RECOVERY_OK\n'
+hypr dispatch exec gnome-software
+software_open=false
+for attempt in $(seq 1 30); do
+  if hypr clients -j | jq -e 'any(.[]; .mapped and (.class | ascii_downcase | contains("gnome.software")))' > /dev/null; then software_open=true; break; fi
+  sleep 1
+done
+test "$software_open" = true
+printf 'FLATPAK_SOFTWARE_WINDOW_OK\n'
+# Application installation is a separate manual GUI acceptance step. This
+# marker asserts only the mapped Software window, not a downloaded application.
+'''
+
+
 def daily_fixture(after_reboot):
     """Installed default-profile assertions; invoked only by --daily-usability."""
     common = r'''
@@ -547,6 +601,9 @@ def guest_report(machine, password, stage, after_reboot=False, update_phase=None
     machine.wait_screen('SLEEPY_AUTH_OK', f'{stage}-authenticated')
     channel = socket.socket(socket.AF_UNIX)
     audit_timeout = 1800 if update_phase else 180
+    if getattr(machine, 'flatpak_recovery', False) and not after_reboot:
+        # One production attempt (60s), natural retry (420s), Software (30s).
+        audit_timeout += 510
     channel.settimeout(audit_timeout)
     channel.connect(str(machine.output / 'report.sock'))
     script = r'''#!/usr/bin/env bash
@@ -628,7 +685,7 @@ runuser -u sleepy -- mkdir -p /home/sleepy/.config/sleepy
 runuser -u sleepy -- sh -c 'printf sleepy-alpha-state > /home/sleepy/.config/sleepy/alpha-persistence'
 sync
 printf 'PERSISTENCE_MARKER_WRITTEN\n'
-''') + lock_fixture(getattr(machine, 'keyboard', 'us')) + (daily_fixture(after_reboot) if getattr(machine, 'daily_usability', False) else '') + update_fixture(update_phase) + (r'''
+''') + (flatpak_fixture(after_reboot) if getattr(machine, 'flatpak_recovery', False) else '') + lock_fixture(getattr(machine, 'keyboard', 'us')) + (daily_fixture(after_reboot) if getattr(machine, 'daily_usability', False) else '') + update_fixture(update_phase) + (r'''
 cp -p /var/lib/sleepy-alpha/hypr-user.before /home/sleepy/.config/hypr/sleepy-user.conf
 hypr reload
 printf 'USER_SETTING_FIXTURE_RESTORED_OK\n'
@@ -671,6 +728,14 @@ printf 'SLEEPY_REPORT_COMPLETE\n'
                 machine.screen(f'{stage}-unlocked')
                 machine.qmp.keys('ctrl', 'alt', 'f2')
                 lock_returned_to_console = True
+            if b'FLATPAK_ENABLE_NETWORK' in report and 'network-enabled' not in daily_sent:
+                daily_sent.add('network-enabled')
+                machine.qmp.call('set_link', name='nic0', up=True)
+            if b'FLATPAK_SOFTWARE_WINDOW_OK' in report and 'software-shown' not in daily_sent:
+                daily_sent.add('software-shown')
+                machine.qmp.keys('ctrl', 'alt', 'f1')
+                time.sleep(2)
+                machine.screen(f'{stage}-software')
             if getattr(machine, 'daily_usability', False):
                 for marker, action in [
                     (b'DAILY_PRESS_PRINT', 'print'),
@@ -753,6 +818,7 @@ def main():
     parser.add_argument('--install-timeout', type=int, default=10800)
     parser.add_argument('--interrupt-install', action='store_true', help='Before visible TUI installation, interrupt a real disposable-disk install after mounting and verify cleanup')
     parser.add_argument('--keyboard', choices=('us', 'ru', 'de', 'cz'), default='us', help='Select the installed keyboard through the real TUI and test lock-screen switching')
+    parser.add_argument('--flatpak-recovery', action='store_true', help='Select Flatpak in TUI; prove offline first desktop and real Flathub timer recovery, then launch Software')
     parser.add_argument('--daily-usability', action='store_true', help='Verify installed daily defaults, real Print save/clipboard and PNG persistence; adds virtual audio')
     parser.add_argument('--update-safety', action='store_true', help='Also test failed rebuild boot safety, boot a second generation, then rollback and boot the original')
     parser.add_argument('--pause-at-greeter', action='store_true', help='Pause and release QMP before first graphical login for field inspection; see printed continuation instructions')
@@ -787,6 +853,8 @@ def main():
     machine.pause_at_greeter = args.pause_at_greeter
     machine.keyboard = args.keyboard
     machine.daily_usability = args.daily_usability
+    machine.flatpak_recovery = args.flatpak_recovery
+    result['flatpak_recovery'] = args.flatpak_recovery
     result['daily_usability'] = args.daily_usability
     result['keyboard'] = args.keyboard
     try:
@@ -852,6 +920,10 @@ def main():
             if check not in result['completed']: result['completed'].append(check)
         # Preserve verified substeps even if a later update or reboot gate fails.
         markers = {
+            'FLATPAK_OFFLINE_DESKTOP_AND_FAILED_REGISTRATION_OK': 'flatpak-offline-first-desktop',
+            'FLATPAK_REAL_FLATHUB_TIMER_RECOVERY_OK': 'flatpak-real-Flathub-timer-recovery',
+            'FLATPAK_SOFTWARE_WINDOW_OK': 'flatpak-Software-window',
+            'FLATPAK_REMOTE_PERSISTED_OK': 'flatpak-remote-persistence',
             **{f'DAILY_{key}_OK': value for key, value in {
                 'FASTFETCH_ASSET_AND_EXECUTION': 'daily-fastfetch',
                 'GTK_DARK_CONFIG': 'daily-gtk-dark-config',
