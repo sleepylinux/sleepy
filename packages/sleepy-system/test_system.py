@@ -14,6 +14,11 @@ class SystemTools(unittest.TestCase):
         self.bin = self.root / 'bin'
         self.bin.mkdir()
         self.calls = self.root / 'calls'
+        self.profiles = self.root / 'profiles'
+        self.profiles.mkdir()
+        self.profile = self.profiles / 'system'
+        (self.profiles / 'system-12-link').symlink_to('/nix/store/test-system')
+        self.profile.symlink_to('system-12-link')
         self.env = dict(os.environ, PATH=str(self.bin) + ':' + os.environ['PATH'],
                         HOME=str(self.root), XDG_STATE_HOME=str(self.root / 'state'),
                         CALLS=str(self.calls), REBUILD_STATUS='0')
@@ -27,7 +32,7 @@ case "$*" in
  *--yesno*) exit "${CONFIRM_STATUS:-0}";;
 esac''')
         self.script = self.root / 'sleepy-system'
-        self.script.write_text(SOURCE.read_text().replace('@rebuild@', str(self.bin / 'nixos-rebuild')).replace('@dialogrc@', '/test/dialogrc'))
+        self.script.write_text(SOURCE.read_text().replace('@rebuild@', str(self.bin / 'nixos-rebuild')).replace('@dialogrc@', '/test/dialogrc').replace('/nix/var/nix/profiles/system', str(self.profile)))
 
     def command(self, name, body):
         p = self.bin / name
@@ -57,7 +62,7 @@ esac''')
 
     def test_generations_stays_read_only(self):
         self.assertEqual(self.run_tool('generations').returncode, 0)
-        self.assertIn('nix-env --list-generations -p /nix/var/nix/profiles/system', self.calls_text())
+        self.assertNotIn('nix-env', self.calls_text())
         self.assertNotIn('sudo', self.calls_text())
 
     def test_failed_rebuild_preserves_status_and_private_diagnostics(self):
@@ -108,6 +113,39 @@ esac''')
         self.assertIn('nixos-system-sleepy', calls)
         self.assertIn('aaaaaaaa', calls)
         self.assertIn('bbbbbbbb', calls)
+
+    @unittest.skipIf(os.geteuid() == 0, 'requires an actual unprivileged UID')
+    def test_generations_read_root_style_readonly_profile_without_lock(self):
+        # Use real readlink/stat/date and actual filesystem permission denial.
+        (self.bin / 'readlink').unlink()
+        (self.profiles / 'system-2-link').symlink_to('/nix/store/older-system')
+        (self.profiles / 'system-bogus-link').symlink_to('/nix/store/ignore')
+        (self.profiles / 'system-9-link').write_text('not a generation symlink')
+        os.utime(self.profiles / 'system-2-link', (1700000000, 1700000000), follow_symlinks=False)
+        os.utime(self.profiles / 'system-12-link', (1700000100, 1700000100), follow_symlinks=False)
+        lock = self.profiles / 'system.lock'
+        lock.write_text('unchanged')
+        lock.chmod(0o444)
+        self.profiles.chmod(0o555)
+        self.addCleanup(self.profiles.chmod, 0o755)
+        with self.assertRaises(PermissionError):
+            lock.open('w')
+        # Model the observed old nix-env attempt with real denied lock access.
+        self.command('nix-env', 'while test "$#" -gt 0; do if test "$1" = -p; then shift; : > "$1.lock"; exit; fi; shift; done')
+        before = {p.name: p.lstat().st_mtime_ns for p in self.profiles.iterdir()}
+        result = self.run_tool('generations', TZ='UTC')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        rows = result.stdout.strip().splitlines()
+        self.assertEqual([r.split()[0] for r in rows], ['2', '12'])
+        self.assertIn('2023-11-14 22:13:20', rows[0])
+        self.assertNotIn('(current)', rows[0])
+        self.assertIn('(current)', rows[1])
+        menu = self.run_tool('menu', CHOICE='generations', TZ='UTC')
+        self.assertEqual(menu.returncode, 0, menu.stderr)
+        self.assertIn('(current)', self.calls_text())
+        self.assertEqual({p.name: p.lstat().st_mtime_ns for p in self.profiles.iterdir()}, before)
+        self.assertEqual(lock.read_text(), 'unchanged')
+        self.assertNotIn('sudo', self.calls_text())
 
     def test_unknown_command_rejected_without_mutation(self):
         self.assertEqual(self.run_tool('arbitrary-command').returncode, 2)

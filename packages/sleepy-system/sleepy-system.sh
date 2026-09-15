@@ -30,6 +30,30 @@ system_status() {
   done
 }
 
+list_generations() {
+  local profile=/nix/var/nix/profiles/system
+  local directory entry generation selected timestamp marker
+  directory=${profile%/*}
+  if ! test -r "$directory" || ! test -x "$directory"; then
+    printf 'Cannot read saved system generations.\n' >&2
+    return 1
+  fi
+  selected=$(readlink "$profile") || selected=
+  # nix-env --list-generations takes a write lock on the system profile.
+  # Reading the generation symlinks needs no lock or administrative privilege.
+  for entry in "$profile"-*-link; do
+    test -L "$entry" || continue
+    generation=${entry#"$profile"-}
+    generation=${generation%-link}
+    [[ "$generation" =~ ^[0-9]+$ ]] || continue
+    timestamp=$(stat -c %Y -- "$entry") || return $?
+    timestamp=$(date -d "@$timestamp" '+%Y-%m-%d %H:%M:%S') || return $?
+    marker=
+    case "$selected" in "$entry"|"${entry##*/}") marker='(current)' ;; esac
+    printf '%s  %s  %s\n' "$generation" "$timestamp" "$marker"
+  done | sort -n
+}
+
 run_saved() {
   local operation=$1 log_directory log status
   local -a args pipeline_status
@@ -90,7 +114,7 @@ menu() {
       dialog --title ' System status ' --msgbox "$summary" 18 76
       ;;
     generations)
-      summary=$(nix-env --list-generations -p /nix/var/nix/profiles/system) || return $?
+      summary=$(list_generations) || return $?
       dialog --title ' Recovery generations ' --msgbox "$summary" 22 76
       ;;
     rebuild|rollback)
@@ -122,7 +146,7 @@ if test "$#" -gt 1; then usage >&2; exit 2; fi
 case "${1:-menu}" in
   menu) menu ;;
   status) system_status ;;
-  generations) exec nix-env --list-generations -p /nix/var/nix/profiles/system ;;
+  generations) list_generations ;;
   rebuild|rollback) run_saved "$1" ;;
   help|--help|-h) usage ;;
   *) usage >&2; exit 2 ;;
