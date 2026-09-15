@@ -27,6 +27,7 @@ def fixture():
 uenv() { runuser -u sleepy -- env HOME=/home/sleepy PATH="/etc/profiles/per-user/sleepy/bin:/home/sleepy/.nix-profile/bin:$PATH" XDG_RUNTIME_DIR=/run/user/$uid DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$uid/bus "$@"; }
 capture_request() { uenv timeout 3 sleepyctl capture request "$1"; }
 capture_begin() { capture_request "$(jq -cn --arg id "$1" --arg output "$2" '{schemaVersion:1,command:{type:"begin",jobId:$id,outputId:$output}}')"; }
+capture_cancel_job() { capture_request "$(jq -cn --arg id "$1" '{schemaVersion:1,command:{type:"cancel",jobId:$id}}')"; }
 capture_status() { capture_request "$(jq -cn --arg id "$1" '{schemaVersion:1,command:{type:"status",jobId:$id}}')"; }
 capture_wait_state() {
   for attempt in $(seq 1 30); do
@@ -45,6 +46,8 @@ capture_desktop() { test "$(cat /sys/class/tty/tty0/active)" = tty1; }
 test -S /run/user/$uid/sleepy/capture.sock
 test "$(stat -c %a /run/user/$uid/sleepy/capture.sock)" = 600
 capture_request '{"schemaVersion":1,"command":{"type":"capabilities"}}' | jq -e '.payload.type=="capabilities" and .payload.screenshot==true and .payload.colorPicker==false'
+# Pointer coordinates below target the runner's single 1280x800 scale-1 output.
+hypr monitors -j | jq -e 'length==1 and .[0].width==1280 and .[0].height==800 and .[0].scale==1' > /dev/null
 capture_output="output:$(hypr monitors -j | jq -er '.[0].name')"
 capture_monitor_width=$(hypr monitors -j | jq -er '.[0].width')
 capture_monitor_height=$(hypr monitors -j | jq -er '.[0].height')
@@ -53,8 +56,9 @@ capture_bad=73305412-1111-4111-8111-123456789001
 capture_cancel=73305412-1111-4111-8111-123456789002
 capture_good=73305412-1111-4111-8111-123456789003
 capture_crash=73305412-1111-4111-8111-123456789004
+capture_api_cancel=73305412-1111-4111-8111-123456789005
 # This fixture executes once per fresh installed VM, never over old job IDs.
-for capture_id in "$capture_bad" "$capture_cancel" "$capture_good" "$capture_crash"; do test ! -e "$capture_dir/screenshot-$capture_id.png"; done
+for capture_id in "$capture_bad" "$capture_cancel" "$capture_good" "$capture_crash" "$capture_api_cancel"; do test ! -e "$capture_dir/screenshot-$capture_id.png"; done
 printf 'CAPTURE_RETURN_TO_DESKTOP\n'
 capture_wait capture_desktop
 capture_begin "$capture_bad" output:SLEEPY-NONEXISTENT-999 | jq -e '.payload.type=="job"'
@@ -87,6 +91,13 @@ capture_wait_state "$capture_cancel" cancelled
 capture_wait capture_hidden
 test ! -e "$capture_dir/screenshot-$capture_cancel.png"
 printf 'CAPTURE_ESCAPE_CANCELLED_NO_PNG_OK\n'
+capture_begin "$capture_api_cancel" "$capture_output" | jq -e '.payload.job.state=="awaitingConsent"'
+capture_wait capture_visible
+capture_cancel_job "$capture_api_cancel" | jq -e '.payload.type=="job"'
+capture_wait_state "$capture_api_cancel" cancelled
+capture_wait capture_hidden
+test ! -e "$capture_dir/screenshot-$capture_api_cancel.png"
+printf 'CAPTURE_API_CANCELLED_NO_PNG_OK\n'
 capture_begin "$capture_good" "$capture_output" | jq -e '.payload.job.state=="awaitingConsent"'
 capture_wait capture_visible
 printf 'CAPTURE_SELECT_READY\n'
@@ -181,6 +192,7 @@ def advance(machine, report, sent, stage):
 MARKERS = {
     'CAPTURE_WRONG_OUTPUT_REJECTED_OK': 'capture-wrong-output-rejected',
     'CAPTURE_CONSENT_WAIT_RESPONSIVE_OK': 'capture-consent-wait-responsive',
+    'CAPTURE_API_CANCELLED_NO_PNG_OK': 'capture-API-cancel-no-PNG',
     'CAPTURE_ESCAPE_CANCELLED_NO_PNG_OK': 'capture-Escape-cancel-no-PNG',
     'CAPTURE_SELECTED_REGION_VALID_PNG_OK': 'capture-selected-region-valid-PNG',
     'CAPTURE_VIEWER_READY': 'capture-PNG-viewer-window',

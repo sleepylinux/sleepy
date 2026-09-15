@@ -55,6 +55,13 @@ class CaptureProtocolTests(unittest.TestCase):
         for marker in ('CAPTURE_RESPONSIVENESS','CAPTURE_HELPER_PID'):
             code=script.split("<<'"+marker+"'\n")[1].split('\n'+marker)[0];compile(code,marker,'exec')
 
+    def test_guest_api_cancel_serializes_the_exact_job_id(self):
+        import subprocess,json
+        function=next(line for line in capture_jobs.fixture().splitlines() if line.startswith('capture_cancel_job()'))
+        command='capture_request() { printf "%s" "$1"; }\n'+function+'\ncapture_cancel_job "73305412-1111-4111-8111-123456789005"\n'
+        result=subprocess.run(['bash'],input=command,text=True,capture_output=True,check=True)
+        self.assertEqual(json.loads(result.stdout),{'schemaVersion':1,'command':{'type':'cancel','jobId':'73305412-1111-4111-8111-123456789005'}})
+
     def test_png_validator_rejects_mismatched_dimensions_and_symlink(self):
         import tempfile, pathlib, struct, zlib, json, subprocess, sys, os
         def chunk(kind,body):return struct.pack('>I',len(body))+kind+body+struct.pack('>I',zlib.crc32(kind+body)&0xffffffff)
@@ -62,8 +69,9 @@ class CaptureProtocolTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             path=pathlib.Path(directory)/'image.png';path.write_bytes(png);path.chmod(0o600)
             reply={'payload':{'job':{'state':'completed','result':{'path':str(path),'mimeType':'image/png','width':2,'height':3}}}}
-            def run(value,p):return subprocess.run([sys.executable,'-c',capture_jobs.PNG_CHECK,str(p),str(os.getuid())],input=json.dumps(value),text=True,capture_output=True)
+            def run(value,p,*size):return subprocess.run([sys.executable,'-c',capture_jobs.PNG_CHECK,str(p),str(os.getuid()),*map(str,size)],input=json.dumps(value),text=True,capture_output=True)
             self.assertEqual(run(reply,path).returncode,0)
+            self.assertNotEqual(run(reply,path,1280,800).returncode,0)
             reply['payload']['job']['result']['width']=20;self.assertNotEqual(run(reply,path).returncode,0)
             reply['payload']['job']['result']['width']=2;link=pathlib.Path(directory)/'link.png';link.symlink_to(path);reply['payload']['job']['result']['path']=str(link);self.assertNotEqual(run(reply,link).returncode,0)
 
