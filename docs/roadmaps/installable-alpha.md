@@ -46,11 +46,13 @@ remove disposable disks, credentials and the task-owned builder after validation
    assignable IOMMU group exposed; no repository self-hosted runner is registered.
    Do not unbind or alter that host OS. Configuration evaluation and virtual audio
    are useful evidence, not physical GPU or suspend acceptance.
-2. **Reviewed-candidate updates.** Keep saved-config rebuild semantics. The
+2. **Reviewed-candidate updates — active implementation.** Keep saved-config rebuild semantics. The
    next implementable slice is an explicitly approved immutable candidate,
    staged while preserving installation settings and system.stateVersion,
-   built before selection for the next boot. Track previous configuration and
-   generation together so rollback and the next rebuild agree. Gates: rejected
+   built before selection for the next boot. Keep the installation configuration
+   unchanged and retain the evaluated source in each generation's closure so
+   rollback and the next rebuild agree. Backend, TUI and VM gates are being
+   implemented; no candidate update is verified yet. Gates: rejected
    or changed candidate, concurrent config edits, offline/build failure,
    interruption, failed boot and previous-generation password desktop recovery.
    A content hash proves identity, not maintainer approval. Automatic channels

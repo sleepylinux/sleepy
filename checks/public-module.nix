@@ -15,6 +15,12 @@
       ];
     };
   defaultConfig = (mkSystem {}).config;
+  approvedCandidate = {
+    version = "VM fixture";
+    revision = "0000000000000000000000000000000000000000";
+    nar_hash = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+  };
+  candidateConfig = (mkSystem {updates.candidates.vm-fixture = approvedCandidate;}).config;
   # A host can select a portal build without leaving a second backend behind.
   portalOverride =
     ((mkSystem {}).extendModules {
@@ -108,6 +114,14 @@ in
     builtins.filter (portal: builtins.elem (pkgs.lib.getName portal) ["xdg-desktop-portal-hyprland" "sleepy-test-portal"]) config.xdg.portal.extraPortals
     == [config.programs.hyprland.portalPackage]) [defaultConfig profiles.flatpak portalOverride];
   assert defaultConfig.sleepy.primaryUser == "sleepy";
+  assert defaultConfig.sleepy.updates.candidates == {};
+  assert !(defaultConfig.environment.etc ? "sleepy/candidates/vm-fixture.json");
+  assert builtins.fromJSON candidateConfig.environment.etc."sleepy/candidates/vm-fixture.json".text
+  == approvedCandidate
+  // {
+    schema = 1;
+    id = "vm-fixture";
+  };
   assert defaultConfig.sleepy.version == "0.1.0";
   assert defaultConfig.users.users.sleepy.isNormalUser;
   assert defaultConfig.services.xserver.xkb.layout == "us";

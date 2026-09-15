@@ -65,6 +65,9 @@
     packages = forAllSystems (system: let
       pkgs = mkPkgs system;
     in {
+      sleepy-update = pkgs.callPackage ./packages/sleepy-update {
+        nix = import ./packages/vendor/nix-with-git {inherit pkgs;};
+      };
       sleepy-installer = pkgs.callPackage ./packages/sleepy-installer {
         source = self;
         nix = import ./packages/vendor/nix-with-git {inherit pkgs;};

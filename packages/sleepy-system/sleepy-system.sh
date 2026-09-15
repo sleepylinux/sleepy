@@ -154,7 +154,7 @@ update_result() {
 }
 
 choose_update() {
-  local snapshot line id label choice status found= label_selected=
+  local snapshot line id label choice status found='' label_selected=''
   local -a items=()
   local -A labels=()
   # Capture the command's status before reading TSV. Process substitution would
