@@ -11,7 +11,7 @@
   locker = homeConfig.systemd.user.services.sleepy-locker;
   clipboard = homeConfig.systemd.user.services.sleepy-clipboard;
   polkitAgent = config.systemd.user.services.polkit-gnome-authentication-agent-1;
-  keyring = config.systemd.user.services.gnome-keyring-daemon;
+  keyringContract = import ./keyring-contract.nix {inherit config pkgs;};
 in
   assert pkgs.lib.assertMsg config.programs.hyprland.enable
   "Sleepy must enable the upstream Hyprland module";
@@ -80,9 +80,8 @@ in
   "locker and clipboard helper must stop with the UWSM graphical session";
   assert pkgs.lib.assertMsg
   (builtins.elem "graphical-session.target" polkitAgent.partOf
-    && builtins.elem "graphical-session.target" keyring.partOf
-    && builtins.elem "graphical-session.target" keyring.after)
-  "policy agent and keyring must share the active UWSM graphical lifecycle";
+    && builtins.elem "graphical-session.target" polkitAgent.after)
+  "policy agent must share the active UWSM graphical lifecycle";
   assert pkgs.lib.assertMsg config.services.openssh.enable
   "Sleepy VM must retain OpenSSH maintenance access";
   assert pkgs.lib.assertMsg config.services.openssh.openFirewall
@@ -101,6 +100,7 @@ in
       nativeBuildInputs = [pkgs.gnugrep];
     } ''
       set -eu
+      test -e ${keyringContract}
 
       test -x ${hyprlandPackage}/bin/Hyprland
       test -x ${uwsmPackage}/bin/uwsm

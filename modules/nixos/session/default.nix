@@ -98,10 +98,6 @@ in {
     serviceConfig.ExecStart = "${pkgs.polkit_gnome}/libexec/polkit-gnome-authentication-agent-1";
   };
 
-  systemd.user.services.gnome-keyring-daemon = {
-    wantedBy = ["graphical-session.target"];
-    partOf = ["graphical-session.target"];
-    after = ["graphical-session.target"];
-    requisite = ["graphical-session.target"];
-  };
+  # Upstream GNOME Keyring uses PAM login unlock and DBus activation. It does
+  # not define a systemd user service to extend; an ordering-only unit is invalid.
 }

@@ -213,6 +213,10 @@ in
     hyprland-production-vm = hyprlandProductionVm;
     public-module = publicModule;
     session-contract = sessionContract;
+    keyring-contract = import ./keyring-contract.nix {
+      inherit pkgs;
+      inherit (nixosConfiguration) config;
+    };
     update-safety = updateSafety;
     update-safety-vm = updateSafetyVm;
     pristine-login-vm = updateSafetyVm;
