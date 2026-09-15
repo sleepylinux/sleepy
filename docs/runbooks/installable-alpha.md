@@ -61,22 +61,53 @@ activates the previous system generation. See [recovery](../recovery.md).
 The following additions are implemented in the usability branch; the immutable
 `9bca73c` ISO above predates them. Combined installed-VM acceptance is pending.
 
-- Run `sleepy-system` to open the system menu. Status and generation listing are
-  read-only; applying saved settings and rollback ask for confirmation.
-  `sleepy-system status` also works directly in a terminal. Failed operations
-  return an error and retain a private log in `~/.local/state/sleepy/system`.
-- `Print` selects a screen region and opens Swappy; press `Ctrl+S` to save in
-  `~/Pictures/Screenshots`. `Shift+Print` copies a region as a PNG to the clipboard.
-- Open saved images from Thunar; imv is the default image viewer. Press `q` to
-  close it. Both the viewer and MIME defaults can be overridden by host profiles.
-- Run `fastfetch` for system information and the Sleepy crescent. It does not run
-  automatically each time a terminal opens.
-- GTK applications use the shared dark theme and icons. Host theme, terminal,
-  launcher and Fastfetch settings remain overridable.
-- When Flatpak was selected during installation, open Software from the launcher.
-  Flathub setup starts shortly after boot and retries every five minutes after
-  a connection failure. Login does not wait for it. Public-network registration
-  and graphical app installation still require the combined VM check.
+Open a terminal with `Super+Return`, or the application launcher with `Super+D`.
+
+- Run `sleepy-system` (or `sleepy-system menu`) for system status and recovery.
+  `sleepy-system status` prints the current running system, the system booted
+  this session and the selected system profile; they can differ after a switch.
+  `sleepy-system generations` lists recovery generations. Both are read-only.
+  The menu asks for confirmation before applying saved settings or rolling back;
+  Escape cancels the main menu. Direct `rebuild` and `rollback` commands start
+  the requested operation without that menu confirmation and may ask for your
+  administrator password in the terminal.
+- `sleepy-system rebuild` applies `/etc/nixos#installed`. It may download or
+  build dependencies and restart services; it does not select a new Sleepy
+  release, advance a channel or update the saved source pin. Rollback switches
+  to the previous system generation; it does not restore personal files or
+  application data. Progress and the diagnostic log path appear in the terminal.
+  Logs use `$XDG_STATE_HOME/sleepy/system`, normally
+  `~/.local/state/sleepy/system`, with private file permissions. See
+  [recovery](../recovery.md) for boot-menu recovery.
+- Press `Print`, then drag and release to select a screen region. Swappy opens
+  the captured image for annotation; press `Ctrl+S` to save a PNG. The default
+  is `Sleepy-YYYYMMDD-HHMMSS.png` in `~/Pictures/Screenshots`; a configured XDG
+  Pictures directory or host `save_dir` override changes the destination.
+  Escape cancels the picker. `Shift+Print` copies the selected region directly
+  as a PNG; paste into an application that accepts images. Swappy's
+  [keyboard reference](https://github.com/jtheoof/swappy/blob/v1.8.0/README.md#keyboard-shortcuts)
+  lists its editor controls.
+- Open a saved PNG in Thunar to use imv, the default image viewer; `q` closes
+  it. Host profiles can override the viewer and MIME defaults.
+- Run `fastfetch` for system information and the Sleepy crescent. It does not
+  run automatically when a terminal opens. GTK theme, terminal, launcher and
+  Fastfetch defaults remain overridable through the Home Manager configuration.
+- If Flatpak was selected during installation, open Software from the launcher.
+  Flathub registration is scheduled shortly after boot; after a failed attempt,
+  it retries about five minutes later without holding up login. Reconnect the
+  network and allow time for the retry. `flatpak remotes --system` lists the
+  registered sources; `systemctl status sleepy-flathub.service` shows setup
+  status. An empty catalog while offline does not mean registration succeeded.
+  Without the optional profile, Software and this Flathub timer are not enabled.
+
+The shell's Print/Shift+Print picker is separate from the SDK screenshot
+capability: `sleepyctl doctor` can report optional screenshot support as
+unavailable when `sleepy-capture-helper` is absent. That status describes the
+[daemon helper path](https://github.com/sleepylinux/sleepy-session/blob/004e81dbfd10ebcec569129aa9eb6ae1559dab5f/src/desktop/utilities.rs),
+not a test of the [native shell picker](../architecture/shell-runtime-integrations.md).
+Neither status alone proves a successful capture; check the saved image or
+clipboard result. These instructions describe implemented behavior, not a
+successful combined VM acceptance run.
 
 ## Reproduce the real VM gate
 
