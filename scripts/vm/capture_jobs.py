@@ -78,7 +78,7 @@ uid,job=sys.argv[1:]
 base=['runuser','-u','sleepy','--','env','HOME=/home/sleepy','PATH=/etc/profiles/per-user/sleepy/bin:/home/sleepy/.nix-profile/bin:'+os.environ['PATH'],'XDG_RUNTIME_DIR=/run/user/'+uid,'DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/'+uid+'/bus','sleepyctl']
 for args in [['capture','request',json.dumps({'schemaVersion':1,'command':{'type':'status','jobId':job}})],['doctor','--json']]:
  start=time.monotonic();result=subprocess.run(base+args,capture_output=True,text=True,timeout=3);elapsed=time.monotonic()-start
- assert result.returncode==0, result.stderr
+ assert result.returncode==0, json.dumps({"command":args[0],"returncode":result.returncode,"stdout":result.stdout,"stderr":result.stderr,"elapsed":elapsed})
  reply=json.loads(result.stdout)
  if args[0]=='capture':assert reply['payload']['job']['state']=='awaitingConsent'
  else:assert 'checks' in reply
