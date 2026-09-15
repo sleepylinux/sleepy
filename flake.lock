@@ -205,17 +205,17 @@
         ]
       },
       "locked": {
-        "lastModified": 1787695542,
-        "narHash": "sha256-j6zHOF7GoboU5duoWOBIIjup9in7ecnsvax4ScTx4SY=",
+        "lastModified": 1789430590,
+        "narHash": "sha256-oJHS2+tlWJP0RnKbBb4RYpsEMyoxSywIQZ00EODtXjU=",
         "owner": "sleepylinux",
         "repo": "sleepy-artwork",
-        "rev": "175314b9c236c1b412e8e1ebc54bbe3937b0c90d",
+        "rev": "ac3feed1e81b4e74a84a326c1f53f3ddaf94aa3e",
         "type": "github"
       },
       "original": {
         "owner": "sleepylinux",
         "repo": "sleepy-artwork",
-        "rev": "175314b9c236c1b412e8e1ebc54bbe3937b0c90d",
+        "rev": "ac3feed1e81b4e74a84a326c1f53f3ddaf94aa3e",
         "type": "github"
       }
     },
@@ -659,17 +659,17 @@
         ]
       },
       "locked": {
-        "lastModified": 1789427557,
-        "narHash": "sha256-ReIHqbWSiNI1GaUHzeENeviiXbj0Jjo5cr6SZqEUAM8=",
+        "lastModified": 1789430894,
+        "narHash": "sha256-Z6zG2U32HEBaJqXMINZZVpaPOnNjRQ9YqXcEdGUUP5w=",
         "owner": "sleepylinux",
         "repo": "sleepy-session",
-        "rev": "3980ea94547ff42b590e6c96b8ae3b987d7a2dcc",
+        "rev": "004e81dbfd10ebcec569129aa9eb6ae1559dab5f",
         "type": "github"
       },
       "original": {
         "owner": "sleepylinux",
         "repo": "sleepy-session",
-        "rev": "3980ea94547ff42b590e6c96b8ae3b987d7a2dcc",
+        "rev": "004e81dbfd10ebcec569129aa9eb6ae1559dab5f",
         "type": "github"
       }
     }
