@@ -1,0 +1,69 @@
+sudo -n lsblk --json --paths --properties-by blkid --output PATH,TYPE,FSTYPE,PARTTYPE,PTTYPE,UUID /dev/vda
+[?2004l
+{
+   "blockdevices": [
+      {
+         "path": "/dev/vda",
+         "type": "disk",
+         "fstype": null,
+         "parttype": null,
+         "pttype": "gpt",
+         "uuid": null
+      },{
+         "path": "/dev/vda1",
+         "type": "part",
+         "fstype": "vfat",
+         "parttype": "c12a7328-f81f-11d2-ba4b-00a0c93ec93b",
+         "pttype": "gpt",
+         "uuid": "3430-61E5"
+      },{
+         "path": "/dev/vda2",
+         "type": "part",
+         "fstype": "btrfs",
+         "parttype": "0fc63daf-8483-4772-8e79-3d69d8477de4",
+         "pttype": "gpt",
+         "uuid": "f974c712-571f-44d1-afe2-872fdd482ce2"
+      }
+   ]
+}
+[?2004h
+
+[1;32m[]0;nixos@sleepy-installer: ~nixos@sleepy-installer:~]$[0m sudo -n lsblk --tree --json --paths --properties-by blkid --output PATH,TYPE,FSTYPE,PARTTYPE,PTTYPE,UUID /dev/vda
+[?2004l
+{
+   "blockdevices": [
+      {
+         "path": "/dev/vda",
+         "type": "disk",
+         "fstype": null,
+         "parttype": null,
+         "pttype": "gpt",
+         "uuid": null,
+         "children": [
+            {
+               "path": "/dev/vda1",
+               "type": "part",
+               "fstype": "vfat",
+               "parttype": "c12a7328-f81f-11d2-ba4b-00a0c93ec93b",
+               "pttype": "gpt",
+               "uuid": "3430-61E5"
+            },{
+               "path": "/dev/vda2",
+               "type": "part",
+               "fstype": "btrfs",
+               "parttype": "0fc63daf-8483-4772-8e79-3d69d8477de4",
+               "pttype": "gpt",
+               "uuid": "f974c712-571f-44d1-afe2-872fdd482ce2"
+            }
+         ]
+      }
+   ]
+}
+[?2004h
+
+[1;32m[]0;nixos@sleepy-installer: ~nixos@sleepy-installer:~]$[0m sudo -n lsblk --version
+[?2004l
+lsblk from util-linux 2.42.2
+[?2004h
+
+[1;32m[]0;nixos@sleepy-installer: ~nixos@sleepy-installer:~]$[0m 

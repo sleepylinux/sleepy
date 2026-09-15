@@ -8,7 +8,8 @@ Generic defaults remain overridable. No custom compositor or package manager.
 ## Completed and verified
 
 - [x] UEFI/GPT/ESP/Btrfs whole-disk TUI installation, real credentials, target
-  identity/busy checks, error reporting and actual interruption cleanup.
+  identity checks, error reporting and actual interruption cleanup. Real mounted
+  descendant safety requires the new `7876db3` correction and acceptance below.
 - [x] Final image `97830de`: fresh install, three disk-only boots, real login,
   native idle/VT/DPMS lock recovery, shell/session crashes and offline desktop.
 - [x] Everyday basics: terminal/file manager, PNG save/view/clipboard, dark GTK,
@@ -32,9 +33,11 @@ the next active stage, then remove that task-owned container and volume.
 
 ## Next work, in dependency order
 
-1. **Finish the evidence follow-up.** Merge PR #11 after its exact CI; preserve
+1. **Finish guided recovery and its evidence — active.** PR #11 now includes the
+   recovery implementation and disk-topology safety correction. Merge after
+   fresh installed-disk recovery and exact CI; preserve
    the earlier failed runs and the distinction between image and runner revisions.
-2. **Make recovery guided — active.** Extend the existing TUI beyond instructions and a
+2. **Complete the guided recovery gate.** Extend the existing TUI beyond instructions and a
    terminal: identify an installed system read-only, show diagnostics and boot
    generations, and require explicit confirmation for a bounded repair.
    Gate: wrong/busy targets rejected; disposable broken-boot recovery; no

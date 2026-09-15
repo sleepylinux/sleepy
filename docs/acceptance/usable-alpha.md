@@ -1,5 +1,12 @@
 # Verified installed usable-alpha snapshot
 
+**Installer images before `7876db3` are superseded:** their disk listing omitted
+partition topology, so mounted-descendant safety was not covered by the earlier
+47 gates. Guided recovery also needed the supported Btrfs replay option. The
+new recovery candidate is `afd713c`; its combined fresh VM acceptance is pending.
+The historical results below remain valid only for their recorded scenarios.
+
+
 Image source **97830de29099483356a7cff1a28751edfcc538d9** passed a fresh TUI
 installation and **three installed-disk boots / 47 acceptance gates** with clean
 runner **0d534265c83b0767e79bb93dd132d7fe6f956292**. The ISO was detached before
@@ -63,8 +70,9 @@ The failed-update test covers evaluation rejection, not every failure of an
 already-selected generation. The final Flatpak gate covers registration and
 Software opening; the earlier real Kalk installation/Firefox portal/polkit
 checks below are separate diagnostic evidence. The doctor currently reports its
-SDK screenshot capability unavailable even though the verified Print/grim path
-works. Gaming and NVIDIA profiles have configuration checks, not physical GPU
+SDK screenshot capability unavailable even though the verified Print path
+works through Quickshell CUtils and Swappy. The unavailable capability is a
+separate session SDK capture provider. Gaming and NVIDIA profiles have configuration checks, not physical GPU
 or game-performance acceptance. Hybrid graphics, real microphone/Bluetooth,
 battery/brightness/suspend/VRR, Secure Boot and encryption remain unverified or
 deferred. Reviewed public channels and guided recovery remain follow-up work.

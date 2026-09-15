@@ -16,18 +16,22 @@ ls -lh result-installer/iso/
 sha256sum result-installer/iso/*.iso
 ```
 
-To reproduce the accepted artifact from its public source revision:
+The older `97830de` image is historical evidence, not the recommended installer:
+its mounted-descendant safety check was incomplete. Recovery candidate `afd713c`
+contains the correction and guided boot repair; fresh acceptance is pending.
+To build that exact candidate:
 
 ```sh
-nix build github:sleepylinux/sleepy/97830de29099483356a7cff1a28751edfcc538d9#installer-iso \
+nix build github:sleepylinux/sleepy/afd713c5098900061209a746742b5525acdbfbe8#installer-iso \
   --out-link result-installer
 ```
 
-The [current accepted snapshot](../acceptance/usable-alpha.md) records its SHA256,
+The [revision-bound acceptance record](../acceptance/usable-alpha.md) records its SHA256,
 component graph and clean runner revision. A later checkout may produce a
 different artifact checksum. This is a tested alpha snapshot, not a published
 release. Its full VM run used a separately supplied signed local binary cache;
-a public-cache-only installation has not been validated.
+the later `229a794` diagnostic completed a public-only installation and first
+password desktop login, but failed its subsequent recovery gate.
 
 For the retained local artifacts, start the signed dependency cache on loopback:
 

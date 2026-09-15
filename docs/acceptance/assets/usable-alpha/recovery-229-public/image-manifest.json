@@ -1,0 +1,55 @@
+{
+  "image_source_revision": "229a794618a694ce3b66bc0d95c32976f10f1531",
+  "runner_source_revision": "229a794618a694ce3b66bc0d95c32976f10f1531",
+  "iso": "sleepy-recovery-229a794.iso",
+  "iso_sha256": "5bb5411af9184f1d58629eff7f387e022177825a4a1737d175fe9f46099582d3",
+  "iso_bytes": 859832320,
+  "component_lock_sha256": "5287c31b89266a72a954c0abd619e798563e337a996d09338bbbe5e068472be6",
+  "vm_status": "interrupted",
+  "vm_plan": "public-network-only install; optional profiles disabled; ru keyboard; daily desktop; deleted ESP entries; offline TUI repair; disk-only password login and preserved state",
+  "source_build_jobs": 1,
+  "source_build_cores": 2,
+  "local_binary_cache": false,
+  "checks": {
+    "installer_recovery_tui": {
+      "tests": 50,
+      "passed": 49,
+      "skipped": 1,
+      "environment": "Nix build"
+    },
+    "system_tools": {
+      "tests": 13,
+      "passed": 13
+    },
+    "runner": {
+      "tests": 17,
+      "passed": 17
+    },
+    "root_owned_private_log": {
+      "tests": 1,
+      "passed": 1,
+      "environment": "dedicated root build container; temporary directory only"
+    },
+    "format": "passed",
+    "independent_source_review": "ready for real VM"
+  },
+  "ci_run": "https://github.com/sleepylinux/sleepy/actions/runs/34941428320",
+  "components": {
+    "sleepy-sdk": "dff28bb596950d862ae5d219e478460dfa13e8f4",
+    "sleepy-session": "210cbaad7a50280e4406281f90cbe36def50086c",
+    "sleepy-desktop": "45f721a037693523ba1886eba20784ac9e8102fc",
+    "sleepy-artwork": "ac3feed1e81b4e74a84a326c1f53f3ddaf94aa3e"
+  },
+  "hyprland_store_path": "/nix/store/vab6yfkk554x20wrmv2pafax1c23mvxa-hyprland-0.56.2",
+  "qtbase_store_path": "/nix/store/s7n4mf856bmrmqz1i3q9v54giy2gfyqc-qtbase-wayland-focus-reset-6.11.1",
+  "observed": {
+    "public_tui_install_completed": true,
+    "first_disk_boot_without_iso": true,
+    "created_password_graphical_login": true,
+    "first_welcome_rendered": true,
+    "recovery_acceptance": "failed in separate diagnostics; superseded image required"
+  },
+  "visible_install_seconds": 2838.0,
+  "ci_conclusion": "success",
+  "superseded_reason": "missing lsblk tree topology; unsupported standalone Btrfs nologreplay option"
+}
