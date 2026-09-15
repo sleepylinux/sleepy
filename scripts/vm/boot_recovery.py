@@ -73,7 +73,7 @@ def recovery_tui(machine, verify_cancel):
 
 
 
-BUSY_TARGET_PROBE = r'''import json, pathlib, subprocess
+BUSY_TARGET_PROBE = r'''import json, pathlib, secrets, subprocess
 rows = json.loads(subprocess.check_output(['sleepy-install-backend', '--list'], text=True))
 disk = next(row for row in rows if row['path'] == '/dev/vda')
 assert disk['eligible']
@@ -82,6 +82,19 @@ mount = pathlib.Path('/run/sleepy-recovery-busy-probe')
 mount.mkdir(mode=0o700)
 subprocess.run(['mount', '-o', 'ro', '/dev/vda1', str(mount)], check=True)
 try:
+    mounted = next(row for row in json.loads(subprocess.check_output(
+        ['sleepy-install-backend', '--list'], text=True)) if row['path'] == '/dev/vda')
+    assert not mounted['eligible'] and 'mounted' in mounted['reason'].lower(), mounted
+    install_request = dict(request, confirm_erase='/dev/vda', username='sleepy',
+                           password=secrets.token_hex(12), hostname='sleepy',
+                           locale='en_US.UTF-8', keyboard='us', timezone='UTC', options={})
+    install = subprocess.run(['sleepy-install-backend', '--install'], input=json.dumps(install_request),
+                             capture_output=True, text=True, timeout=30)
+    events = [json.loads(line) for line in install.stdout.splitlines()]
+    assert install.returncode != 0 and events[-1]['stage'] == 'error', install.stdout
+    assert 'mounted' in events[-1]['message'].lower(), install.stdout
+    assert not any(event['stage'] in ('network', 'preflight', 'partition') for event in events), install.stdout
+    print('INSTALL_BUSY_DESCENDANT_REJECTED_OK', flush=True)
     result = subprocess.run(['sleepy-recover-backend', '--inspect'], input=json.dumps(request),
                             capture_output=True, text=True, timeout=30)
     assert result.returncode != 0, 'Recovery accepted a mounted target'
