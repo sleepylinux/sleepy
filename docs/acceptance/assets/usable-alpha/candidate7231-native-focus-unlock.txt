@@ -1,0 +1,7 @@
+Earlier instrumented source-patched Qt
+locker status: unlocked
+Actual mapped library: /nix/store/vc3yhwsbiz8v9b4lh9wn74j6j0mshdlz-qtbase-wayland-focus-reset-diagnostic-6.11.1/lib/libQt6WaylandClient.so.6.11.1
+
+Later clean source-patched Qt and dark locker
+locker status: unlocked
+Actual mapped library: /nix/store/s7n4mf856bmrmqz1i3q9v54giy2gfyqc-qtbase-wayland-focus-reset-6.11.1/lib/libQt6WaylandClient.so.6.11.1

@@ -47,6 +47,13 @@ passed all checks, including fresh production and update-safety VM gates.
    Gate: fresh ISO-to-installed-disk acceptance of the final production graph,
    independent review, exact-head CI and cleanup of temporary disks/builds.
 
+Recent bounded diagnostics on the retained installed disk now cover real
+Software → Flathub Kalk installation and calculation, Print/save/view and
+Shift+Print clipboard, generation-list/menu cancellation, and native dark-locker
+VT return/input/PAM unlock with the scoped Qt fix. These use temporary runtime
+overrides; they do not complete the final-image gate or all portal/keyring checks.
+[Revision-bound evidence](../acceptance/usable-alpha.md).
+
 ## Verification and limits
 
 Keep one current disposable installed disk and one active build environment;

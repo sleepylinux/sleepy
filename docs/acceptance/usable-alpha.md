@@ -148,3 +148,42 @@ Reproduce with
 This existing fixture uses credential-free test-only PAM. Its pass is separate
 from real-password installed-disk acceptance and does not complete the final
 combined usability gate.
+
+## Actual Software installation and native locker focus
+
+Further diagnostics used the same old `7231d4b` installed disk and temporary
+session `4d48082` runtime. GNOME Software displayed Kalk from real Flathub,
+installed it, changed its action to Open, and launched the calculator. The
+visible calculation produced `4`. Evidence:
+[before installation](assets/usable-alpha/candidate7231-software-calculator-details.png),
+[installed Open action](assets/usable-alpha/candidate7231-software-after-unlock.png),
+[running calculation](assets/usable-alpha/candidate7231-kalk-calculation.png), and
+[Flatpak ref, commit, origin and mapped window](assets/usable-alpha/candidate7231-kalk.txt).
+This proves this application flow, not all portals, keyring/polkit behavior or
+all Flatpak applications. Kalk used a light theme in this capture.
+
+The Qt keyboard-removal fault was reproduced in Qt's existing Wayland client
+suite: unpatched Qt lost the focus window after capability removal/re-addition;
+the same test executable with the patched library passed all five checks.
+[Compact red/green output](assets/usable-alpha/qt-keyboard-focus-red-green.txt)
+records the permanent regression. The maintained
+[downstream patch and rationale](../../packages/vendor/qt-wayland-focus/README.md)
+are scoped to the native locker; this is not an upstream-accepted fix.
+
+An earlier instrumented source-patched Qt build restored active-window and
+prompt focus after VT return, followed by real native password unlock.
+[Filtered focus events](assets/usable-alpha/candidate7231-native-focus-observer.json)
+exclude input lengths and authentication details. A later diagnostic loaded
+clean Qt library `s7n4mf856bmrmqz1i3q9v54giy2gfyqc` with dark native locker
+`815b403b5016a41027b396b0c5efac6a5160cb6e`: after VT return, Russian input reached
+the masked field, switching back to US permitted real-password PAM unlock.
+[Dark locker after VT return](assets/usable-alpha/candidate7231-dark-locker-vt-russian-input.png)
+and [unlocked status with actual mapped libraries](assets/usable-alpha/candidate7231-native-focus-unlock.txt)
+are retained.
+
+These temporary guest overrides demonstrate the fixes on an existing installed
+system. They are not fresh final-image acceptance or proof that every user
+service is healthy. [Exact provenance and source hashes](assets/usable-alpha/candidate7231-kalk-qt-provenance.json)
+distinguish the earlier instrumented Qt build from the clean later library.
+The final combined installation, locked VT roundtrip, update and reboot gate
+remains required.

@@ -1,0 +1,32 @@
+[
+  {
+    "event": "prompt-focus",
+    "windowActive": false,
+    "promptActiveFocus": true
+  },
+  {
+    "event": "window-active",
+    "windowActive": true,
+    "promptActiveFocus": true
+  },
+  {
+    "event": "prompt-focus",
+    "windowActive": true,
+    "promptActiveFocus": false
+  },
+  {
+    "event": "window-active",
+    "windowActive": false,
+    "promptActiveFocus": false
+  },
+  {
+    "event": "prompt-focus",
+    "windowActive": false,
+    "promptActiveFocus": true
+  },
+  {
+    "event": "window-active",
+    "windowActive": true,
+    "promptActiveFocus": true
+  }
+]
