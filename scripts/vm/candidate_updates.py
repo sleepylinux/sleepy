@@ -61,47 +61,52 @@ def temporary_configuration(config, options):
         backup.replace(original)
 
 
+def marker_processes(marker, proc=Path('/proc')):
+    """Read only argv[0], never expose other processes' arguments in evidence."""
+    matches = set()
+    with os.scandir(proc) as entries:
+        for count, entry in enumerate(entries):
+            if count >= 32768:
+                raise RuntimeError('process observation exceeded its entry bound')
+            if not entry.name.isdecimal():
+                continue
+            try:
+                with (proc / entry.name / 'cmdline').open('rb') as stream:
+                    first = stream.read(256).split(b'\0', 1)[0]
+            except (FileNotFoundError, ProcessLookupError, PermissionError):
+                continue
+            if first == marker.encode():
+                matches.add(int(entry.name))
+    return matches
+
+
 def interrupt_build(state, marker):
-    """Interrupt only after this attempt's real builder emits its unique marker."""
-    log = Path('/var/lib/sleepy-update/update.log')
-    old = log.stat() if log.exists() else None
-    inode = old.st_ino if old else None
-    offset = old.st_size if old else 0
-    environment = dict(os.environ)
-    environment['NIX_CONFIG'] = environment.get('NIX_CONFIG', '') + '\nprint-build-logs = true\n'
+    """Interrupt only after observing this attempt's actual controlled builder."""
+    assert not marker_processes(marker), 'controlled builder already exists'
     output_path = state / 'interrupted-prepare.log'
     with output_path.open('x') as output:
         output_path.chmod(0o600)
         process = subprocess.Popen(['sleepy-update', 'prepare', 'vm-reviewed'],
-                                   stdout=output, stderr=subprocess.STDOUT, env=environment)
+                                   stdout=output, stderr=subprocess.STDOUT)
         try:
             deadline = time.monotonic() + 180
-            pending = b''
-            observed = False
+            observed = set()
             while time.monotonic() < deadline:
-                if log.exists():
-                    info = log.stat()
-                    if info.st_ino != inode or info.st_size < offset:
-                        inode, offset, pending = info.st_ino, 0, b''
-                    with log.open('rb') as stream:
-                        stream.seek(offset)
-                        chunk = stream.read(8 * 1024 * 1024)
-                        offset += len(chunk)
-                    pending += chunk
-                    lines = pending.split(b'\n')
-                    pending = lines.pop()
-                    # Nix --print-build-logs may prepend the derivation name.
-                    if any(line.rsplit(b'> ', 1)[-1].strip() == marker.encode() for line in lines):
-                        observed = True
-                        break
+                observed = marker_processes(marker)
+                if observed:
+                    break
                 if process.poll() is not None:
-                    raise RuntimeError('prepare exited before the controlled builder marker')
+                    raise RuntimeError('prepare exited before the controlled builder appeared')
                 time.sleep(0.25)
-            assert observed, 'real controlled Nix build did not start within deadline'
+            assert len(observed) == 1, 'one real controlled Nix builder must start within deadline'
             assert process.poll() is None, 'backend exited before interruption'
             print('CANDIDATE_CONTROLLED_BUILD_STARTED', flush=True)
             process.terminate()
             assert process.wait(timeout=20) == 1, 'SIGTERM did not produce a reaped failed prepare'
+            deadline = time.monotonic() + 20
+            while marker_processes(marker) and time.monotonic() < deadline:
+                time.sleep(0.25)
+            assert not marker_processes(marker), 'controlled builder survived backend cancellation'
         finally:
             if process.poll() is None:
                 process.terminate()
@@ -192,7 +197,7 @@ def guest(phase, revision, nar_hash):
 
         build_marker = 'SLEEPY_CANDIDATE_BUILD_' + uuid.uuid4().hex
         controlled_build = ("system.extraDependencies = [ (pkgs.runCommand \"sleepy-candidate-interrupt\" {} ''"
-                            + "echo " + build_marker + " >&2\nsleep 600\ntouch $out\n'' ) ];")
+                            + "exec -a " + build_marker + " sleep 600\n'' ) ];")
         with temporary_configuration(config, controlled_build):
             interrupt_build(state, build_marker)
         unchanged_after_failed_prepare()
@@ -222,6 +227,22 @@ def guest(phase, revision, nar_hash):
         assert 'Sleepy version: ' + source['version'] in visible_status
         assert 'Source NAR: ' + nar_hash[:19] in visible_status
         print('CANDIDATE_REAL_PASSWORD_BOOT_SOURCE_OK', flush=True)
+        # Exercise the booted candidate's cleanup implementation, not the old
+        # installer backend used for the first preparation.
+        update_state = Path('/var/lib/sleepy-update')
+        previous_roots = {str(path): str(path.readlink()) for path in update_state.glob('attempt-*/built-system') if path.is_symlink()}
+        selected_link = str(profile.readlink())
+        command('sleepy-update', 'prepare', 'vm-reviewed', timeout=1500)
+        ready = json.loads(command('sleepy-update', 'status').stdout)
+        assert ready['phase'] == 'ready' and ready['built'] == before['prepared']
+        completed_root = Path(ready['gc_root'])
+        assert completed_root.parent.is_dir()
+        assert not completed_root.exists() and not completed_root.is_symlink(), 'completed attempt GC root was retained'
+        assert str(profile.readlink()) == selected_link, 'same candidate added a generation'
+        assert str(live.resolve()) == before['prepared']
+        assert {str(path): str(path.readlink()) for path in update_state.glob('attempt-*/built-system') if path.is_symlink()} == previous_roots
+        config_unchanged(before)
+        print('CANDIDATE_COMPLETED_GC_ROOT_RELEASED_OTHERS_PRESERVED_OK', flush=True)
         command('sleepy-system', 'rebuild', timeout=1500)
         config_unchanged(before)
         rebuilt = json.loads((profile / 'etc/sleepy/source.json').read_text())
@@ -252,6 +273,6 @@ def fixture(phase, revision, nar_hash):
     if phase not in ('prepare', 'rollback', 'verify'):
         raise ValueError('unknown candidate phase')
     program = 'import base64, contextlib, hashlib, json, os, stat, subprocess, time, uuid\nfrom pathlib import Path\n'
-    program += '\n'.join(inspect.getsource(function) for function in (tree_state, temporary_configuration, interrupt_build, guest))
+    program += '\n'.join(inspect.getsource(function) for function in (tree_state, temporary_configuration, marker_processes, interrupt_build, guest))
     program += '\nguest(' + ', '.join(repr(x) for x in (phase, revision, nar_hash)) + ')\n'
     return '\n"$python" - <<\'SLEEPY_CANDIDATE_PY\'\n' + program + 'SLEEPY_CANDIDATE_PY\n'

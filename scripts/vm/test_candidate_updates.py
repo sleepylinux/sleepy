@@ -128,33 +128,45 @@ class CandidateProtocol(unittest.TestCase):
                 with m.temporary_configuration(config, 'assertions = [];'): pass
             self.assertEqual(m.tree_state(config), before)
 
-    def test_interruption_waits_for_new_log_marker_and_reaps_real_child(self):
+    def test_interruption_observes_real_argv0_and_reaps_builder(self):
         m = self.module()
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            log = root / 'update.log'
-            marker = 'UNIQUE_TEST_BUILDER_STARTED'
-            log.write_text(marker + '\n')  # A prior marker must not release the wait.
+            marker = 'SLEEPY_TEST_' + os.urandom(12).hex()
             worker = (
-                'import pathlib,signal,sys,time\n'
-                'signal.signal(signal.SIGTERM, lambda *_: sys.exit(1))\n'
+                'import signal,subprocess,sys,time\n'
                 'time.sleep(0.4)\n'
-                'with pathlib.Path(sys.argv[1]).open("a") as f: f.write("builder> " + sys.argv[2] + "\\n"); f.flush()\n'
-                'time.sleep(5)\n')
+                "child=subprocess.Popen(['bash','-c','exec -a \"$1\" sleep 10','bash',sys.argv[1]])\n"
+                'def stop(*_):\n'
+                ' child.terminate(); child.wait(timeout=2); sys.exit(1)\n'
+                'signal.signal(signal.SIGTERM, stop)\n'
+                'child.wait()\n')
             original_popen = subprocess.Popen
             children = []
             def spawn(argv, **kwargs):
                 self.assertEqual(argv, ['sleepy-update', 'prepare', 'vm-reviewed'])
-                self.assertIn('print-build-logs = true', kwargs['env']['NIX_CONFIG'])
-                child = original_popen([sys.executable, '-c', worker, str(log), marker], **kwargs)
+                self.assertFalse('env' in kwargs, 'must preserve the ordinary backend environment')
+                child = original_popen([sys.executable, '-c', worker, marker], **kwargs)
                 children.append(child)
                 return child
             started = time.monotonic()
-            with patch.object(m, 'Path', lambda _: log), patch.object(m.subprocess, 'Popen', spawn), contextlib.redirect_stdout(io.StringIO()):
+            with patch.object(m.subprocess, 'Popen', spawn), contextlib.redirect_stdout(io.StringIO()):
                 m.interrupt_build(root, marker)
             self.assertGreaterEqual(time.monotonic() - started, 0.4)
             self.assertEqual(len(children), 1)
             self.assertEqual(children[0].returncode, 1)
+            self.assertEqual(m.marker_processes(marker), set())
+
+    def test_process_observer_requires_exact_first_cmdline_field(self):
+        m = self.module()
+        self.assertTrue(hasattr(m, 'marker_processes'), 'process observer missing')
+        with tempfile.TemporaryDirectory() as directory:
+            proc = Path(directory)
+            for pid, data in [(101, b'unique\0sleep\0'), (102, b'python\0unique\0'),
+                              (103, b'unique-suffix\0'), (104, b'')]:
+                (proc / str(pid)).mkdir()
+                (proc / str(pid) / 'cmdline').write_bytes(data)
+            self.assertEqual(m.marker_processes('unique', proc), {101})
 
     def test_all_guest_phases_compile_and_shell_parse(self):
         m = self.module()
