@@ -103,6 +103,7 @@
       })
       // {
         installer = (mkPkgs system).callPackage ./checks/installer.nix {};
+        flatpak-recovery = import ./checks/flatpak-recovery.nix {pkgs = mkPkgs system;};
       });
 
     devShells = forAllSystems (system: let
