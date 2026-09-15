@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 
 SOURCE = Path(__file__).with_name('sleepy-system.sh')
 
@@ -97,7 +98,7 @@ esac''')
                 if contents is not None: self.assertIn('source metadata', result.stdout)
 
     def test_existing_rebuild_and_rollback_fixed_arguments(self):
-        for name, args in [('rebuild', 'switch --flake /etc/nixos#installed'), ('rollback', 'switch --rollback')]:
+        for name, args in [('rebuild', 'switch --flake /etc/nixos#installed'), ('rollback', 'switch --rollback --no-reexec --flake /etc/nixos#installed')]:
             with self.subTest(name=name):
                 self.calls.unlink(missing_ok=True)
                 self.assertEqual(self.run_tool(name).returncode, 0)
@@ -121,6 +122,62 @@ esac''')
         self.assertEqual(self.run_tool(MENU_STATUS='1').returncode, 0)
         self.assertIn('--menu', self.calls_text())
         self.assertNotIn('sudo', self.calls_text())
+
+    def test_pinned_rebuild_rolls_back_without_evaluating_saved_configuration(self):
+        import site
+        package_site = os.environ.get('SLEEPY_TEST_REBUILD_SITE')
+        self.assertTrue(package_site, 'Run the Nix installer check for the pinned nixos-rebuild dispatch test')
+        site.addsitedir(package_site)
+        import nixos_rebuild
+        from nixos_rebuild import models, nix
+
+        result = self.run_tool('rollback')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        dispatch = next(line for line in self.calls_text().splitlines() if line.startswith('rebuild '))
+        argv = ['nixos-rebuild'] + shlex.split(dispatch[len('rebuild '):])
+        previous = self.root / 'previous-system'
+        (previous / 'bin').mkdir(parents=True)
+        marker = self.root / 'activated-previous'
+        executable = previous / 'bin/switch-to-configuration'
+        executable.write_text('#!' + shutil.which('bash') + '\nprintf "%s" "$1" > ' + shlex.quote(str(marker)) + '\n')
+        executable.chmod(0o755)
+        configuration = self.root / 'saved-flake.nix'
+        calls = []
+
+        def command(command, **kwargs):
+            values = [str(value) for value in command]
+            calls.append(values)
+            if values == ['nix-instantiate', '--find-file', 'nixos-system']:
+                return subprocess.CompletedProcess(values, 1, '')
+            if values[:2] == ['nix-env', '--rollback']:
+                self.profile.unlink()
+                self.profile.symlink_to(previous)
+                return subprocess.CompletedProcess(values, 0, '')
+            if values == ['test', '-d', '/run/systemd/system']:
+                return subprocess.CompletedProcess(values, 1, '')
+            if values == [str(self.profile / 'bin/switch-to-configuration'), 'switch']:
+                return subprocess.run(values, check=True, capture_output=True, text=True)
+            raise AssertionError('Rollback attempted configuration evaluation or another unexpected command: ' + repr(values))
+
+        def path(value):
+            return configuration if str(value) == '/etc/nixos/flake.nix' else Path(value)
+
+        for exists in (False, True):
+            with self.subTest(saved_config_exists=exists):
+                marker.unlink(missing_ok=True)
+                if exists:
+                    configuration.write_text('this is not valid Nix; rollback must not evaluate it')
+                else:
+                    configuration.unlink(missing_ok=True)
+                before = configuration.read_bytes() if exists else None
+                with patch.object(models.Profile, 'from_arg', return_value=models.Profile('system', self.profile)), \
+                     patch.object(models, 'Path', side_effect=path), \
+                     patch.object(nix, 'run_wrapper', side_effect=command), \
+                     patch.dict(os.environ, {'_NIXOS_REBUILD_REEXEC': ''}):
+                    nixos_rebuild.execute(argv)
+                self.assertEqual(marker.read_text(), 'switch')
+                self.assertEqual(configuration.read_bytes() if exists else None, before)
+                self.assertEqual(self.profile.resolve(), previous)
 
     def test_menu_rollback_decline_never_mutates(self):
         self.assertEqual(self.run_tool('menu', CHOICE='rollback', CONFIRM_STATUS='1').returncode, 0)

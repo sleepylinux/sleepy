@@ -137,7 +137,13 @@ run_saved() {
         args+=(--override-input sleepy "path:$source" --no-write-lock-file)
       fi
       ;;
-    rollback) args=(switch --rollback) ;;
+    rollback)
+      # Reuse the installed rebuild tool. Re-exec evaluates the saved flake
+      # before rollback; an explicit flake descriptor also avoids channel-based
+      # version discovery when configuration files are missing. Rollback itself
+      # selects the retained profile and never builds this flake.
+      args=(switch --rollback --no-reexec --flake /etc/nixos#installed)
+      ;;
     prepare) executable=@update@; args=(prepare "$2") ;;
     recover-update) executable=@update@; args=(recover) ;;
     update-status) executable=@update@; args=(status) ;;

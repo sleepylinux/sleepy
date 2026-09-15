@@ -1,6 +1,7 @@
 {pkgs, ...}:
 pkgs.runCommand "sleepy-installer-tests" {
   nativeBuildInputs = [pkgs.python3 pkgs.dialog pkgs.util-linux pkgs.jq pkgs.proot];
+  SLEEPY_TEST_REBUILD_SITE = "${pkgs.nixos-rebuild}/${pkgs.python3.sitePackages}";
   SLEEPY_ZONEINFO = "${pkgs.tzdata}/share/zoneinfo";
   PYTHONTZPATH = "${pkgs.tzdata}/share/zoneinfo";
 } ''
