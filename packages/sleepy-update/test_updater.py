@@ -248,6 +248,31 @@ class UpdateTests(unittest.TestCase):
                 u.recover()
         self.assertFalse(self.calls)
 
+    def test_nix_write_text_store_files_support_catalog_and_running_metadata(self):
+        # environment.etc.*.text uses a direct regular-file store entry.
+        catalog_file = self.STORE / ("f" * 32 + "-candidate.json")
+        catalog_file.write_text(json.dumps(self.candidate))
+        catalog_file.chmod(0o444)
+        catalog_link = self.CATALOG / "alpha-2.json"
+        catalog_link.unlink()
+        catalog_link.symlink_to(catalog_file)
+        self.assertEqual(u.candidates(), [self.candidate])
+
+        metadata_file = self.STORE / ("g" * 32 + "-sleepy-source.json")
+        metadata_file.write_text(json.dumps({
+            "schema": 1, "source_path": str(self.source),
+            "nar_hash": self.candidate["nar_hash"],
+            "revision": None, "version": "0.2",
+        }))
+        metadata_file.chmod(0o444)
+        self.SOURCE_METADATA.symlink_to(metadata_file)
+        self.assertEqual(u.running_source(), str(self.source))
+        # Accepting metadata files must not weaken source/system validation.
+        with self.assertRaises(u.UpdateError):
+            u.store_path(str(catalog_file))
+        with self.assertRaises(u.UpdateError):
+            u.store_path(str(catalog_file), system=True)
+
     def test_catalog_symlink_into_store_is_supported_but_outside_is_rejected(self):
         path = self.CATALOG / "alpha-2.json"
         path.unlink()

@@ -47,12 +47,21 @@ def trusted(path, directory=False):
         raise UpdateError("Untrusted file ownership or permissions: " + str(path))
 
 
-def store_path(value, system=False):
+def store_entry(value):
     if not isinstance(value, str):
         raise UpdateError("Invalid store path")
     path = Path(value)
     if path.parent != STORE or not STORE_NAME.fullmatch(path.name) or path.is_symlink():
         raise UpdateError("Invalid store path")
+    info = path.lstat()
+    if not stat.S_ISDIR(info.st_mode) and not stat.S_ISREG(info.st_mode):
+        raise UpdateError("Unsupported Nix store entry type")
+    trusted(path, directory=stat.S_ISDIR(info.st_mode))
+    return path
+
+
+def store_path(value, system=False):
+    path = store_entry(value)
     trusted(path, True)
     if system:
         if "-nixos-system-" not in path.name:
@@ -72,7 +81,7 @@ def read_json(path):
             raise UpdateError(
                 "Metadata symlink must point into the Nix store"
             ) from None
-        store_path(str(STORE / relative.parts[0]))
+        store_entry(str(STORE / relative.parts[0]))
         path = resolved
     trusted(path)
     if path.stat().st_size > 16384:
