@@ -14,6 +14,7 @@ in {
       firefox.enable = true;
 
       fish.enable = true;
+      imv.enable = lib.mkDefault true;
 
       swappy = {
         enable = lib.mkDefault true;
@@ -65,6 +66,19 @@ in {
           };
         };
       };
+    };
+
+    xdg.mimeApps = lib.mkIf config.programs.imv.enable {
+      enable = lib.mkDefault true;
+      defaultApplications = lib.genAttrs [
+        "image/png"
+        "image/jpeg"
+        "image/gif"
+        "image/webp"
+        "image/tiff"
+        "image/bmp"
+        "image/svg+xml"
+      ] (_: lib.mkDefault ["imv.desktop"]);
     };
 
     gtk = {
