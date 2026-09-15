@@ -35,7 +35,7 @@ esac''')
         self.command('readlink', 'printf "/nix/store/test-%s\\n" "${2##*/}"')
         self.command('dialog', '''printf "dialog %s\\n" "$*" >> "$CALLS"
 case "$*" in
- *"Choose an update"*) printf '%s' "${CANDIDATE_CHOICE:-back}"; exit "${CANDIDATE_MENU_STATUS:-0}";;
+ *"Choose an update"*) printf '%s' "${CANDIDATE_CHOICE:-__back}"; exit "${CANDIDATE_MENU_STATUS:-0}";;
  *--menu*) printf '%s' "${CHOICE:-cancel}"; exit "${MENU_STATUS:-0}";;
  *--yesno*) exit "${CONFIRM_STATUS:-0}";;
 esac''')
@@ -182,8 +182,13 @@ esac''')
         self.assertEqual(len(logs), 1)
         self.assertEqual(logs[0].stat().st_mode & 0o777, 0o600)
 
+    def test_candidate_named_back_remains_selectable(self):
+        result = self.run_tool('update', CANDIDATES='back\tApproved previous candidate', CANDIDATE_CHOICE='back')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn('update prepare back', self.calls_text())
+
     def test_candidate_cancel_decline_failure_or_unlisted_selection_never_mutates(self):
-        for env in [dict(CANDIDATE_CHOICE='back'), dict(CANDIDATE_CHOICE='alpha-1', CONFIRM_STATUS='1'),
+        for env in [dict(CANDIDATE_CHOICE='__back'), dict(CANDIDATE_CHOICE='alpha-1', CONFIRM_STATUS='1'),
                     dict(CANDIDATE_CHOICE='missing'), dict(CANDIDATES_STATUS='9'),
                     dict(CANDIDATES='alpha-1\tVersion\textra'), dict(CANDIDATES='$(touch bad)\tVersion'), dict(CANDIDATES='alpha-1\tOne\nalpha-1\tTwo'),
                     dict(CANDIDATES='alpha-1\tVersion', CANDIDATE_CHOICE='$(touch bad)')]:

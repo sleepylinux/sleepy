@@ -170,7 +170,7 @@ choose_update() {
     id=${line%%$'\t'*}
     label=${line#*$'\t'}
     if ! [[ "$id" =~ ^[a-z0-9][a-z0-9._-]{0,63}$ ]] ||
-       test "$id" = back || test -z "$label" ||
+       test -z "$label" ||
        [[ "$label" == *[$'\t\r\n']* || "$label" =~ [[:cntrl:]] ]] ||
        [[ -v labels[$id] ]]; then
       printf 'Candidate catalogue is malformed; no update started.\n' >&2
@@ -179,11 +179,11 @@ choose_update() {
     labels[$id]=$label
     items+=("$id" "$label")
   done <<< "$snapshot"
-  if choice=$(dialog --stdout --title ' Choose an update ' --default-item back --menu \
+  if choice=$(dialog --stdout --title ' Choose an update ' --default-item __back --menu \
     'Choose a locally approved candidate. Preparation preserves saved installation settings and leaves the running desktop in place. A restart is required.' \
-    20 76 8 "${items[@]}" back 'Keep the current system'); then :
+    20 76 8 "${items[@]}" __back 'Keep the current system'); then :
   else status=$?; case "$status" in 1|255) return 0 ;; *) return "$status" ;; esac; fi
-  if test "$choice" = back; then return 0; fi
+  if test "$choice" = __back; then return 0; fi
   # Never pass a response from dialog directly to the privileged backend.
   for id in "${!labels[@]}"; do
     if test "$choice" = "$id"; then found=yes; label_selected=${labels[$id]}; break; fi
