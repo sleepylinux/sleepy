@@ -1,0 +1,61 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.02s
+     Running tests/desktop_services.rs (work/build/session/debug/deps/desktop_services-449a174d56a6900c)
+
+running 52 tests
+test clipboard_runtime_shutdown_helper ... ok
+test available_state_rejects_a_value_owned_by_another_domain ... ok
+test core_system_adapter_preserves_typed_values_and_terminal_availability ... ok
+test child_pid_readiness_requires_a_complete_positive_record ... ok
+test a_slow_initial_producer_becomes_timeout_at_the_shared_two_second_deadline ... ok
+test every_utility_action_has_a_typed_bounded_transport_contract ... ok
+test every_rich_system_mutation_has_a_narrow_fixed_argv_contract ... ok
+test per_item_probes_validate_dedupe_and_bound_identifiers_before_subprocesses ... ok
+test appearance_actions_persist_and_return_confirmed_mature_theme_readback ... ok
+test proc_resource_parser_is_bounded_typed_and_rejects_inconsistent_input ... ok
+test malformed_initial_state_localizes_parse_to_its_declared_owner ... ok
+test every_available_domain_assembles_one_sdk_valid_atomic_snapshot ... ok
+test desktop_authority_replays_one_full_snapshot_then_monotonic_domain_updates ... ok
+test process_runner_reaps_a_fast_double_forked_setsid_descendant ... ok
+test invalid_domain_data_degrades_only_its_owner_before_any_publication ... ok
+test invalid_initial_payload_is_localized_before_first_publication ... ok
+test invalid_confirmed_terminal_readback_is_failed_and_durably_completed ... ok
+test recording_deletion_is_confined_to_owned_regular_capture_files ... ok
+test registry_domain_ids_are_exhaustive_and_stably_ordered ... ok
+test registry_rejects_every_missing_or_duplicate_domain ... ok
+test acknowledged_logind_transition_does_not_overwrite_power_domain ... ok
+test rich_system_mutations_execute_then_require_complete_confirmed_readback ... ok
+test rich_system_parsers_emit_complete_stable_sdk_snapshots ... ok
+test secret_challenges_are_single_use_raw_bytes_and_all_buffers_are_zeroized ... ok
+sleepy-sessiond endpoint=secret reason=handler-error active=0 tracked=0
+test secret_shutdown_cancels_and_joins_a_live_leased_handler_awaiting_response ... ok
+test a_lagged_stream_is_disconnected_and_reconnect_gets_the_latest_snapshot ... ok
+test secret_socket_uses_binary_one_shot_framing_and_mode_0600 ... ok
+test secret_total_deadline_and_frame_bound_fail_closed_with_zeroization ... ok
+test producer_runtime_reconnects_after_transient_failure_and_cancels_backoff ... ok
+test producer_runtime_restarts_panics_and_gathers_all_owned_work ... ok
+test desktop_generation_never_reuses_a_value_after_authority_restart ... ok
+test duplicate_request_replays_the_exact_result_across_authority_restart ... ok
+test utility_subproducer_terminal_state_does_not_mask_siblings ... ok
+test shutdown_sets_the_registered_blocking_control_before_an_immediate_attempt_abort ... ok
+test successful_control_publishes_confirmed_readback_before_correlated_result ... ok
+test strict_control_rejects_malformed_and_stale_requests_without_execution ... ok
+test terminal_readback_never_succeeds_and_public_diagnostics_are_redacted_codes ... ok
+test concurrent_subscription_and_publication_never_duplicate_one_generation ... ok
+test launcher_search_sampled_before_a_confirmed_launch_cannot_publish_after_it ... ok
+test idle_poll_sampled_before_a_confirmed_mutation_cannot_publish_after_it ... ok
+test initial_registry_preserves_every_terminal_status_without_a_placeholder ... ok
+test process_runner_reaps_a_late_exiting_escaped_descendant_before_return ... ok
+test shutdown_drains_an_in_flight_publication_before_it_can_advance_after_return ... ok
+test process_cancellation_kills_the_pipe_owning_group_and_reaps_descendant_output ... ok
+test real_clipboard_hanging_child_is_cancelled_and_reaped_before_runtime_shutdown_returns ... ok
+test process_cancellation_reaps_an_escaped_descendant_without_reaping_unrelated_children ... ok
+test initialization_deadline_begins_before_generation_open_and_never_resets ... ok
+test completed_initialization_replays_after_the_first_publication_deadline ... ok
+test appearance_poll_cannot_leave_a_blocking_worker_past_bounded_shutdown ... ok
+test appearance_poll_contention_cannot_overwrite_a_confirmed_authority_readback ... ok
+test runtime_timeout_is_bounded_and_reaps_a_production_command_child ... ok
+sleepy-sessiond endpoint=desktop-stream reason=handler-aborted active=0 tracked=0
+test prepared_desktop_sockets_serve_strict_v3_snapshot_and_request_frames ... ok
+
+test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.04s
+

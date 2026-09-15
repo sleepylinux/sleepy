@@ -95,7 +95,9 @@ jobs:
         run: bash checks/fresh-clone.sh
 
       - name: Build all checks
-        run: nix flake check -L
+        # Both VM gates live in flake checks. Do not run them alongside each
+        # other or compiler jobs on the same runner; retain their real deadlines.
+        run: nix flake check --max-jobs 1 -L
 
       - name: Build packaged desktop production smoke
         run: nix build .#checks.x86_64-linux.sleepy-desktop-qml --no-link -L

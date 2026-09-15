@@ -23,3 +23,15 @@ instead of introducing a graphical installer or a second provisioning framework.
 The media carries the pinned source; target packages require network access.
 The installer never promises to restore data after disk erasure. The installed
 system retains its configuration and boot generations for recovery.
+
+Next increment: read-only desktop diagnostics and cleanup.
+
+- [x] Remove obsolete VM disks, intermediate images, build outputs and Nix cache.
+- [x] Implement bounded, privacy-preserving `sleepyctl doctor`; review and unit test.
+- [x] Verify the Nix package in the installed disposable VM, including offline and daemon recovery.
+- [x] Integrate reviewed pins and remove the remaining temporary VM/build files.
+
+Merge gate: exact-head CI and independent review for session PR #10 and root
+PR #9. Installer/root PR #8 and its three component PRs are merged.
+Next product priority: audio/battery parse errors and Bluetooth timeout reported
+by doctor; then physical hardware profiles and suspend acceptance.

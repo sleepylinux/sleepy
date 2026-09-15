@@ -1,0 +1,8 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.02s
+     Running tests/desktop_services.rs (work/build/session/debug/deps/desktop_services-449a174d56a6900c)
+
+running 1 test
+test runtime_timeout_is_bounded_and_reaps_a_production_command_child ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 51 filtered out; finished in 2.12s
+

@@ -1,0 +1,30 @@
+DOCTOR_PACKAGE_PRESENT
+Sleepy desktop: needs attention
+  hyprland: available
+  lock: available
+  network: available
+  audio: invalid provider response
+  bluetooth: timeout
+  battery: invalid provider response
+  brightness: available
+  power: available
+  media: available
+  night-light: available
+  resources: available
+  screenshot: unavailable (optional)
+  recording: available
+{"ok":false,"generation":1277,"checks":[{"capability":"hyprland","status":"available","required":true},{"capability":"lock","status":"available","required":true},{"capability":"network","status":"available","required":false},{"capability":"audio","status":"parse","required":false},{"capability":"bluetooth","status":"timeout","required":false},{"capability":"battery","status":"parse","required":false},{"capability":"brightness","status":"available","required":false},{"capability":"power","status":"available","required":false},{"capability":"media","status":"available","required":false},{"capability":"night-light","status":"available","required":false},{"capability":"resources","status":"available","required":false},{"capability":"screenshot","status":"unavailable","required":false},{"capability":"recording","status":"available","required":false}]}
+true
+true
+DOCTOR_HUMAN_JSON_AND_OPTIONAL_CAPABILITY_ABSENCE_OK
+DOCTOR_OFFLINE_READY
+{"ok":false,"generation":1280,"checks":[{"capability":"hyprland","status":"available","required":true},{"capability":"lock","status":"available","required":true},{"capability":"network","status":"available","required":false},{"capability":"audio","status":"parse","required":false},{"capability":"bluetooth","status":"timeout","required":false},{"capability":"battery","status":"parse","required":false},{"capability":"brightness","status":"available","required":false},{"capability":"power","status":"available","required":false},{"capability":"media","status":"available","required":false},{"capability":"night-light","status":"available","required":false},{"capability":"resources","status":"available","required":false},{"capability":"screenshot","status":"unavailable","required":false},{"capability":"recording","status":"available","required":false}]}
+true
+DOCTOR_OFFLINE_OK
+{"ok":false,"checks":[],"error":"session-unavailable"}
+true
+DOCTOR_STOPPED_DAEMON_BOUNDED_FAILURE_OK
+active
+{"ok":false,"generation":1282,"checks":[{"capability":"hyprland","status":"available","required":true},{"capability":"lock","status":"available","required":true},{"capability":"network","status":"available","required":false},{"capability":"audio","status":"parse","required":false},{"capability":"bluetooth","status":"timeout","required":false},{"capability":"battery","status":"parse","required":false},{"capability":"brightness","status":"available","required":false},{"capability":"power","status":"available","required":false},{"capability":"media","status":"available","required":false},{"capability":"night-light","status":"available","required":false},{"capability":"resources","status":"available","required":false},{"capability":"screenshot","status":"unavailable","required":false},{"capability":"recording","status":"available","required":false}]}
+DOCTOR_RESTART_RECOVERY_OK
+SLEEPY_REPORT_COMPLETE

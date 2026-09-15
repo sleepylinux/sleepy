@@ -1,0 +1,30 @@
+{
+  "doctor_source": "8e6e1dbf408e46e4bfb547ce812a9dbed8c5f025",
+  "installed_image_source": "9bca73cdc125bbf7704e8038dc46cc383cd36fd3",
+  "package": "/nix/store/m92vdxk75sxrl63pg7ndpxhsh1s78l27-sleepy-session-0.1.0",
+  "status": "acceptance-passed-with-provider-issues",
+  "completed": [
+    "real-user-password-login",
+    "human-and-json-report",
+    "authenticated-v3-core-snapshot",
+    "optional-screenshot-unavailability-informational",
+    "offline-report",
+    "stopped-daemon-failure-within-three-seconds",
+    "daemon-restart-report-recovery",
+    "graceful-shutdown"
+  ],
+  "provider_issues": {
+    "audio": "parse",
+    "battery": "parse",
+    "bluetooth": "timeout"
+  },
+  "doctor_health_ok": false,
+  "real_missing_optional_hardware_validated": false,
+  "optional_hardware_note": "Existing VM providers report errors rather than unavailable; absence classification is covered by unit fixtures only.",
+  "transport": {
+    "type": "temporary-local-NAR-import",
+    "bytes": 101217496,
+    "persistent_trust_changes": false,
+    "temporary_NAR_files_created": false
+  }
+}
