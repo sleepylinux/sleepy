@@ -96,6 +96,25 @@ class RecoveryRequestTests(unittest.TestCase):
             self.layout['children'].append(dict(self.layout['children'][1], path='/dev/vda3'))
             with self.assertRaises(backend.InstallError): recovery.partition_layout(self.request)
 
+    def test_luks2_locked_inspection_needs_no_passphrase_and_never_mounts(self):
+        self.layout['children'][1]['fstype']='crypto_LUKS'
+        with patch.object(backend,'verify_target'), patch.object(backend,'run',return_value=json.dumps({'blockdevices':[self.layout]})):
+            layout=recovery.partition_layout(self.request)
+        self.assertEqual(layout['luks_uuid'],self.layout['children'][1]['uuid'])
+        with patch.object(recovery,'recovery_lock',return_value=nullcontext()), patch.object(recovery,'partition_layout',return_value=layout), patch.object(recovery,'mounted_root') as mount:
+            result=recovery.recover(self.request)
+            self.assertTrue(result['locked'])
+            self.assertTrue(result['encrypted'])
+            self.assertNotIn('installation',result)
+            mount.assert_not_called()
+
+    def test_recovery_passphrase_uses_same_console_contract(self):
+        request=dict(self.request,encryption_passphrase='Correct Horse 123')
+        self.assertEqual(recovery.validate_request(request,False),request)
+        for value in ['short','Unicodeé'*3,'with\nnewline12']:
+            with self.assertRaises(backend.InstallError):
+                recovery.validate_request(dict(request,encryption_passphrase=value),False)
+
     def test_busy_target_rejected_before_mount_or_layout_command(self):
         with patch.object(backend, 'verify_target', side_effect=backend.InstallError('busy')), patch.object(backend, 'run') as run:
             with self.assertRaises(backend.InstallError): recovery.partition_layout(self.request)
@@ -127,6 +146,72 @@ class RecoveryMountTests(unittest.TestCase):
             run.assert_not_called()
 
 
+class EncryptedRecoveryTests(unittest.TestCase):
+    def setUp(self):
+        self.uuid='12345678-1234-4234-8234-123456789abc'
+        self.layout={'root':'/dev/vda2','esp':'/dev/vda1','luks_uuid':self.uuid}
+        self.passphrase='Correct Horse 123'
+
+    def exercise(self, wrong=False, cancel=False, unmount_failure=False, writable=False):
+        calls=[]
+        state={'mounted':False,'mapped':False}
+        def command(argv, secret=None):
+            calls.append((argv,secret))
+            if argv[0]=='blkid': return self.uuid if 'UUID' in argv else 'btrfs'
+            if argv[:2]==['cryptsetup','open']:
+                if wrong: raise backend.InstallError('cryptsetup failed (exit 2)')
+                state['mapped']=True
+            if argv[0]=='mount': state['mounted']=True
+            if argv[0]=='umount':
+                if unmount_failure: raise backend.InstallError('busy')
+                state['mounted']=False
+            if argv[:2]==['cryptsetup','close']: state['mapped']=False
+            return ''
+        with patch.object(backend,'run',side_effect=command), patch.object(backend.os.path,'lexists',side_effect=lambda _:state['mapped']), patch.object(recovery.os.path,'ismount',side_effect=lambda _:state['mounted']), patch.object(recovery.RecoveryLuksRoot,'owned',return_value=True):
+            if wrong or cancel or unmount_failure:
+                with self.assertRaises(backend.InstallError):
+                    with recovery.mounted_root(self.layout,writable=writable,passphrase=self.passphrase):
+                        if cancel: raise backend.InstallError('cancelled')
+            else:
+                with recovery.mounted_root(self.layout,writable=writable,passphrase=self.passphrase): pass
+        return calls,state
+
+    def test_wrong_passphrase_never_mounts_or_repairs(self):
+        calls,state=self.exercise(wrong=True)
+        self.assertFalse(state['mapped'])
+        self.assertFalse(any(argv[0] in ['mount','chroot'] for argv,_ in calls))
+        self.assertFalse(any(argv[:2]==['cryptsetup','close'] for argv,_ in calls))
+
+    def test_inspection_unlock_is_readonly_and_cancel_closes_after_unmount(self):
+        for cancel in [False,True]:
+            calls,state=self.exercise(cancel=cancel)
+            self.assertFalse(state['mapped'])
+            self.assertFalse(state['mounted'])
+            open_args=next(argv for argv,_ in calls if argv[:2]==['cryptsetup','open'])
+            self.assertIn('--readonly',open_args)
+            self.assertEqual(calls[-2][0][0],'umount')
+            self.assertEqual(calls[-1][0][:2],['cryptsetup','close'])
+            for argv,secret in calls:
+                self.assertNotIn(self.passphrase,str(argv))
+                if argv[:2]==['cryptsetup','open']: self.assertEqual(secret,self.passphrase)
+
+    def test_writable_repair_opens_without_readonly_only_when_requested(self):
+        calls,_=self.exercise(writable=True)
+        self.assertNotIn('--readonly',next(argv for argv,_ in calls if argv[:2]==['cryptsetup','open']))
+
+    def test_failed_unmount_never_closes_busy_mapper(self):
+        calls,state=self.exercise(unmount_failure=True)
+        self.assertTrue(state['mapped'])
+        self.assertFalse(any(argv[:2]==['cryptsetup','close'] for argv,_ in calls))
+
+    def test_changed_header_refuses_unlock_before_secret_subprocess(self):
+        with patch.object(backend.os.path,'lexists',return_value=False), patch.object(backend,'run',return_value='different') as run:
+            mapping=recovery.RecoveryLuksRoot('/dev/vda2',self.uuid)
+            with self.assertRaisesRegex(backend.InstallError,'changed'):
+                mapping.unlock(self.passphrase,False)
+            self.assertEqual(run.call_count,1)
+            self.assertFalse(mapping.open_attempted)
+
 class RecoveryOperationTests(unittest.TestCase):
     setUp = RecoveryMetadataTests.setUp
 
@@ -144,6 +229,22 @@ class RecoveryOperationTests(unittest.TestCase):
             with self.assertRaises(backend.InstallError): recovery.recover(request, True)
             run.assert_not_called()
         self.assertEqual(calls, [False])
+
+    def test_encrypted_stale_generation_never_reopens_writable(self):
+        request=self.request()
+        request.update(installation='b'*64,encryption_passphrase='Correct Horse 123')
+        layout={'root':'/dev/vda2','esp':'/dev/vda1','luks_uuid':'12345678-1234-4234-8234-123456789abc'}
+        calls=[]
+        @contextmanager
+        def mounted(layout,writable=False,passphrase=None):
+            calls.append(writable)
+            self.assertEqual(passphrase,request['encryption_passphrase'])
+            yield
+        with patch.object(recovery,'ROOT',self.root), patch.object(recovery,'recovery_lock',return_value=nullcontext()), patch.object(recovery,'partition_layout',return_value=layout), patch.object(recovery,'mounted_root',side_effect=mounted), patch.object(backend,'run') as run:
+            with self.assertRaisesRegex(backend.InstallError,'generations changed'):
+                recovery.recover(request,True)
+            run.assert_not_called()
+        self.assertEqual(calls,[False])
 
     def test_fixed_boot_only_command_and_cleanup_on_failure(self):
         request = self.request()

@@ -36,7 +36,7 @@ stdenvNoCC.mkDerivation {
       --prefix PATH : ${lib.makeBinPath [util-linux parted btrfs-progs dosfstools cryptsetup nix nixos-install-tools systemd coreutils shadow kbd]}
     makeWrapper ${python3}/bin/python3 $out/bin/sleepy-recover-backend \
       --add-flags $out/lib/sleepy-installer/recovery.py \
-      --prefix PATH : ${lib.makeBinPath [util-linux btrfs-progs systemd coreutils]}
+      --prefix PATH : ${lib.makeBinPath [util-linux btrfs-progs cryptsetup systemd coreutils]}
     makeWrapper ${python3}/bin/python3 $out/bin/sleepy-recover \
       --add-flags $out/lib/sleepy-installer/recovery_tui.py \
       --set SLEEPY_BACKEND $out/bin/sleepy-install-backend \
